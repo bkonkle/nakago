@@ -8,12 +8,12 @@
     <strong>A lightweight Rust framework for elegant services</strong>
   </p>
 
-</div>
+  [![Crates.io](https://img.shields.io/crates/v/nakago.svg)](https://crates.io/crates/nakago)
+  [![Docs.rs](https://docs.rs/nakago/badge.svg)](https://docs.rs/nakago)
+  [![CI](https://github.com/bkonkle/nakago/workflows/CI/badge.svg)](https://github.com/bkonkle/nakago/actions)
+  [![Coverage Status](https://codecov.io/gh/bkonkle/nakago/branch/main/graph/badge.svg?token=BXEZAMHVLP)](https://codecov.io/gh/bkonkle/nakago)
 
-[![Crates.io](https://img.shields.io/crates/v/nakago.svg)](https://crates.io/crates/nakago)
-[![Docs.rs](https://docs.rs/nakago/badge.svg)](https://docs.rs/nakago)
-[![CI](https://github.com/bkonkle/nakago/workflows/CI/badge.svg)](https://github.com/bkonkle/nakago/actions)
-[![Coverage Status](https://coveralls.io/repos/github/bkonkle/nakago/badge.svg?branch=main)](https://coveralls.io/github/bkonkle/nakago?branch=main)
+</div>
 
 ## ⚠️ Alpha Disclaimer
 
