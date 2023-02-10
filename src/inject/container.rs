@@ -103,7 +103,7 @@ pub(crate) mod test {
 
     use super::*;
 
-    pub trait HasId {
+    pub trait HasId: Sync + Send {
         fn get_id(&self) -> String;
     }
 
@@ -114,16 +114,6 @@ pub(crate) mod test {
     impl TestService {
         pub fn new(id: String) -> Self {
             Self { id }
-        }
-    }
-
-    trait TestTrait: Send + Sync {
-        fn injected(&self) -> bool;
-    }
-
-    impl TestTrait for TestService {
-        fn injected(&self) -> bool {
-            true
         }
     }
 
@@ -243,6 +233,21 @@ pub(crate) mod test {
     }
 
     #[test]
+    fn test_dyn_get_success() -> Result<()> {
+        let mut i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.inject::<dyn HasId>(Box::new(TestService::new(expected.clone())))?;
+
+        let repo = i.get::<dyn HasId>()?;
+
+        assert_eq!(expected, repo.get_id());
+
+        Ok(())
+    }
+
+    #[test]
     fn test_get_not_found() -> Result<()> {
         let i = Inject::default();
 
@@ -353,6 +358,7 @@ pub(crate) mod test {
         let mut i = Inject::default();
 
         i.inject(Box::new(TestService::new(fake::uuid::UUIDv4.fake())))?;
+        i.inject::<dyn HasId>(Box::new(OtherService::new(fake::uuid::UUIDv4.fake())))?;
 
         // Override a type that doesn't have any instances yet
         let result = i.replace(Box::new(OtherService {
@@ -362,8 +368,9 @@ pub(crate) mod test {
         if let Err(err) = result {
             assert_eq!(
                 format!(
-                    "{} was not found\n\nAvailable:\n - {}",
+                    "{} was not found\n\nAvailable:\n - {}\n\n - {}",
                     type_name::<OtherService>(),
+                    type_name::<dyn HasId>(),
                     type_name::<TestService>()
                 ),
                 err.to_string()
@@ -371,19 +378,6 @@ pub(crate) mod test {
         } else {
             panic!("did not return Err as expected")
         }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_dyn_dependency() -> Result<()> {
-        let mut i = Inject::default();
-
-        i.inject::<dyn TestTrait>(Box::new(TestService::new(fake::uuid::UUIDv4.fake())))?;
-
-        let repo = i.get::<dyn TestTrait>()?;
-
-        assert!(repo.injected());
 
         Ok(())
     }

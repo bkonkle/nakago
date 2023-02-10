@@ -19,6 +19,15 @@
 
 NOTE: This library is in early development, and the API may shift rapidly as it evolves. Be advised that this is not yet recommended for Production use.
 
+## Features
+
+- [Dependency Injection](docs/dependency-injection.md)
+- HTTP Adapter using [Axum](https://github.com/tokio-rs/axum) (upcoming)
+- GraphQL Adapter using [Async-GraphQL](https://github.com/async-graphql/async-graphql) (upcoming)
+- CQRS Adapter using [CQRS-ES](https://crates.io/crates/cqrs-es) (upcoming)
+
+As development progresses, major features will be split up into separate crates, so that developers can install only what they need.
+
 ## Installation
 
 ### Cargo
@@ -26,90 +35,13 @@ NOTE: This library is in early development, and the API may shift rapidly as it 
 - Install Rust and Cargo by following [this guide](https://www.rust-lang.org/tools/install).
 - Run `cargo install nakago`
 
+## Etymology
+
+A Nakago (中子) is a Japanese word meaning "core", or less commonly the "middle of a nest of boxes". It often refers to the [tang](https://en.wikipedia.org/wiki/Tang_(tools)) of a Japanese Katana - the foundation of the hilt and the mechanism through which a sword is wielded. The nakago must be sound and resilient, allowing the holder to guide the blade with confidence.
+
 ## Development
 
-To set up a development environment to build this project, you'll need to install some helpful tools.
-
-### Clippy
-
-For helpful linting rools, install [Clippy](https://github.com/rust-lang/rust-clippy)
-
-Run it with `cargo`:
-
-```sh
-cargo clippy --fix
-```
-
-If you're using VS Code, configure the `rust-analyzer` plugin to use it (in _settings.json_):
-
-```json
-{
-    "rust-analyzer.checkOnSave.command": "clippy"
-}
-```
-
-### pre-commit
-
-Install pre-commit to automatically set up Git hook scripts.
-
-In Ubuntu, the package to install is `pre-commit`:
-
-```sh
-sudo apt install pre-commit
-```
-
-On Mac with Homebrew, the package is also `pre-commit`:
-
-```sh
-brew install pre-commit
-```
-
-### libclang
-
-The `cargo-spellcheck` utility depends on [`libclang`](https://clang.llvm.org/doxygen/group__CINDEX.html).
-
-In Ubuntu, the package to install is `libclang-dev`:
-
-```sh
-sudo apt install libclang-dev
-```
-
-### Cargo Make
-
-To use build scripts from the _Makefile.toml_, install Cargo Make:
-
-```sh
-cargo install cargo-make
-```
-
-Run "setup" to install some tooling dependencies:
-
-```sh
-cargo make setup
-```
-
-### Running the Local dev server
-
-Use `cargo` to run the dev server locally:
-
-```sh
-cargo make dev
-```
-
-### Update Dependencies
-
-First, install the `outdated` command for `cargo`:
-
-```sh
-cargo install cargo-outdated
-```
-
-Then, update and check for any major dependency changes:
-
-```sh
-cargo update
-cargo outdated
-```
+See [docs/development.md](docs/development.md).
 
 ## License
 

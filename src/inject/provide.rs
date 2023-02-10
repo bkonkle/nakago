@@ -7,44 +7,44 @@ use super::{tag::Tag, Inject, Result};
 #[async_trait]
 pub trait Provider<T>
 where
-    T: Any + Send + Sync,
+    T: Any + Send + Sync + ?Sized,
 {
     /// Provide a dependency for the container
-    async fn provide(&self, i: &Inject) -> Result<T>;
+    async fn provide(&self, i: &Inject) -> Result<Box<T>>;
 }
 
 impl Inject {
     /// Use a Provider function to inject a dependency
-    pub async fn provide<P, T>(&mut self, provider: P) -> Result<()>
+    pub async fn provide<T, P>(&mut self, provider: P) -> Result<()>
     where
-        T: Any + Sync + Send,
+        T: Any + Sync + Send + ?Sized,
         P: Provider<T>,
     {
-        self.inject::<T>(Box::new(provider.provide(self).await?))
+        self.inject::<T>(provider.provide(self).await?)
     }
 
     /// Use a Provider function to replace an existing dependency
-    pub async fn replace_with<P, T>(&mut self, provider: P) -> Result<()>
+    pub async fn replace_with<T, P>(&mut self, provider: P) -> Result<()>
     where
-        T: Any + Sync + Send,
+        T: Any + Sync + Send + ?Sized,
         P: Provider<T>,
     {
-        self.replace::<T>(Box::new(provider.provide(self).await?))
+        self.replace::<T>(provider.provide(self).await?)
     }
 
     /// Use a Provider function to inject a tagged dependency
-    pub async fn provide_tag<P, T>(&mut self, provider: P, tag: &'static Tag<T>) -> Result<()>
+    pub async fn provide_tag<T, P>(&mut self, provider: P, tag: &'static Tag<T>) -> Result<()>
     where
-        T: Any + Sync + Send,
+        T: Any + Sync + Send + ?Sized,
         P: Provider<T>,
     {
         self.inject_tag::<T>(provider.provide(self).await?, tag)
     }
 
     /// Use a Provider function to replace a tagged dependency
-    pub async fn replace_tag_with<P, T>(&mut self, provider: P, tag: &'static Tag<T>) -> Result<()>
+    pub async fn replace_tag_with<T, P>(&mut self, provider: P, tag: &'static Tag<T>) -> Result<()>
     where
-        T: Any + Sync + Send,
+        T: Any + Sync + Send + ?Sized,
         P: Provider<T>,
     {
         self.replace_tag::<T>(provider.provide(self).await?, tag)
@@ -53,13 +53,13 @@ impl Inject {
 
 #[cfg(test)]
 mod test {
-    use std::any::type_name;
+    use std::{any::type_name, sync::Arc};
 
     use fake::Fake;
 
     use crate::inject::{
-        container::test::{OtherService, TestService},
-        tag::test::{OTHER_TAG, SERVICE_TAG},
+        container::test::{HasId, OtherService, TestService},
+        tag::test::{DYN_TAG, OTHER_TAG, SERVICE_TAG},
         Key,
     };
 
@@ -78,8 +78,8 @@ mod test {
 
     #[async_trait]
     impl Provider<TestService> for TestServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<TestService> {
-            Ok(TestService::new(self.id.clone()))
+        async fn provide(&self, _i: &Inject) -> Result<Box<TestService>> {
+            Ok(Box::new(TestService::new(self.id.clone())))
         }
     }
 
@@ -96,13 +96,32 @@ mod test {
 
     #[async_trait]
     impl Provider<OtherService> for OtherServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<OtherService> {
-            Ok(OtherService::new(self.id.clone()))
+        async fn provide(&self, _i: &Inject) -> Result<Box<OtherService>> {
+            Ok(Box::new(OtherService::new(self.id.clone())))
+        }
+    }
+
+    #[async_trait]
+    impl Provider<Arc<dyn HasId>> for OtherServiceProvider {
+        async fn provide(&self, _i: &Inject) -> Result<Box<Arc<dyn HasId>>> {
+            Ok(Box::new(Arc::new(OtherService::new(self.id.clone()))))
+        }
+    }
+
+    #[derive(Default)]
+    pub struct TestServiceHasIdProvider {}
+
+    #[async_trait]
+    impl Provider<Arc<dyn HasId>> for TestServiceHasIdProvider {
+        async fn provide(&self, _i: &Inject) -> Result<Box<Arc<dyn HasId>>> {
+            Ok(Box::new(Arc::new(OtherService::new(
+                "test-service".to_string(),
+            ))))
         }
     }
 
     #[tokio::test]
-    async fn test_provide_success() -> anyhow::Result<()> {
+    async fn test_provide_success() -> Result<()> {
         let mut i = Inject::default();
 
         i.provide(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
@@ -117,7 +136,21 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_provide_occupied() -> anyhow::Result<()> {
+    async fn test_provide_dyn_success() -> Result<()> {
+        let mut i = Inject::default();
+
+        i.provide(TestServiceHasIdProvider::default()).await?;
+
+        assert!(
+            i.0.contains_key(&Key::from_type_id::<Arc<dyn HasId>>()),
+            "key does not exist in injection container"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_provide_occupied() -> Result<()> {
         let mut i = Inject::default();
 
         i.provide(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
@@ -140,7 +173,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_replace_with_success() -> anyhow::Result<()> {
+    async fn test_replace_with_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
@@ -160,7 +193,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_replace_with_not_found() -> anyhow::Result<()> {
+    async fn test_replace_with_not_found() -> Result<()> {
         let mut i = Inject::default();
 
         i.provide(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
@@ -168,7 +201,7 @@ mod test {
 
         // Override a type that doesn't have any instances yet
         let result = i
-            .replace_with(OtherServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .replace_with::<OtherService, _>(OtherServiceProvider::new(fake::uuid::UUIDv4.fake()))
             .await;
 
         if let Err(err) = result {
@@ -188,7 +221,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_provide_tag_success() -> anyhow::Result<()> {
+    async fn test_provide_tag_success() -> Result<()> {
         let mut i = Inject::default();
 
         i.provide_tag(
@@ -206,7 +239,22 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_provide_tag_occupied() -> anyhow::Result<()> {
+    async fn test_provide_tag_dyn_success() -> Result<()> {
+        let mut i = Inject::default();
+
+        i.provide_tag(TestServiceHasIdProvider::default(), &DYN_TAG)
+            .await?;
+
+        assert!(
+            i.0.contains_key(&Key::from_tag::<Arc<dyn HasId>>(&DYN_TAG)),
+            "key does not exist in injection container"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_provide_tag_occupied() -> Result<()> {
         let mut i = Inject::default();
 
         i.provide_tag(
@@ -235,7 +283,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_replace_tag_with_success() -> anyhow::Result<()> {
+    async fn test_replace_tag_with_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
@@ -258,7 +306,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_replace_tag_with_not_found() -> anyhow::Result<()> {
+    async fn test_replace_tag_with_not_found() -> Result<()> {
         let mut i = Inject::default();
 
         i.provide_tag(
