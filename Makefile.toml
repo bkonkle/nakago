@@ -61,6 +61,10 @@ args = [
 command = "cargo"
 args = ["llvm-cov", "${@}"]
 
+[tasks.cov-ci]
+command = "cargo"
+args = ["llvm-cov", "--lcov", "--output-path", "lcov.info", "${@}"]
+
 [tasks.audit]
 command = "cargo"
 args = ["audit"]
