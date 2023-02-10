@@ -12,3 +12,5 @@ Cargo.lock
 *.pdb
 
 .DS_Store
+
+lcov.info
