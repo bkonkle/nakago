@@ -68,7 +68,7 @@ jobs:
               uses: taiki-e/install-action@cargo-llvm-cov
 
             - name: Run Unit Tests
-              run: cargo make cov-ci
+              run: cargo make cov
 
             - name: Upload coverage data to codecov
               uses: codecov/codecov-action@v3
