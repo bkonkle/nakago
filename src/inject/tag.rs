@@ -4,14 +4,14 @@ use super::{Error, Key};
 use crate::Inject;
 
 /// A dependency injection Tag representing a specific type
-pub struct Tag<T> {
+pub struct Tag<T: ?Sized> {
     tag: &'static str,
     _phantom: fn() -> PhantomData<T>,
 }
 
 impl<T> Tag<T>
 where
-    T: Sync + Send,
+    T: Sync + Send + ?Sized,
 {
     /// Create a new Tag instance
     pub const fn new(tag: &'static str) -> Self {
@@ -114,13 +114,20 @@ pub(crate) mod test {
     use fake::Fake;
 
     use super::*;
-    use crate::inject::container::test::{OtherService, TestService};
+    use crate::inject::{
+        container::test::{OtherService, TestService},
+        Result,
+    };
 
     pub const SERVICE_TAG: Tag<TestService> = Tag::new("InMemoryTestService");
     pub const OTHER_TAG: Tag<OtherService> = Tag::new("InMemoryOtherService");
 
+    trait DynamicService: Sync + Send {
+        fn test_fn(&self) {}
+    }
+
     #[test]
-    fn test_inject_tag_success() -> anyhow::Result<()> {
+    fn test_inject_tag_success() -> Result<()> {
         let mut i = Inject::default();
 
         i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG)?;
@@ -134,7 +141,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_inject_tag_occupied() -> anyhow::Result<()> {
+    fn test_inject_tag_occupied() -> Result<()> {
         let mut i = Inject::default();
 
         i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG)?;
@@ -155,7 +162,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_get_tag_opt_success() -> anyhow::Result<()> {
+    fn test_get_tag_opt_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
@@ -170,7 +177,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_get_tag_opt_not_found() -> anyhow::Result<()> {
+    fn test_get_tag_opt_not_found() -> Result<()> {
         let i = Inject::default();
 
         let result = i.get_tag_opt::<TestService>(&SERVICE_TAG);
@@ -181,7 +188,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_get_tag_success() -> anyhow::Result<()> {
+    fn test_get_tag_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
@@ -196,7 +203,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_get_tag_not_found() -> anyhow::Result<()> {
+    fn test_get_tag_not_found() -> Result<()> {
         let i = Inject::default();
 
         let result = i.get_tag::<TestService>(&SERVICE_TAG);
@@ -214,7 +221,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_get_tag_mut_opt_success() -> anyhow::Result<()> {
+    fn test_get_tag_mut_opt_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
@@ -229,7 +236,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_get_tag_mut_opt_not_found() -> anyhow::Result<()> {
+    fn test_get_tag_mut_opt_not_found() -> Result<()> {
         let mut i = Inject::default();
 
         let result = i.get_tag_mut_opt::<TestService>(&SERVICE_TAG);
@@ -240,7 +247,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_get_tag_mut_success() -> anyhow::Result<()> {
+    fn test_get_tag_mut_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
@@ -255,7 +262,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_get_tag_mut_not_found() -> anyhow::Result<()> {
+    fn test_get_tag_mut_not_found() -> Result<()> {
         let mut i = Inject::default();
 
         let result = i.get_tag_mut::<TestService>(&SERVICE_TAG);
@@ -273,7 +280,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_replace_tag_success() -> anyhow::Result<()> {
+    fn test_replace_tag_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
@@ -291,7 +298,7 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_replace_not_found() -> anyhow::Result<()> {
+    fn test_replace_not_found() -> Result<()> {
         let mut i = Inject::default();
 
         i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG)?;

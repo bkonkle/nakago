@@ -20,7 +20,7 @@ impl Inject {
         T: Any + Sync + Send,
         P: Provider<T>,
     {
-        self.inject::<T>(provider.provide(self).await?)
+        self.inject::<T>(Box::new(provider.provide(self).await?))
     }
 
     /// Use a Provider function to replace an existing dependency
@@ -29,7 +29,7 @@ impl Inject {
         T: Any + Sync + Send,
         P: Provider<T>,
     {
-        self.replace::<T>(provider.provide(self).await?)
+        self.replace::<T>(Box::new(provider.provide(self).await?))
     }
 
     /// Use a Provider function to inject a tagged dependency

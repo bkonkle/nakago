@@ -1,3 +1,10 @@
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+
+[config]
+main_project_member = "./"
+default_to_workspace = false
+
 [tasks.setup]
 script = '''
     echo # installing git hooks
