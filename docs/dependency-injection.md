@@ -137,17 +137,17 @@ pub struct PostgresRepositoryProvider {}
 
 #[async_trait]
 impl inject::Provider<dyn Repository> for PostgresRepositoryProvider {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<Box<dyn Repository>> {
+    async fn provide(&self, i: &inject::Inject) -> inject::ProvideResult<dyn Repository> {
         let pool = i.get::<Pool<Postgres>>()?;
 
-        Ok(Box::new(PostgresRepository::new(pool.clone())))
+        inject::provide(PostgresRepository::new(pool.clone()))
     }
 }
 ```
 
 The PostgresRepositoryProvider struct is empty, and just exists so that we can implement the `inject::Provider<T>` trait. It uses `#[derive(Default)]` because it doesn't need to initialize any properties. It doesn't *have* to be empty, though, and can contain configuration for the provider that is passed in on initialization.
 
-The `Ok(Box::new(...))` wrapper services two purposees - first, to allow inner operations to return `Err` values for `inject::Result`, to handle things like a failed `i.get()` call or a failed database connection initialization.
+The `inject::provide(...)` helper wraps the dependency in an inner `Box` to allow dynamic types that are unsized, and wraps *that* in an `inject::Result` so that an `Err` can be returned to handle things like a failed `i.get()` call or a failed database connection initialization.
 
 In this particular case, since `Pool<Postgres>` is based on an `Arc` and that is the only dependency currently carried by the hypothetical Repository, it's safe to provide it directly like this. It can be cloned without issue. If your dependencies aren't `Send + Sync`, however, you may need to manually wrap them in an `Arc`. In that case, the provider would look like this:
 
@@ -157,10 +157,10 @@ pub struct PostgresRepositoryProvider {}
 
 #[async_trait]
 impl inject::Provider<Arc<dyn Repository>> for PostgresRepositoryProvider {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<Box<Arc<dyn Repository>>> {
+    async fn provide(&self, i: &inject::Inject) -> inject::ProvideResult<Arc<dyn Repository>> {
         let pool = i.get::<Pool<Postgres>>()?;
 
-        Ok(Box::new(Arc::new(PostgresRepository::new(pool.clone()))))
+        provide(Arc::new(PostgresRepository::new(pool.clone())))
     }
 }
 ```
