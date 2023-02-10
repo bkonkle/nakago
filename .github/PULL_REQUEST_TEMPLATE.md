@@ -6,7 +6,7 @@ Please, make sure:
   https://github.com/bkonkle/nakago/blob/main/docs/CONTRIBUTING.md
 - you have formatted the code using rustfmt:
   https://github.com/rust-lang/rustfmt
-- you have checked that all tests pass, by running `cargo test --all`
+- you have checked that all tests pass, by running `cargo make test`
 - you have updated the changelog (if needed):
   https://github.com/bkonkle/nakago/blob/main/CHANGELOG.md
 -->
