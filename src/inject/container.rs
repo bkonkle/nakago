@@ -370,8 +370,8 @@ pub(crate) mod test {
                 format!(
                     "{} was not found\n\nAvailable:\n - {}\n\n - {}",
                     type_name::<OtherService>(),
-                    type_name::<dyn HasId>(),
-                    type_name::<TestService>()
+                    type_name::<TestService>(),
+                    type_name::<dyn HasId>()
                 ),
                 err.to_string()
             );
