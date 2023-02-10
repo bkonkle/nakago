@@ -1,0 +1,42 @@
+name: Build
+
+on:
+    push:
+        branches:
+            - main
+
+
+jobs:
+    docs:
+        name: Docs
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Install Rust toolchain
+              uses: dtolnay/rust-toolchain@stable
+
+            - uses: Swatinem/rust-cache@v2
+
+            - name: Check documentation
+              run: cargo doc --no-deps --document-private-items --all-features --workspace --examples
+              env:
+                  RUSTDOCFLAGS: -D warnings
+
+    publish-dry-run:
+        if: ${{ false }}  # disable for now
+        name: Publish dry run
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Install Rust toolchain
+              uses: dtolnay/rust-toolchain@stable
+
+            - uses: Swatinem/rust-cache@v2
+
+            - name: Dry run
+              run: cargo publish --dry-run
+

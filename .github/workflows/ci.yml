@@ -1,0 +1,77 @@
+name: CI # Continuous Integration
+
+on:
+    pull_request:
+        paths-ignore:
+            - "**.md"
+    push:
+        branches:
+            - main
+        paths-ignore:
+            - "**.md"
+    workflow_dispatch:
+
+env:
+    CARGO_TERM_COLOR: always
+
+jobs:
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+              with:
+                  ref: ${{ github.event.pull_request.head.ref }}
+                  fetch-depth: 0
+
+            - name: Install Rust toolchain
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  components: rustfmt, clippy
+
+            - uses: davidB/rust-cargo-make@v1
+
+            - uses: Swatinem/rust-cache@v2
+
+            - name: Check formatting
+              run: cargo make format
+
+            - name: Clippy check
+              run: cargo make lint
+
+    test:
+        name: Test Suite
+        runs-on: ubuntu-latest
+        env:
+            RUSTFLAGS: -D warnings
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+              with:
+                  ref: ${{ github.event.pull_request.head.ref }}
+                  fetch-depth: 0
+
+            - name: Install Rust toolchain
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  components: llvm-tools-preview
+
+            - uses: davidB/rust-cargo-make@v1
+
+            - uses: Swatinem/rust-cache@v2
+
+            - name: Install nextest
+              uses: taiki-e/install-action@nextest
+
+            - name: Install cargo-llvm-cov
+              uses: taiki-e/install-action@cargo-llvm-cov
+
+            - name: Run Unit Tests
+              run: cargo make cov-ci
+
+            - name: Upload coverage data to codecov
+              uses: codecov/codecov-action@v3
+              with:
+                  files: lcov.info
+
