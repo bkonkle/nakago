@@ -187,7 +187,7 @@ pub(crate) mod test {
 
         i.inject_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
 
-        let result = i.get_tag_opt::<TestService>(&SERVICE_TAG).unwrap();
+        let result = i.get_tag_opt(&SERVICE_TAG).unwrap();
 
         assert_eq!(expected, result.id);
 
@@ -198,7 +198,7 @@ pub(crate) mod test {
     fn test_get_tag_opt_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.get_tag_opt::<TestService>(&SERVICE_TAG);
+        let result = i.get_tag_opt(&SERVICE_TAG);
 
         assert!(result.is_none());
 
@@ -213,7 +213,7 @@ pub(crate) mod test {
 
         i.inject_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
 
-        let result = i.get_tag::<TestService>(&SERVICE_TAG)?;
+        let result = i.get_tag(&SERVICE_TAG)?;
 
         assert_eq!(expected, result.id);
 
@@ -231,7 +231,7 @@ pub(crate) mod test {
             &DYN_TAG,
         )?;
 
-        let result = i.get_tag::<Arc<dyn HasId>>(&DYN_TAG)?;
+        let result = i.get_tag(&DYN_TAG)?;
 
         assert_eq!(expected, result.get_id());
 
@@ -242,7 +242,7 @@ pub(crate) mod test {
     fn test_get_tag_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.get_tag::<TestService>(&SERVICE_TAG);
+        let result = i.get_tag(&SERVICE_TAG);
 
         if let Err(err) = result {
             assert_eq!(
@@ -264,7 +264,7 @@ pub(crate) mod test {
 
         i.inject_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
 
-        let result = i.get_tag_mut_opt::<TestService>(&SERVICE_TAG).unwrap();
+        let result = i.get_tag_mut_opt(&SERVICE_TAG).unwrap();
 
         assert_eq!(expected, result.id);
 
@@ -275,7 +275,7 @@ pub(crate) mod test {
     fn test_get_tag_mut_opt_not_found() -> Result<()> {
         let mut i = Inject::default();
 
-        let result = i.get_tag_mut_opt::<TestService>(&SERVICE_TAG);
+        let result = i.get_tag_mut_opt(&SERVICE_TAG);
 
         assert!(result.is_none());
 
@@ -290,7 +290,7 @@ pub(crate) mod test {
 
         i.inject_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
 
-        let result = i.get_tag_mut::<TestService>(&SERVICE_TAG)?;
+        let result = i.get_tag_mut(&SERVICE_TAG)?;
 
         assert_eq!(expected, result.id);
 
@@ -301,7 +301,7 @@ pub(crate) mod test {
     fn test_get_tag_mut_not_found() -> Result<()> {
         let mut i = Inject::default();
 
-        let result = i.get_tag_mut::<TestService>(&SERVICE_TAG);
+        let result = i.get_tag_mut(&SERVICE_TAG);
 
         if let Err(err) = result {
             assert_eq!(
@@ -329,7 +329,7 @@ pub(crate) mod test {
         // Override the instance that was injected the first time
         i.replace_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
 
-        let result = i.get_tag::<TestService>(&SERVICE_TAG)?;
+        let result = i.get_tag(&SERVICE_TAG)?;
 
         assert_eq!(expected, result.id);
 

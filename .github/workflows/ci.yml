@@ -38,7 +38,7 @@ jobs:
               run: cargo make format
 
             - name: Clippy check
-              run: cargo make lint
+              run: cargo make check
 
     test:
         name: Test Suite
@@ -68,10 +68,9 @@ jobs:
               uses: taiki-e/install-action@cargo-llvm-cov
 
             - name: Run Unit Tests
-              run: cargo make cov-ci
+              run: cargo make cov
 
             - name: Upload coverage data to codecov
               uses: codecov/codecov-action@v3
               with:
                   files: lcov.info
-
