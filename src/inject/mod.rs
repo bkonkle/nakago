@@ -16,4 +16,5 @@ pub mod tag;
 pub use container::Inject;
 pub use error::{Error, Result};
 pub use key::{Id, Key};
-pub use provide::Provider;
+pub use provide::{provide, ProvideResult, Provider};
+pub use tag::Tag;

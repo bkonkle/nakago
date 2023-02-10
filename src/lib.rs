@@ -4,4 +4,6 @@
 /// Dependency Injection
 pub mod inject;
 
-pub use inject::{Error as InjectError, Inject, Provider};
+pub use inject::{
+    provide, Error as InjectError, Inject, ProvideResult, Provider, Result as InjectResult, Tag,
+};
