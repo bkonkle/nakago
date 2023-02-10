@@ -38,7 +38,7 @@ jobs:
               run: cargo make format
 
             - name: Clippy check
-              run: cargo make lint
+              run: cargo make check
 
     test:
         name: Test Suite
@@ -74,4 +74,3 @@ jobs:
               uses: codecov/codecov-action@v3
               with:
                   files: lcov.info
-
