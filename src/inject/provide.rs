@@ -10,7 +10,15 @@ where
     T: Any + Send + Sync + ?Sized,
 {
     /// Provide a dependency for the container
-    async fn provide(&self, i: &Inject) -> Result<Box<T>>;
+    async fn provide(&self, i: &Inject) -> ProvideResult<T>;
+}
+
+/// A Provider result, which is boxed to allow for unsized types
+pub type ProvideResult<T> = Result<Box<T>>;
+
+/// A convenience wrapper around `Ok(Box::new(...))`, for better readability
+pub fn provide<T>(t: T) -> ProvideResult<T> {
+    Ok(Box::new(t))
 }
 
 impl Inject {
@@ -78,8 +86,8 @@ mod test {
 
     #[async_trait]
     impl Provider<TestService> for TestServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<Box<TestService>> {
-            Ok(Box::new(TestService::new(self.id.clone())))
+        async fn provide(&self, _i: &Inject) -> ProvideResult<TestService> {
+            provide(TestService::new(self.id.clone()))
         }
     }
 
@@ -96,15 +104,15 @@ mod test {
 
     #[async_trait]
     impl Provider<OtherService> for OtherServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<Box<OtherService>> {
-            Ok(Box::new(OtherService::new(self.id.clone())))
+        async fn provide(&self, _i: &Inject) -> ProvideResult<OtherService> {
+            provide(OtherService::new(self.id.clone()))
         }
     }
 
     #[async_trait]
     impl Provider<Arc<dyn HasId>> for OtherServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<Box<Arc<dyn HasId>>> {
-            Ok(Box::new(Arc::new(OtherService::new(self.id.clone()))))
+        async fn provide(&self, _i: &Inject) -> ProvideResult<Arc<dyn HasId>> {
+            provide(Arc::new(OtherService::new(self.id.clone())))
         }
     }
 
@@ -113,10 +121,8 @@ mod test {
 
     #[async_trait]
     impl Provider<Arc<dyn HasId>> for TestServiceHasIdProvider {
-        async fn provide(&self, _i: &Inject) -> Result<Box<Arc<dyn HasId>>> {
-            Ok(Box::new(Arc::new(OtherService::new(
-                "test-service".to_string(),
-            ))))
+        async fn provide(&self, _i: &Inject) -> ProvideResult<Arc<dyn HasId>> {
+            provide(Arc::new(OtherService::new("test-service".to_string())))
         }
     }
 
