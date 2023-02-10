@@ -37,7 +37,7 @@ As development progresses, major features will be split up into separate crates,
 
 ## Etymology
 
-A Nakago (中子) is a Japanese word meaning "core", or less commonly the "middle of a nest of boxes". It often refers to the [tang](https://en.wikipedia.org/wiki/Tang_(tools)) of a Japanese Katana - the foundation of the hilt and the mechanism through which a sword is wielded. The nakago must be sound and resilient, allowing the holder to guide the blade with confidence.
+Nakago (中子) is a Japanese word meaning "core", or less commonly the "middle of a nest of boxes". It often refers to the [tang](https://en.wikipedia.org/wiki/Tang_(tools)) of a Japanese katana - the foundation of the hilt and the mechanism through which a sword is wielded. The nakago must be sound and resilient, allowing the holder to guide the blade with confidence.
 
 ## Development
 

@@ -7,8 +7,6 @@ description = "A lightweight Rust framework for sharp services 😎"
 repository = "https://github.com/bkonkle/nakago"
 license = "MIT"
 
-publish = false # TODO: Remove when ready to publish
-
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
