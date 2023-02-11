@@ -9,8 +9,8 @@ env:
     CARGO_TERM_COLOR: always
 
 jobs:
-
     release:
+        if: ${{ false }} # disable for now
         name: Publishing for ${{ matrix.job.target }}
         runs-on: ${{ matrix.job.os }}
         strategy:
@@ -81,4 +81,3 @@ jobs:
 
             - name: Publish
               run: cargo publish --token "${{ secrets.CARGO_API_KEY }}"
-
