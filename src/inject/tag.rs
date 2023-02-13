@@ -1,7 +1,10 @@
 use std::{any::Any, fmt::Display, marker::PhantomData, ops::Deref};
 
-use super::{Error, Key};
-use crate::Inject;
+use parking_lot::{
+    MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLockReadGuard, RwLockWriteGuard,
+};
+
+use super::{Error, Inject, Key, Result};
 
 /// A dependency injection Tag representing a specific type
 pub struct Tag<T> {
@@ -37,54 +40,79 @@ impl<T> Deref for Tag<T> {
 }
 
 impl Inject {
-    /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
-    pub fn get_tag<T: Any>(&self, tag: &'static Tag<T>) -> Result<&T, Error> {
-        self.get_tag_opt::<T>(tag).ok_or_else(|| Error::NotFound {
-            missing: Key::from_tag::<T>(tag.tag),
+    /// Retrieve a reference to a dependency if it exists in the map
+    pub fn get_tag<T: Any>(&self, tag: &'static Tag<T>) -> Result<MappedRwLockReadGuard<'_, &T>> {
+        let key = Key::from_tag::<T>(tag.tag);
+
+        RwLockReadGuard::try_map(self.0.read(), |m| {
+            m.get(&key).and_then(|b| b.downcast_ref())
+        })
+        .map_err(|_| Error::NotFound {
+            missing: Key::from_type_id::<T>(),
             available: self.available_type_names(),
         })
     }
 
-    /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub fn get_tag_mut<T: Any>(&mut self, tag: &'static Tag<T>) -> Result<&mut T, Error> {
-        // TODO: Move this into .ok_or_else()
-        let available = self.available_type_names();
+    // /// Retrieve a mutable reference to a dependency if it exists in the map
+    // pub fn get_tag_mut<T: Any>(
+    //     &self,
+    //     tag: &'static Tag<T>,
+    // ) -> Result<MappedRwLockWriteGuard<'_, &mut T>> {
+    //     let key = Key::from_tag::<T>(tag.tag);
 
-        self.get_tag_mut_opt::<T>(tag)
-            .ok_or_else(|| Error::NotFound {
-                missing: Key::from_tag::<T>(tag.tag),
-                available,
-            })
-    }
+    //     RwLockWriteGuard::try_map(self.0.write(), |m| {
+    //         m.get_mut(&key).and_then(|b| b.downcast_mut())
+    //     })
+    //     .map_err(|_| Error::NotFound {
+    //         missing: Key::from_type_id::<T>(),
+    //         available: self.available_type_names(),
+    //     })
+    // }
 
-    /// Retrieve a reference to a tagged dependency if it exists in the map
-    pub fn get_tag_opt<T: Any>(&self, tag: &'static Tag<T>) -> Option<&T> {
-        let key = Key::from_tag::<T>(tag.tag);
+    // /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
+    // pub fn get_tag<T: Any>(&self, tag: &'static Tag<T>) -> Result<&T, Error> {
+    //     self.get_tag_opt::<T>(tag).ok_or_else(|| Error::NotFound {
+    //         missing: Key::from_tag::<T>(tag.tag),
+    //         available: self.available_type_names(),
+    //     })
+    // }
 
-        self.0
-            .read()
-            .get(&key)
-            .and_then(|d| d.downcast_ref::<Box<T>>())
-            .map(|d| &**d)
-    }
+    // /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
+    // pub fn get_tag_mut<T: Any>(&mut self, tag: &'static Tag<T>) -> Result<&mut T, Error> {
+    //     // TODO: Move this into .ok_or_else()
+    //     let available = self.available_type_names();
 
-    /// Retrieve a mutable reference to a tagged dependency if it exists in the map
-    pub fn get_tag_mut_opt<T: Any>(&mut self, tag: &'static Tag<T>) -> Option<&mut T> {
-        let key = Key::from_tag::<T>(tag.tag);
+    //     self.get_tag_mut_opt::<T>(tag)
+    //         .ok_or_else(|| Error::NotFound {
+    //             missing: Key::from_tag::<T>(tag.tag),
+    //             available,
+    //         })
+    // }
 
-        self.0
-            .read()
-            .get_mut(&key)
-            .and_then(|d| d.downcast_mut::<Box<T>>())
-            .map(|d| &mut **d)
-    }
+    // /// Retrieve a reference to a tagged dependency if it exists in the map
+    // pub fn get_tag_opt<T: Any>(&self, tag: &'static Tag<T>) -> Option<&T> {
+    //     let key = Key::from_tag::<T>(tag.tag);
+
+    //     self.0
+    //         .read()
+    //         .get(&key)
+    //         .and_then(|d| d.downcast_ref::<Box<T>>())
+    //         .map(|d| &**d)
+    // }
+
+    // /// Retrieve a mutable reference to a tagged dependency if it exists in the map
+    // pub fn get_tag_mut_opt<T: Any>(&mut self, tag: &'static Tag<T>) -> Option<&mut T> {
+    //     let key = Key::from_tag::<T>(tag.tag);
+
+    //     self.0
+    //         .read()
+    //         .get_mut(&key)
+    //         .and_then(|d| d.downcast_mut::<Box<T>>())
+    //         .map(|d| &mut **d)
+    // }
 
     /// Provide a tagged dependency directly
-    pub fn inject_tag<T: Any + Sync + Send>(
-        &mut self,
-        dep: Box<T>,
-        tag: &'static Tag<T>,
-    ) -> Result<(), Error> {
+    pub fn inject_tag<T: Any + Sync + Send>(&mut self, dep: T, tag: &'static Tag<T>) -> Result<()> {
         let key = Key::from_tag::<T>(tag.tag);
 
         if self.0.read().contains_key(&key) {
@@ -99,9 +127,9 @@ impl Inject {
     /// Replace an existing tagged dependency directly
     pub fn replace_tag<T: Any + Sync + Send>(
         &mut self,
-        dep: Box<T>,
+        dep: T,
         tag: &'static Tag<T>,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let key = Key::from_tag::<T>(tag.tag);
 
         if !self.0.read().contains_key(&key) {
@@ -141,10 +169,7 @@ pub(crate) mod test {
     fn test_inject_tag_success() -> Result<()> {
         let mut i = Inject::default();
 
-        i.inject_tag(
-            Box::new(TestService::new(fake::uuid::UUIDv4.fake())),
-            &SERVICE_TAG,
-        )?;
+        i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG)?;
 
         assert!(
             i.0.read()
@@ -159,16 +184,10 @@ pub(crate) mod test {
     fn test_inject_tag_occupied() -> Result<()> {
         let mut i = Inject::default();
 
-        i.inject_tag(
-            Box::new(TestService::new(fake::uuid::UUIDv4.fake())),
-            &SERVICE_TAG,
-        )?;
+        i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG)?;
 
         // Inject the same type a second time
-        let result = i.inject_tag(
-            Box::new(TestService::new(fake::uuid::UUIDv4.fake())),
-            &SERVICE_TAG,
-        );
+        let result = i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG);
 
         if let Err(err) = result {
             assert_eq!(
@@ -182,31 +201,31 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_get_tag_opt_success() -> Result<()> {
-        let mut i = Inject::default();
+    // #[test]
+    // fn test_get_tag_opt_success() -> Result<()> {
+    //     let mut i = Inject::default();
 
-        let expected: String = fake::uuid::UUIDv4.fake();
+    //     let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
+    //     i.inject_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
 
-        let result = i.get_tag_opt(&SERVICE_TAG).unwrap();
+    //     let result = i.get_tag_opt(&SERVICE_TAG).unwrap();
 
-        assert_eq!(expected, result.id);
+    //     assert_eq!(expected, result.id);
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    #[test]
-    fn test_get_tag_opt_not_found() -> Result<()> {
-        let i = Inject::default();
+    // #[test]
+    // fn test_get_tag_opt_not_found() -> Result<()> {
+    //     let i = Inject::default();
 
-        let result = i.get_tag_opt(&SERVICE_TAG);
+    //     let result = i.get_tag_opt(&SERVICE_TAG);
 
-        assert!(result.is_none());
+    //     assert!(result.is_none());
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     #[test]
     fn test_get_tag_success() -> Result<()> {
@@ -214,7 +233,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
+        i.inject_tag(TestService::new(expected.clone()), &SERVICE_TAG)?;
 
         let result = i.get_tag(&SERVICE_TAG)?;
 
@@ -229,10 +248,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag::<Arc<dyn HasId>>(
-            Box::new(Arc::new(TestService::new(expected.clone()))),
-            &DYN_TAG,
-        )?;
+        i.inject_tag::<Arc<dyn HasId>>(Arc::new(TestService::new(expected.clone())), &DYN_TAG)?;
 
         let result = i.get_tag(&DYN_TAG)?;
 
@@ -259,64 +275,64 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_get_tag_mut_opt_success() -> Result<()> {
-        let mut i = Inject::default();
+    // #[test]
+    // fn test_get_tag_mut_opt_success() -> Result<()> {
+    //     let mut i = Inject::default();
 
-        let expected: String = fake::uuid::UUIDv4.fake();
+    //     let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
+    //     i.inject_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
 
-        let result = i.get_tag_mut_opt(&SERVICE_TAG).unwrap();
+    //     let result = i.get_tag_mut_opt(&SERVICE_TAG).unwrap();
 
-        assert_eq!(expected, result.id);
+    //     assert_eq!(expected, result.id);
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    #[test]
-    fn test_get_tag_mut_opt_not_found() -> Result<()> {
-        let mut i = Inject::default();
+    // #[test]
+    // fn test_get_tag_mut_opt_not_found() -> Result<()> {
+    //     let mut i = Inject::default();
 
-        let result = i.get_tag_mut_opt(&SERVICE_TAG);
+    //     let result = i.get_tag_mut_opt(&SERVICE_TAG);
 
-        assert!(result.is_none());
+    //     assert!(result.is_none());
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    #[test]
-    fn test_get_tag_mut_success() -> Result<()> {
-        let mut i = Inject::default();
+    // #[test]
+    // fn test_get_tag_mut_success() -> Result<()> {
+    //     let mut i = Inject::default();
 
-        let expected: String = fake::uuid::UUIDv4.fake();
+    //     let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
+    //     i.inject_tag(TestService::new(expected.clone()), &SERVICE_TAG)?;
 
-        let result = i.get_tag_mut(&SERVICE_TAG)?;
+    //     let result = i.get_tag_mut(&SERVICE_TAG)?;
 
-        assert_eq!(expected, result.id);
+    //     assert_eq!(expected, result.id);
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    #[test]
-    fn test_get_tag_mut_not_found() -> Result<()> {
-        let mut i = Inject::default();
+    // #[test]
+    // fn test_get_tag_mut_not_found() -> Result<()> {
+    //     let i = Inject::default();
 
-        let result = i.get_tag_mut(&SERVICE_TAG);
+    //     let result = i.get_tag_mut(&SERVICE_TAG);
 
-        if let Err(err) = result {
-            assert_eq!(
-                format!("{} was not found\n\nAvailable: (empty)", SERVICE_TAG),
-                err.to_string()
-            );
-        } else {
-            panic!("did not return Err as expected")
-        }
+    //     if let Err(err) = result {
+    //         assert_eq!(
+    //             format!("{} was not found\n\nAvailable: (empty)", SERVICE_TAG),
+    //             err.to_string()
+    //         );
+    //     } else {
+    //         panic!("did not return Err as expected")
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     #[test]
     fn test_replace_tag_success() -> Result<()> {
@@ -324,13 +340,10 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag(
-            Box::new(TestService::new(fake::uuid::UUIDv4.fake())),
-            &SERVICE_TAG,
-        )?;
+        i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG)?;
 
         // Override the instance that was injected the first time
-        i.replace_tag(Box::new(TestService::new(expected.clone())), &SERVICE_TAG)?;
+        i.replace_tag(TestService::new(expected.clone()), &SERVICE_TAG)?;
 
         let result = i.get_tag(&SERVICE_TAG)?;
 
@@ -343,16 +356,10 @@ pub(crate) mod test {
     fn test_replace_not_found() -> Result<()> {
         let mut i = Inject::default();
 
-        i.inject_tag(
-            Box::new(TestService::new(fake::uuid::UUIDv4.fake())),
-            &SERVICE_TAG,
-        )?;
+        i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG)?;
 
         // Override a type that doesn't have any instances yet
-        let result = i.replace_tag(
-            Box::new(OtherService::new(fake::uuid::UUIDv4.fake())),
-            &OTHER_TAG,
-        );
+        let result = i.replace_tag(OtherService::new(fake::uuid::UUIDv4.fake()), &OTHER_TAG);
 
         if let Err(err) = result {
             assert_eq!(
