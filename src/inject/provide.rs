@@ -7,7 +7,7 @@ use super::{tag::Tag, Inject, Result};
 #[async_trait]
 pub trait Provider<T>
 where
-    T: Any + Send + Sync,
+    T: Any + Send,
 {
     /// Provide a dependency for the container
     async fn provide(&self, i: &Inject) -> Result<T>;
@@ -17,7 +17,7 @@ impl Inject {
     /// Use a Provider function to inject a dependency
     pub async fn provide<T, P>(&mut self, provider: P) -> Result<()>
     where
-        T: Any + Sync + Send,
+        T: Any + Send,
         P: Provider<T>,
     {
         self.inject::<T>(provider.provide(self).await?)
@@ -26,7 +26,7 @@ impl Inject {
     /// Use a Provider function to replace an existing dependency
     pub async fn replace_with<T, P>(&mut self, provider: P) -> Result<()>
     where
-        T: Any + Sync + Send,
+        T: Any + Send,
         P: Provider<T>,
     {
         self.replace::<T>(provider.provide(self).await?)
@@ -35,7 +35,7 @@ impl Inject {
     /// Use a Provider function to inject a tagged dependency
     pub async fn provide_tag<T, P>(&mut self, provider: P, tag: &'static Tag<T>) -> Result<()>
     where
-        T: Any + Sync + Send,
+        T: Any + Send,
         P: Provider<T>,
     {
         self.inject_tag::<T>(provider.provide(self).await?, tag)
@@ -44,7 +44,7 @@ impl Inject {
     /// Use a Provider function to replace a tagged dependency
     pub async fn replace_tag_with<T, P>(&mut self, provider: P, tag: &'static Tag<T>) -> Result<()>
     where
-        T: Any + Sync + Send,
+        T: Any + Send,
         P: Provider<T>,
     {
         self.replace_tag::<T>(provider.provide(self).await?, tag)
@@ -53,9 +53,9 @@ impl Inject {
 
 #[cfg(test)]
 mod test {
-    use std::{any::type_name, sync::Arc};
-
     use fake::Fake;
+    use std::any::type_name;
+    use tokio::time::{sleep, Duration};
 
     use crate::inject::{
         container::test::{HasId, OtherService, TestService},
@@ -102,9 +102,9 @@ mod test {
     }
 
     #[async_trait]
-    impl Provider<Arc<dyn HasId>> for OtherServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<Arc<dyn HasId>> {
-            Ok(Arc::new(OtherService::new(self.id.clone())))
+    impl Provider<Box<dyn HasId>> for OtherServiceProvider {
+        async fn provide(&self, _i: &Inject) -> Result<Box<dyn HasId>> {
+            Ok(Box::new(OtherService::new(self.id.clone())))
         }
     }
 
@@ -112,9 +112,15 @@ mod test {
     pub struct TestServiceHasIdProvider {}
 
     #[async_trait]
-    impl Provider<Arc<dyn HasId>> for TestServiceHasIdProvider {
-        async fn provide(&self, _i: &Inject) -> Result<Arc<dyn HasId>> {
-            Ok(Arc::new(OtherService::new("test-service".to_string())))
+    impl Provider<Box<dyn HasId>> for TestServiceHasIdProvider {
+        async fn provide(&self, i: &Inject) -> Result<Box<dyn HasId>> {
+            // Trigger a borrow so that the reference to `Inject` has to be held across the await
+            // point below, to test issues with Inject thread safety.
+            let _ = i.get::<String>();
+
+            sleep(Duration::from_millis(1)).await;
+
+            Ok(Box::new(OtherService::new("test-service".to_string())))
         }
     }
 
@@ -141,7 +147,7 @@ mod test {
 
         assert!(
             i.0.read()
-                .contains_key(&Key::from_type_id::<Arc<dyn HasId>>()),
+                .contains_key(&Key::from_type_id::<Box<dyn HasId>>()),
             "key does not exist in injection container"
         );
 
@@ -247,7 +253,7 @@ mod test {
 
         assert!(
             i.0.read()
-                .contains_key(&Key::from_tag::<Arc<dyn HasId>>(&DYN_TAG)),
+                .contains_key(&Key::from_tag::<Box<dyn HasId>>(&DYN_TAG)),
             "key does not exist in injection container"
         );
 
