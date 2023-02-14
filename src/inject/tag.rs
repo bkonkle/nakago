@@ -4,14 +4,14 @@ use super::{Error, Key};
 use crate::Inject;
 
 /// A dependency injection Tag representing a specific type
-pub struct Tag<T: ?Sized> {
+pub struct Tag<T> {
     tag: &'static str,
     _phantom: fn() -> PhantomData<T>,
 }
 
 impl<T> Tag<T>
 where
-    T: Sync + Send + ?Sized,
+    T: Sync + Send,
 {
     /// Create a new Tag instance
     pub const fn new(tag: &'static str) -> Self {
@@ -22,13 +22,13 @@ where
     }
 }
 
-impl<T: ?Sized> Display for Tag<T> {
+impl<T> Display for Tag<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Tag({})", self.tag)
     }
 }
 
-impl<T: ?Sized> Deref for Tag<T> {
+impl<T> Deref for Tag<T> {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
@@ -38,7 +38,7 @@ impl<T: ?Sized> Deref for Tag<T> {
 
 impl Inject {
     /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
-    pub fn get_tag<T: Any + ?Sized>(&self, tag: &'static Tag<T>) -> Result<&T, Error> {
+    pub fn get_tag<T: Any>(&self, tag: &'static Tag<T>) -> Result<&T, Error> {
         self.get_tag_opt::<T>(tag).ok_or_else(|| Error::NotFound {
             missing: Key::from_tag::<T>(tag.tag),
             available: self.available_type_names(),
@@ -46,7 +46,7 @@ impl Inject {
     }
 
     /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub fn get_tag_mut<T: Any + ?Sized>(&mut self, tag: &'static Tag<T>) -> Result<&mut T, Error> {
+    pub fn get_tag_mut<T: Any>(&mut self, tag: &'static Tag<T>) -> Result<&mut T, Error> {
         // TODO: Move this into .ok_or_else()
         let available = self.available_type_names();
 
@@ -58,58 +58,60 @@ impl Inject {
     }
 
     /// Retrieve a reference to a tagged dependency if it exists in the map
-    pub fn get_tag_opt<T: Any + ?Sized>(&self, tag: &'static Tag<T>) -> Option<&T> {
+    pub fn get_tag_opt<T: Any>(&self, tag: &'static Tag<T>) -> Option<&T> {
         let key = Key::from_tag::<T>(tag.tag);
 
         self.0
+            .read()
             .get(&key)
             .and_then(|d| d.downcast_ref::<Box<T>>())
             .map(|d| &**d)
     }
 
     /// Retrieve a mutable reference to a tagged dependency if it exists in the map
-    pub fn get_tag_mut_opt<T: Any + ?Sized>(&mut self, tag: &'static Tag<T>) -> Option<&mut T> {
+    pub fn get_tag_mut_opt<T: Any>(&mut self, tag: &'static Tag<T>) -> Option<&mut T> {
         let key = Key::from_tag::<T>(tag.tag);
 
         self.0
+            .read()
             .get_mut(&key)
             .and_then(|d| d.downcast_mut::<Box<T>>())
             .map(|d| &mut **d)
     }
 
     /// Provide a tagged dependency directly
-    pub fn inject_tag<T: Any + Sync + Send + ?Sized>(
+    pub fn inject_tag<T: Any + Sync + Send>(
         &mut self,
         dep: Box<T>,
         tag: &'static Tag<T>,
     ) -> Result<(), Error> {
         let key = Key::from_tag::<T>(tag.tag);
 
-        if self.0.contains_key(&key) {
+        if self.0.read().contains_key(&key) {
             return Err(Error::Occupied(key));
         }
 
-        let _ = self.0.insert(key, Box::new(dep));
+        let _ = self.0.write().insert(key, Box::new(dep));
 
         Ok(())
     }
 
     /// Replace an existing tagged dependency directly
-    pub fn replace_tag<T: Any + Sync + Send + ?Sized>(
+    pub fn replace_tag<T: Any + Sync + Send>(
         &mut self,
         dep: Box<T>,
         tag: &'static Tag<T>,
     ) -> Result<(), Error> {
         let key = Key::from_tag::<T>(tag.tag);
 
-        if !self.0.contains_key(&key) {
+        if !self.0.read().contains_key(&key) {
             return Err(Error::NotFound {
                 missing: Key::from_tag::<T>(tag.tag),
                 available: self.available_type_names(),
             });
         }
 
-        self.0.insert(key, Box::new(dep));
+        self.0.write().insert(key, Box::new(dep));
 
         Ok(())
     }
@@ -145,7 +147,8 @@ pub(crate) mod test {
         )?;
 
         assert!(
-            i.0.contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
+            i.0.read()
+                .contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
             "key does not exist in injection container"
         );
 

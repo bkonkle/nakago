@@ -21,14 +21,14 @@ pub enum Id {
 }
 
 impl Key {
-    pub(crate) fn from_type_id<T: Any + ?Sized>() -> Self {
+    pub(crate) fn from_type_id<T: Any>() -> Self {
         Self {
             id: Id::TypeId(TypeId::of::<T>()),
             type_name: type_name::<T>().to_string(),
         }
     }
 
-    pub(crate) fn from_tag<T: Any + ?Sized>(tag: &'static str) -> Self {
+    pub(crate) fn from_tag<T: Any>(tag: &'static str) -> Self {
         Self {
             id: Id::Tag(tag),
             type_name: type_name::<T>().to_string(),

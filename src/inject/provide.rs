@@ -7,7 +7,7 @@ use super::{tag::Tag, Inject, Result};
 #[async_trait]
 pub trait Provider<T>
 where
-    T: Any + Send + Sync + ?Sized,
+    T: Any + Send + Sync,
 {
     /// Provide a dependency for the container
     async fn provide(&self, i: &Inject) -> ProvideResult<T>;
@@ -25,7 +25,7 @@ impl Inject {
     /// Use a Provider function to inject a dependency
     pub async fn provide<T, P>(&mut self, provider: P) -> Result<()>
     where
-        T: Any + Sync + Send + ?Sized,
+        T: Any + Sync + Send,
         P: Provider<T>,
     {
         self.inject::<T>(provider.provide(self).await?)
@@ -34,7 +34,7 @@ impl Inject {
     /// Use a Provider function to replace an existing dependency
     pub async fn replace_with<T, P>(&mut self, provider: P) -> Result<()>
     where
-        T: Any + Sync + Send + ?Sized,
+        T: Any + Sync + Send,
         P: Provider<T>,
     {
         self.replace::<T>(provider.provide(self).await?)
@@ -43,7 +43,7 @@ impl Inject {
     /// Use a Provider function to inject a tagged dependency
     pub async fn provide_tag<T, P>(&mut self, provider: P, tag: &'static Tag<T>) -> Result<()>
     where
-        T: Any + Sync + Send + ?Sized,
+        T: Any + Sync + Send,
         P: Provider<T>,
     {
         self.inject_tag::<T>(provider.provide(self).await?, tag)
@@ -52,7 +52,7 @@ impl Inject {
     /// Use a Provider function to replace a tagged dependency
     pub async fn replace_tag_with<T, P>(&mut self, provider: P, tag: &'static Tag<T>) -> Result<()>
     where
-        T: Any + Sync + Send + ?Sized,
+        T: Any + Sync + Send,
         P: Provider<T>,
     {
         self.replace_tag::<T>(provider.provide(self).await?, tag)
@@ -134,7 +134,7 @@ mod test {
             .await?;
 
         assert!(
-            i.0.contains_key(&Key::from_type_id::<TestService>()),
+            i.0.read().contains_key(&Key::from_type_id::<TestService>()),
             "key does not exist in injection container"
         );
 
@@ -148,7 +148,8 @@ mod test {
         i.provide(TestServiceHasIdProvider::default()).await?;
 
         assert!(
-            i.0.contains_key(&Key::from_type_id::<Arc<dyn HasId>>()),
+            i.0.read()
+                .contains_key(&Key::from_type_id::<Arc<dyn HasId>>()),
             "key does not exist in injection container"
         );
 
@@ -237,7 +238,8 @@ mod test {
         .await?;
 
         assert!(
-            i.0.contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
+            i.0.read()
+                .contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
             "key does not exist in injection container"
         );
 
@@ -252,7 +254,8 @@ mod test {
             .await?;
 
         assert!(
-            i.0.contains_key(&Key::from_tag::<Arc<dyn HasId>>(&DYN_TAG)),
+            i.0.read()
+                .contains_key(&Key::from_tag::<Arc<dyn HasId>>(&DYN_TAG)),
             "key does not exist in injection container"
         );
 

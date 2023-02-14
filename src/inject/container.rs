@@ -1,17 +1,20 @@
 use fnv::FnvHashMap;
+use parking_lot::{
+    MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
+};
 use std::{any::Any, fmt::Debug, ops::Deref};
 
 use super::{Error, Key, Result};
 
 /// A type map for dependency injection
-pub(crate) type TypeMap = FnvHashMap<Key, Box<dyn Any + Sync + Send>>;
+pub(crate) type TypeMap = FnvHashMap<Key, Box<dyn Any>>;
 
 /// The injection Container
 #[derive(Default, Debug)]
-pub struct Inject(pub(crate) TypeMap);
+pub struct Inject(pub(crate) RwLock<TypeMap>);
 
 impl Deref for Inject {
-    type Target = TypeMap;
+    type Target = RwLock<TypeMap>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -20,7 +23,7 @@ impl Deref for Inject {
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub fn get<T: Any + ?Sized>(&self) -> Result<&T> {
+    pub fn get<T: Any>(&self) -> Result<&T> {
         self.get_opt::<T>().ok_or_else(|| Error::NotFound {
             missing: Key::from_type_id::<T>(),
             available: self.available_type_names(),
@@ -28,7 +31,7 @@ impl Inject {
     }
 
     /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub fn get_mut<T: Any + ?Sized>(&mut self) -> Result<&mut T> {
+    pub fn get_mut<T: Any>(&mut self) -> Result<&mut T> {
         // TODO: Since `self` is borrowed as a mutable ref for `self.get_mut_opt()`, it cannot be
         // used for self.available_type_names() within the `.ok_or_else()` call below. Because of
         // this, the `available` property is pre-loaded here in case there is an error. It must
@@ -43,56 +46,59 @@ impl Inject {
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
-    pub fn get_opt<T: Any + ?Sized>(&self) -> Option<&T> {
+    pub fn get_opt<T: Any>(&self) -> Option<&T> {
         let key = Key::from_type_id::<T>();
 
-        self.0
-            .get(&key)
-            .and_then(|d| d.downcast_ref::<Box<T>>())
-            .map(|d| &**d)
+        *RwLockReadGuard::map(self.0.read(), |m| {
+            &m.get(&key)
+                .and_then(|b| Some(b.downcast_ref()))
+                .unwrap_or(None)
+        })
     }
 
     /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub fn get_mut_opt<T: Any + ?Sized>(&mut self) -> Option<&mut T> {
+    pub fn get_mut_opt<T: Any>(&mut self) -> Option<&mut T> {
         let key = Key::from_type_id::<T>();
 
-        self.0
-            .get_mut(&key)
-            .and_then(|d| d.downcast_mut::<Box<T>>())
-            .map(|d| &mut **d)
+        *RwLockWriteGuard::map(self.0.write(), |m| {
+            &mut m
+                .get_mut(&key)
+                .and_then(|b| Some(b.downcast_mut()))
+                .unwrap_or(None)
+        })
     }
 
     /// Provide a dependency directly
-    pub fn inject<T: Any + Sync + Send + ?Sized>(&mut self, dep: Box<T>) -> Result<()> {
+    pub fn inject<T: Any + Send + Sync>(&mut self, dep: Box<T>) -> Result<()> {
         let key = Key::from_type_id::<T>();
 
-        if self.0.contains_key(&key) {
+        if self.0.read().contains_key(&key) {
             return Err(Error::Occupied(key));
         }
 
-        let _ = self.0.insert(key, Box::new(dep));
+        let _ = self.0.write().insert(key, Box::new(dep));
 
         Ok(())
     }
 
     /// Replace an existing dependency directly
-    pub fn replace<T: Any + Sync + Send + ?Sized>(&mut self, dep: Box<T>) -> Result<()> {
+    pub fn replace<T: Any + Sync + Send>(&mut self, dep: Box<T>) -> Result<()> {
         let key = Key::from_type_id::<T>();
 
-        if !self.0.contains_key(&key) {
+        if !self.0.read().contains_key(&key) {
             return Err(Error::NotFound {
                 missing: Key::from_type_id::<T>(),
                 available: self.available_type_names(),
             });
         }
 
-        self.0.insert(key, Box::new(dep));
+        self.0.write().insert(key, Box::new(dep));
 
         Ok(())
     }
 
     pub(crate) fn available_type_names(&self) -> Vec<Key> {
-        self.0.keys().cloned().collect()
+        self.0.read().keys().cloned().collect()
     }
 }
 
@@ -148,7 +154,7 @@ pub(crate) mod test {
         i.inject(Box::new(service))?;
 
         assert!(
-            i.0.contains_key(&Key::from_type_id::<TestService>()),
+            i.0.read().contains_key(&Key::from_type_id::<TestService>()),
             "key does not exist in injection container"
         );
 
