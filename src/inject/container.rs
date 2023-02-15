@@ -7,7 +7,7 @@ use std::{any::Any, fmt::Debug};
 use super::{Error, Key, Result};
 
 /// A type map for dependency injection
-pub(crate) type TypeMap = FnvHashMap<Key, Box<dyn Any>>;
+pub(crate) type TypeMap = FnvHashMap<Key, Box<dyn Any + Send>>;
 
 /// The injection Container
 #[derive(Default, Debug)]
@@ -15,28 +15,28 @@ pub struct Inject(pub(crate) RwLock<TypeMap>);
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists in the map
-    pub fn get<T: Any>(&self) -> Result<MappedRwLockReadGuard<'_, T>> {
+    pub fn get<T: Any + Send>(&self) -> Result<MappedRwLockReadGuard<'_, T>> {
         self.get_key(Key::from_type_id::<T>())
     }
 
     /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub fn get_mut<T: Any>(&self) -> Result<MappedRwLockWriteGuard<'_, T>> {
+    pub fn get_mut<T: Any + Send>(&self) -> Result<MappedRwLockWriteGuard<'_, T>> {
         self.get_key_mut(Key::from_type_id::<T>())
     }
 
     /// Provide a dependency directly
-    pub fn inject<T: Any>(&mut self, dep: T) -> Result<()> {
+    pub fn inject<T: Any + Send>(&mut self, dep: T) -> Result<()> {
         self.inject_key(Key::from_type_id::<T>(), dep)
     }
 
     /// Replace an existing dependency directly
-    pub fn replace<T: Any>(&mut self, dep: T) -> Result<()> {
+    pub fn replace<T: Any + Send>(&mut self, dep: T) -> Result<()> {
         self.replace_key(Key::from_type_id::<T>(), dep)
     }
 
     // The base methods powering both the Tag and TypeId modes
 
-    pub(crate) fn get_key<T: Any>(&self, key: Key) -> Result<MappedRwLockReadGuard<'_, T>> {
+    pub(crate) fn get_key<T: Any + Send>(&self, key: Key) -> Result<MappedRwLockReadGuard<'_, T>> {
         RwLockReadGuard::try_map(self.0.read(), |m| {
             m.get(&key).and_then(|b| b.downcast_ref())
         })
@@ -46,7 +46,10 @@ impl Inject {
         })
     }
 
-    pub(crate) fn get_key_mut<T: Any>(&self, key: Key) -> Result<MappedRwLockWriteGuard<'_, T>> {
+    pub(crate) fn get_key_mut<T: Any + Send>(
+        &self,
+        key: Key,
+    ) -> Result<MappedRwLockWriteGuard<'_, T>> {
         RwLockWriteGuard::try_map(self.0.write(), |m| {
             m.get_mut(&key).and_then(|b| b.downcast_mut())
         })
@@ -56,7 +59,7 @@ impl Inject {
         })
     }
 
-    pub(crate) fn inject_key<T: Any>(&mut self, key: Key, dep: T) -> Result<()> {
+    pub(crate) fn inject_key<T: Any + Send>(&mut self, key: Key, dep: T) -> Result<()> {
         if self.0.read().contains_key(&key) {
             return Err(Error::Occupied(key));
         }
@@ -66,7 +69,7 @@ impl Inject {
         Ok(())
     }
 
-    pub(crate) fn replace_key<T: Any>(&mut self, key: Key, dep: T) -> Result<()> {
+    pub(crate) fn replace_key<T: Any + Send>(&mut self, key: Key, dep: T) -> Result<()> {
         if !self.0.read().contains_key(&key) {
             return Err(Error::NotFound {
                 missing: key,

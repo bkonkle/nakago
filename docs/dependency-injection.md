@@ -109,18 +109,18 @@ If you use a mismatched type the compiler will complain, saving you from a likel
 error[E0308]: mismatched types
    --> src/my/entity.rs:216:45
     |
-216 |         let result = i.get_tag::<dyn Repository>(&POSTGRES_REPO)?;
-    |                        ------------------------- ^^^^^^^^^^^^ expected trait object `dyn inject::container::test::entity::Repository`, found struct `inject::container::test::entity::PostgresRepository`
+216 |         let result = i.get_tag::<Box<dyn Repository>>(&POSTGRES_REPO)?;
+    |                        ------------------------------ ^^^^^^^^^^^^ expected trait object `Box<dyn inject::container::test::entity::Repository>`, found struct `Box<inject::container::test::entity::PostgresRepository>`
     |                        |
     |                        arguments to this function are incorrect
     |
-    = note: expected reference `&'static inject::tag::Tag<dyn inject::container::test::entity::Repository>`
-               found reference `&inject::tag::Tag<inject::container::test::entity::PostgresRepository>`
+    = note: expected reference `&'static inject::tag::Tag<Box<dyn inject::container::test::entity::Repository>>`
+               found reference `&inject::tag::Tag<Box<inject::container::test::entity::PostgresRepository>>`
 note: associated function defined here
    --> src/inject/tag.rs:41:12
     |
-41  |     pub fn get_tag<T: Any + ?Sized>(&self, tag: &'static Tag<T>) -> Result<&T, Error> {
-    |            ^^^^^^^                         --------------------
+41  |     pub fn get_tag<T: Any + Send>(&self, tag: &'static Tag<T>) -> Result<&T, Error> {
+    |            ^^^^^^^                       --------------------
 ```
 
 ### Providers

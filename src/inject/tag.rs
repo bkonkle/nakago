@@ -39,12 +39,15 @@ impl<T> Deref for Tag<T> {
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists in the map
-    pub fn get_tag<T: Any>(&self, tag: &'static Tag<T>) -> Result<MappedRwLockReadGuard<'_, T>> {
+    pub fn get_tag<T: Any + Send>(
+        &self,
+        tag: &'static Tag<T>,
+    ) -> Result<MappedRwLockReadGuard<'_, T>> {
         self.get_key(Key::from_tag::<T>(tag.tag))
     }
 
     /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub fn get_tag_mut<T: Any>(
+    pub fn get_tag_mut<T: Any + Send>(
         &self,
         tag: &'static Tag<T>,
     ) -> Result<MappedRwLockWriteGuard<'_, T>> {
@@ -52,12 +55,12 @@ impl Inject {
     }
 
     /// Provide a tagged dependency directly
-    pub fn inject_tag<T: Any>(&mut self, dep: T, tag: &'static Tag<T>) -> Result<()> {
+    pub fn inject_tag<T: Any + Send>(&mut self, dep: T, tag: &'static Tag<T>) -> Result<()> {
         self.inject_key(Key::from_tag::<T>(tag.tag), dep)
     }
 
     /// Replace an existing tagged dependency directly
-    pub fn replace_tag<T: Any>(&mut self, dep: T, tag: &'static Tag<T>) -> Result<()> {
+    pub fn replace_tag<T: Any + Send>(&mut self, dep: T, tag: &'static Tag<T>) -> Result<()> {
         self.replace_key(Key::from_tag::<T>(tag.tag), dep)
     }
 }
