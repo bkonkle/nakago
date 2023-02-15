@@ -9,18 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Export more things for easier ergonomics
+- Export more things for easier ergonomics ([#5](https://github.com/bkonkle/nakago/pull/5))
 
 ### Fixed
 
-- Fixed the CI build
-- Disabled auto-publishing (for now)
+- Fixed the CI build ([#4](https://github.com/bkonkle/nakago/pull/4))
+- Disabled auto-publishing (for now) ([#4](https://github.com/bkonkle/nakago/pull/4))
+
+### Removed
+
+- Remove `inject::ProvideResult` and `inject::provide(...)` and clean up unnecessary boxing. ([#6](https://github.com/bkonkle/nakago/pull/6))
 
 ## [0.2.0] - 2023-02-10
 
 ### Added
 
-- Add `inject::ProvideResult<dyn Repository>` and `inject::provide(...)` to make the `Ok(Box::new(...))` less obtrusive. ([#3](https://github.com/bkonkle/nakago/pull/3))
+- Add `inject::ProvideResult` and `inject::provide(...)` to make the `Ok(Box::new(...))` less obtrusive. ([#3](https://github.com/bkonkle/nakago/pull/3))
 
 ### Changed
 

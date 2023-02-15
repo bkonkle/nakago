@@ -1,5 +1,5 @@
 use fnv::FnvHashMap;
-use std::{any::Any, fmt::Debug, ops::Deref};
+use std::{any::Any, fmt::Debug};
 
 use super::{Error, Key, Result};
 
@@ -10,25 +10,49 @@ pub(crate) type TypeMap = FnvHashMap<Key, Box<dyn Any + Sync + Send>>;
 #[derive(Default, Debug)]
 pub struct Inject(pub(crate) TypeMap);
 
-impl Deref for Inject {
-    type Target = TypeMap;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub fn get<T: Any + ?Sized>(&self) -> Result<&T> {
-        self.get_opt::<T>().ok_or_else(|| Error::NotFound {
-            missing: Key::from_type_id::<T>(),
-            available: self.available_type_names(),
-        })
+    pub fn get<T: Any>(&self) -> Result<&T> {
+        self.get_key(Key::from_type_id::<T>())
     }
 
     /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub fn get_mut<T: Any + ?Sized>(&mut self) -> Result<&mut T> {
+    pub fn get_mut<T: Any>(&mut self) -> Result<&mut T> {
+        self.get_key_mut(Key::from_type_id::<T>())
+    }
+
+    /// Retrieve a reference to a dependency if it exists in the map
+    pub fn get_opt<T: Any>(&self) -> Option<&T> {
+        self.get_key_opt(Key::from_type_id::<T>())
+    }
+
+    /// Retrieve a mutable reference to a dependency if it exists in the map
+    pub fn get_mut_opt<T: Any>(&mut self) -> Option<&mut T> {
+        self.get_key_mut_opt(Key::from_type_id::<T>())
+    }
+
+    /// Provide a dependency directly
+    pub fn inject<T: Any + Sync + Send>(&mut self, dep: T) -> Result<()> {
+        self.inject_key(Key::from_type_id::<T>(), dep)
+    }
+
+    /// Replace an existing dependency directly
+    pub fn replace<T: Any + Sync + Send>(&mut self, dep: T) -> Result<()> {
+        self.replace_key(Key::from_type_id::<T>(), dep)
+    }
+
+    // The base methods powering both the Tag and TypeId modes
+
+    pub(crate) fn get_key<T: Any>(&self, key: Key) -> Result<&T> {
+        self.get_key_opt::<T>(key.clone())
+            .ok_or_else(|| Error::NotFound {
+                missing: key,
+                available: self.available_type_names(),
+            })
+    }
+
+    /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
+    pub(crate) fn get_key_mut<T: Any>(&mut self, key: Key) -> Result<&mut T> {
         // TODO: Since `self` is borrowed as a mutable ref for `self.get_mut_opt()`, it cannot be
         // used for self.available_type_names() within the `.ok_or_else()` call below. Because of
         // this, the `available` property is pre-loaded here in case there is an error. It must
@@ -36,36 +60,25 @@ impl Inject {
         // avoid it.
         let available = self.available_type_names();
 
-        self.get_mut_opt::<T>().ok_or_else(|| Error::NotFound {
-            missing: Key::from_type_id::<T>(),
-            available,
-        })
+        self.get_key_mut_opt::<T>(key.clone())
+            .ok_or(Error::NotFound {
+                missing: key,
+                available,
+            })
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
-    pub fn get_opt<T: Any + ?Sized>(&self) -> Option<&T> {
-        let key = Key::from_type_id::<T>();
-
-        self.0
-            .get(&key)
-            .and_then(|d| d.downcast_ref::<Box<T>>())
-            .map(|d| &**d)
+    pub(crate) fn get_key_opt<T: Any>(&self, key: Key) -> Option<&T> {
+        self.0.get(&key).and_then(|d| d.downcast_ref::<T>())
     }
 
     /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub fn get_mut_opt<T: Any + ?Sized>(&mut self) -> Option<&mut T> {
-        let key = Key::from_type_id::<T>();
-
-        self.0
-            .get_mut(&key)
-            .and_then(|d| d.downcast_mut::<Box<T>>())
-            .map(|d| &mut **d)
+    pub(crate) fn get_key_mut_opt<T: Any>(&mut self, key: Key) -> Option<&mut T> {
+        self.0.get_mut(&key).and_then(|d| d.downcast_mut::<T>())
     }
 
     /// Provide a dependency directly
-    pub fn inject<T: Any + Sync + Send + ?Sized>(&mut self, dep: Box<T>) -> Result<()> {
-        let key = Key::from_type_id::<T>();
-
+    pub(crate) fn inject_key<T: Any + Sync + Send>(&mut self, key: Key, dep: T) -> Result<()> {
         if self.0.contains_key(&key) {
             return Err(Error::Occupied(key));
         }
@@ -76,12 +89,10 @@ impl Inject {
     }
 
     /// Replace an existing dependency directly
-    pub fn replace<T: Any + Sync + Send + ?Sized>(&mut self, dep: Box<T>) -> Result<()> {
-        let key = Key::from_type_id::<T>();
-
+    pub(crate) fn replace_key<T: Any + Sync + Send>(&mut self, key: Key, dep: T) -> Result<()> {
         if !self.0.contains_key(&key) {
             return Err(Error::NotFound {
-                missing: Key::from_type_id::<T>(),
+                missing: key,
                 available: self.available_type_names(),
             });
         }
@@ -145,7 +156,7 @@ pub(crate) mod test {
 
         let service = TestService::new(fake::uuid::UUIDv4.fake());
 
-        i.inject(Box::new(service))?;
+        i.inject(service)?;
 
         assert!(
             i.0.contains_key(&Key::from_type_id::<TestService>()),
@@ -159,10 +170,10 @@ pub(crate) mod test {
     fn test_inject_occupied() -> Result<()> {
         let mut i = Inject::default();
 
-        i.inject(Box::new(TestService::new(fake::uuid::UUIDv4.fake())))?;
+        i.inject(TestService::new(fake::uuid::UUIDv4.fake()))?;
 
         // Inject the same type a second time
-        let result = i.inject(Box::new(TestService::new(fake::uuid::UUIDv4.fake())));
+        let result = i.inject(TestService::new(fake::uuid::UUIDv4.fake()));
 
         if let Err(err) = result {
             assert_eq!(
@@ -182,7 +193,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(Box::new(TestService::new(expected.clone())))?;
+        i.inject(TestService::new(expected.clone()))?;
 
         let result = i.get_opt::<TestService>().unwrap();
 
@@ -197,7 +208,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(Box::new(vec![TestService::new(expected.clone())]))?;
+        i.inject(vec![TestService::new(expected.clone())])?;
 
         let result = i.get_opt::<Vec<TestService>>().unwrap();
 
@@ -223,7 +234,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(Box::new(TestService::new(expected.clone())))?;
+        i.inject(TestService::new(expected.clone()))?;
 
         let result = i.get::<TestService>()?;
 
@@ -238,9 +249,9 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject::<dyn HasId>(Box::new(TestService::new(expected.clone())))?;
+        i.inject::<Box<dyn HasId>>(Box::new(TestService::new(expected.clone())))?;
 
-        let repo = i.get::<dyn HasId>()?;
+        let repo = i.get::<Box<dyn HasId>>()?;
 
         assert_eq!(expected, repo.get_id());
 
@@ -274,7 +285,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(Box::new(TestService::new(expected.clone())))?;
+        i.inject(TestService::new(expected.clone()))?;
 
         let result = i.get_mut_opt::<TestService>().unwrap();
 
@@ -300,7 +311,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(Box::new(vec![TestService::new(fake::uuid::UUIDv4.fake())]))?;
+        i.inject(vec![TestService::new(fake::uuid::UUIDv4.fake())])?;
 
         let services = i.get_mut::<Vec<TestService>>()?;
         services.push(TestService::new(expected.clone()));
@@ -339,12 +350,12 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(Box::new(TestService::new(fake::uuid::UUIDv4.fake())))?;
+        i.inject(TestService::new(fake::uuid::UUIDv4.fake()))?;
 
         // Override the instance that was injected the first time
-        i.replace(Box::new(TestService {
+        i.replace(TestService {
             id: expected.clone(),
-        }))?;
+        })?;
 
         let result = i.get::<TestService>()?;
 
@@ -358,7 +369,7 @@ pub(crate) mod test {
         let mut i = Inject::default();
 
         i.inject(Box::new(TestService::new(fake::uuid::UUIDv4.fake())))?;
-        i.inject::<dyn HasId>(Box::new(OtherService::new(fake::uuid::UUIDv4.fake())))?;
+        i.inject::<Box<dyn HasId>>(Box::new(OtherService::new(fake::uuid::UUIDv4.fake())))?;
 
         // Override a type that doesn't have any instances yet
         let result = i.replace(Box::new(OtherService {
@@ -369,9 +380,9 @@ pub(crate) mod test {
             assert_eq!(
                 format!(
                     "{} was not found\n\nAvailable:\n - {}\n\n - {}",
-                    type_name::<OtherService>(),
-                    type_name::<TestService>(),
-                    type_name::<dyn HasId>()
+                    type_name::<Box<OtherService>>(),
+                    type_name::<Box<TestService>>(),
+                    type_name::<Box<dyn HasId>>()
                 ),
                 err.to_string()
             );

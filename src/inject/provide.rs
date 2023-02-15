@@ -7,25 +7,17 @@ use super::{tag::Tag, Inject, Result};
 #[async_trait]
 pub trait Provider<T>
 where
-    T: Any + Send + Sync + ?Sized,
+    T: Any + Send + Sync,
 {
     /// Provide a dependency for the container
-    async fn provide(&self, i: &Inject) -> ProvideResult<T>;
-}
-
-/// A Provider result, which is boxed to allow for unsized types
-pub type ProvideResult<T> = Result<Box<T>>;
-
-/// A convenience wrapper around `Ok(Box::new(...))`, for better readability
-pub fn provide<T>(t: T) -> ProvideResult<T> {
-    Ok(Box::new(t))
+    async fn provide(&self, i: &Inject) -> Result<T>;
 }
 
 impl Inject {
     /// Use a Provider function to inject a dependency
     pub async fn provide<T, P>(&mut self, provider: P) -> Result<()>
     where
-        T: Any + Sync + Send + ?Sized,
+        T: Any + Sync + Send,
         P: Provider<T>,
     {
         self.inject::<T>(provider.provide(self).await?)
@@ -34,7 +26,7 @@ impl Inject {
     /// Use a Provider function to replace an existing dependency
     pub async fn replace_with<T, P>(&mut self, provider: P) -> Result<()>
     where
-        T: Any + Sync + Send + ?Sized,
+        T: Any + Sync + Send,
         P: Provider<T>,
     {
         self.replace::<T>(provider.provide(self).await?)
@@ -43,7 +35,7 @@ impl Inject {
     /// Use a Provider function to inject a tagged dependency
     pub async fn provide_tag<T, P>(&mut self, provider: P, tag: &'static Tag<T>) -> Result<()>
     where
-        T: Any + Sync + Send + ?Sized,
+        T: Any + Sync + Send,
         P: Provider<T>,
     {
         self.inject_tag::<T>(provider.provide(self).await?, tag)
@@ -52,7 +44,7 @@ impl Inject {
     /// Use a Provider function to replace a tagged dependency
     pub async fn replace_tag_with<T, P>(&mut self, provider: P, tag: &'static Tag<T>) -> Result<()>
     where
-        T: Any + Sync + Send + ?Sized,
+        T: Any + Sync + Send,
         P: Provider<T>,
     {
         self.replace_tag::<T>(provider.provide(self).await?, tag)
@@ -61,9 +53,9 @@ impl Inject {
 
 #[cfg(test)]
 mod test {
-    use std::{any::type_name, sync::Arc};
-
     use fake::Fake;
+    use std::{any::type_name, sync::Arc};
+    use tokio::time::{sleep, Duration};
 
     use crate::inject::{
         container::test::{HasId, OtherService, TestService},
@@ -86,8 +78,8 @@ mod test {
 
     #[async_trait]
     impl Provider<TestService> for TestServiceProvider {
-        async fn provide(&self, _i: &Inject) -> ProvideResult<TestService> {
-            provide(TestService::new(self.id.clone()))
+        async fn provide(&self, _i: &Inject) -> Result<TestService> {
+            Ok(TestService::new(self.id.clone()))
         }
     }
 
@@ -104,15 +96,15 @@ mod test {
 
     #[async_trait]
     impl Provider<OtherService> for OtherServiceProvider {
-        async fn provide(&self, _i: &Inject) -> ProvideResult<OtherService> {
-            provide(OtherService::new(self.id.clone()))
+        async fn provide(&self, _i: &Inject) -> Result<OtherService> {
+            Ok(OtherService::new(self.id.clone()))
         }
     }
 
     #[async_trait]
     impl Provider<Arc<dyn HasId>> for OtherServiceProvider {
-        async fn provide(&self, _i: &Inject) -> ProvideResult<Arc<dyn HasId>> {
-            provide(Arc::new(OtherService::new(self.id.clone())))
+        async fn provide(&self, _i: &Inject) -> Result<Arc<dyn HasId>> {
+            Ok(Arc::new(OtherService::new(self.id.clone())))
         }
     }
 
@@ -121,8 +113,14 @@ mod test {
 
     #[async_trait]
     impl Provider<Arc<dyn HasId>> for TestServiceHasIdProvider {
-        async fn provide(&self, _i: &Inject) -> ProvideResult<Arc<dyn HasId>> {
-            provide(Arc::new(OtherService::new("test-service".to_string())))
+        async fn provide(&self, i: &Inject) -> Result<Arc<dyn HasId>> {
+            // Trigger a borrow so that the reference to `Inject` has to be held across the await
+            // point below, to test issues with Inject thread safety.
+            let _ = i.get::<String>();
+
+            sleep(Duration::from_millis(1)).await;
+
+            Ok(Arc::new(OtherService::new("test-service".to_string())))
         }
     }
 
