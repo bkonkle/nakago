@@ -41,14 +41,14 @@ impl<T> Deref for Tag<T> {
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists in the map
-    pub fn get_tag<T: Any>(&self, tag: &'static Tag<T>) -> Result<MappedRwLockReadGuard<'_, &T>> {
+    pub fn get_tag<T: Any>(&self, tag: &'static Tag<T>) -> Result<MappedRwLockReadGuard<'_, T>> {
         let key = Key::from_tag::<T>(tag.tag);
 
         RwLockReadGuard::try_map(self.0.read(), |m| {
             m.get(&key).and_then(|b| b.downcast_ref())
         })
-        .map_err(|_| Error::NotFound {
-            missing: Key::from_type_id::<T>(),
+        .map_err(|_err| Error::NotFound {
+            missing: key,
             available: self.available_type_names(),
         })
     }
@@ -134,7 +134,7 @@ impl Inject {
 
         if !self.0.read().contains_key(&key) {
             return Err(Error::NotFound {
-                missing: Key::from_tag::<T>(tag.tag),
+                missing: key,
                 available: self.available_type_names(),
             });
         }

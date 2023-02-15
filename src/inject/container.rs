@@ -46,30 +46,30 @@ impl Inject {
     // }
 
     /// Retrieve a reference to a dependency if it exists in the map
-    pub fn get<T: Any>(&self) -> Result<MappedRwLockReadGuard<'_, &T>> {
+    pub fn get<T: Any>(&self) -> Result<MappedRwLockReadGuard<'_, T>> {
         let key = Key::from_type_id::<T>();
 
         RwLockReadGuard::try_map(self.0.read(), |m| {
             m.get(&key).and_then(|b| b.downcast_ref())
         })
         .map_err(|_err| Error::NotFound {
-            missing: Key::from_type_id::<T>(),
+            missing: key,
             available: self.available_type_names(),
         })
     }
 
-    // /// Retrieve a mutable reference to a dependency if it exists in the map
-    // pub fn get_mut<T: Any>(&self) -> Result<MappedRwLockWriteGuard<'_, &mut T>> {
-    //     let key = Key::from_type_id::<T>();
+    /// Retrieve a mutable reference to a dependency if it exists in the map
+    pub fn get_mut<T: Any>(&self) -> Result<MappedRwLockWriteGuard<'_, T>> {
+        let key = Key::from_type_id::<T>();
 
-    //     RwLockWriteGuard::try_map(self.0.write(), |m| {
-    //         m.get_mut(&key).and_then(|b| b.downcast_mut())
-    //     })
-    //     .map_err(|_| Error::NotFound {
-    //         missing: Key::from_type_id::<T>(),
-    //         available: self.available_type_names(),
-    //     })
-    // }
+        RwLockWriteGuard::try_map(self.0.write(), |m| {
+            m.get_mut(&key).and_then(|b| b.downcast_mut())
+        })
+        .map_err(|_err| Error::NotFound {
+            missing: key,
+            available: self.available_type_names(),
+        })
+    }
 
     /// Provide a dependency directly
     pub fn inject<T: Any>(&mut self, dep: T) -> Result<()> {
@@ -90,7 +90,7 @@ impl Inject {
 
         if !self.0.read().contains_key(&key) {
             return Err(Error::NotFound {
-                missing: Key::from_type_id::<T>(),
+                missing: key,
                 available: self.available_type_names(),
             });
         }
@@ -232,7 +232,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(Box::new(TestService::new(expected.clone())))?;
+        i.inject(TestService::new(expected.clone()))?;
 
         let result = i.get::<TestService>()?;
 
@@ -303,44 +303,46 @@ pub(crate) mod test {
     //     Ok(())
     // }
 
-    // #[test]
-    // fn test_get_mut_success() -> Result<()> {
-    //     let mut i = Inject::default();
+    #[test]
+    fn test_get_mut_success() -> Result<()> {
+        let mut i = Inject::default();
 
-    //     let expected: String = fake::uuid::UUIDv4.fake();
+        let expected: String = fake::uuid::UUIDv4.fake();
 
-    //     i.inject(vec![TestService::new(fake::uuid::UUIDv4.fake())])?;
+        i.inject(vec![TestService::new(fake::uuid::UUIDv4.fake())])?;
 
-    //     let mut services = i.get_mut::<Vec<TestService>>()?;
-    //     services.push(TestService::new(expected.clone()));
+        let mut services = i.get_mut::<Vec<TestService>>()?;
+        services.push(TestService::new(expected.clone()));
 
-    //     let result = i.get::<Vec<TestService>>()?;
+        drop(services);
 
-    //     assert_eq!(expected, result[1].id);
+        let result = i.get::<Vec<TestService>>()?;
 
-    //     Ok(())
-    // }
+        assert_eq!(expected, result[1].id);
 
-    // #[test]
-    // fn test_get_mut_not_found() -> Result<()> {
-    //     let i = Inject::default();
+        Ok(())
+    }
 
-    //     let result = i.get_mut::<TestService>();
+    #[test]
+    fn test_get_mut_not_found() -> Result<()> {
+        let i = Inject::default();
 
-    //     if let Err(err) = result {
-    //         assert_eq!(
-    //             format!(
-    //                 "{} was not found\n\nAvailable: (empty)",
-    //                 type_name::<TestService>(),
-    //             ),
-    //             err.to_string()
-    //         );
-    //     } else {
-    //         panic!("did not return Err as expected")
-    //     }
+        let result = i.get_mut::<TestService>();
 
-    //     Ok(())
-    // }
+        if let Err(err) = result {
+            assert_eq!(
+                format!(
+                    "{} was not found\n\nAvailable: (empty)",
+                    type_name::<TestService>(),
+                ),
+                err.to_string()
+            );
+        } else {
+            panic!("did not return Err as expected")
+        }
+
+        Ok(())
+    }
 
     #[test]
     fn test_replace_success() -> Result<()> {
@@ -374,9 +376,9 @@ pub(crate) mod test {
             assert_eq!(
                 format!(
                     "{} was not found\n\nAvailable:\n - {}\n\n - {}",
-                    type_name::<OtherService>(),
-                    type_name::<TestService>(),
-                    type_name::<dyn HasId>()
+                    type_name::<Box<OtherService>>(),
+                    type_name::<Box<dyn HasId>>(),
+                    type_name::<Box<TestService>>()
                 ),
                 err.to_string()
             );
