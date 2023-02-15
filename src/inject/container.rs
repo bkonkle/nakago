@@ -83,7 +83,7 @@ impl Inject {
 #[cfg(test)]
 pub(crate) mod test {
     use fake::Fake;
-    use std::{any::type_name, sync::Arc};
+    use std::any::type_name;
 
     use super::*;
 
@@ -181,9 +181,9 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject::<Arc<dyn HasId>>(Arc::new(TestService::new(expected.clone())))?;
+        i.inject::<Box<dyn HasId>>(Box::new(TestService::new(expected.clone())))?;
 
-        let repo = i.get::<Arc<dyn HasId>>()?;
+        let repo = i.get::<Box<dyn HasId>>()?;
 
         assert_eq!(expected, repo.get_id());
 
@@ -285,8 +285,8 @@ pub(crate) mod test {
                 format!(
                     "{} was not found\n\nAvailable:\n - {}\n\n - {}",
                     type_name::<Box<OtherService>>(),
-                    type_name::<Box<dyn HasId>>(),
-                    type_name::<Box<TestService>>()
+                    type_name::<Box<TestService>>(),
+                    type_name::<Box<dyn HasId>>()
                 ),
                 err.to_string()
             );

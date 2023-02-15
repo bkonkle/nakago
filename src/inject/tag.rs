@@ -4,6 +4,7 @@ use std::{any::Any, fmt::Display, marker::PhantomData, ops::Deref};
 use super::{Inject, Key, Result};
 
 /// A dependency injection Tag representing a specific type
+#[derive(Debug, Eq, PartialEq)]
 pub struct Tag<T> {
     tag: &'static str,
     _phantom: fn() -> PhantomData<T>,
