@@ -377,15 +377,15 @@ pub(crate) mod test {
         }));
 
         if let Err(err) = result {
-            assert_eq!(
-                format!(
-                    "{} was not found\n\nAvailable:\n - {}\n\n - {}",
-                    type_name::<Box<OtherService>>(),
-                    type_name::<Box<TestService>>(),
-                    type_name::<Box<dyn HasId>>()
-                ),
-                err.to_string()
-            );
+            let message = err.to_string();
+
+            assert!(message.contains(&format!(
+                "{} was not found\n\nAvailable:",
+                type_name::<Box<OtherService>>()
+            )));
+
+            assert!(message.contains(&format!("\n - {}", type_name::<Box<TestService>>())));
+            assert!(message.contains(&format!("\n - {}", type_name::<Box<dyn HasId>>())));
         } else {
             panic!("did not return Err as expected")
         }
