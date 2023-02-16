@@ -62,8 +62,8 @@ impl Inject {
     /// Provide a tagged dependency directly
     pub fn inject_tag<T: Any + Sync + Send>(
         &mut self,
-        dep: T,
         tag: &'static Tag<T>,
+        dep: T,
     ) -> Result<(), Error> {
         self.inject_key(Key::from_tag::<T>(tag.tag), dep)
     }
@@ -71,8 +71,8 @@ impl Inject {
     /// Replace an existing tagged dependency directly
     pub fn replace_tag<T: Any + Sync + Send>(
         &mut self,
-        dep: T,
         tag: &'static Tag<T>,
+        dep: T,
     ) -> Result<(), Error> {
         self.replace_key(Key::from_tag::<T>(tag.tag), dep)
     }
@@ -102,7 +102,7 @@ pub(crate) mod test {
     fn test_inject_tag_success() -> Result<()> {
         let mut i = Inject::default();
 
-        i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG)?;
+        i.inject_tag(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
 
         assert!(
             i.0.contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
@@ -116,10 +116,10 @@ pub(crate) mod test {
     fn test_inject_tag_occupied() -> Result<()> {
         let mut i = Inject::default();
 
-        i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG)?;
+        i.inject_tag(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
 
         // Inject the same type a second time
-        let result = i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG);
+        let result = i.inject_tag(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()));
 
         if let Err(err) = result {
             assert_eq!(
@@ -139,7 +139,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag(TestService::new(expected.clone()), &SERVICE_TAG)?;
+        i.inject_tag(&SERVICE_TAG, TestService::new(expected.clone()))?;
 
         let result = i.get_tag_opt(&SERVICE_TAG).unwrap();
 
@@ -165,7 +165,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag(TestService::new(expected.clone()), &SERVICE_TAG)?;
+        i.inject_tag(&SERVICE_TAG, TestService::new(expected.clone()))?;
 
         let result = i.get_tag(&SERVICE_TAG)?;
 
@@ -180,7 +180,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag::<Arc<dyn HasId>>(Arc::new(TestService::new(expected.clone())), &DYN_TAG)?;
+        i.inject_tag::<Arc<dyn HasId>>(&DYN_TAG, Arc::new(TestService::new(expected.clone())))?;
 
         let result = i.get_tag(&DYN_TAG)?;
 
@@ -213,7 +213,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag(TestService::new(expected.clone()), &SERVICE_TAG)?;
+        i.inject_tag(&SERVICE_TAG, TestService::new(expected.clone()))?;
 
         let result = i.get_tag_mut_opt(&SERVICE_TAG).unwrap();
 
@@ -239,7 +239,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag(TestService::new(expected.clone()), &SERVICE_TAG)?;
+        i.inject_tag(&SERVICE_TAG, TestService::new(expected.clone()))?;
 
         let result = i.get_tag_mut(&SERVICE_TAG)?;
 
@@ -272,10 +272,10 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG)?;
+        i.inject_tag(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
 
         // Override the instance that was injected the first time
-        i.replace_tag(TestService::new(expected.clone()), &SERVICE_TAG)?;
+        i.replace_tag(&SERVICE_TAG, TestService::new(expected.clone()))?;
 
         let result = i.get_tag(&SERVICE_TAG)?;
 
@@ -288,10 +288,10 @@ pub(crate) mod test {
     fn test_replace_not_found() -> Result<()> {
         let mut i = Inject::default();
 
-        i.inject_tag(TestService::new(fake::uuid::UUIDv4.fake()), &SERVICE_TAG)?;
+        i.inject_tag(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
 
         // Override a type that doesn't have any instances yet
-        let result = i.replace_tag(OtherService::new(fake::uuid::UUIDv4.fake()), &OTHER_TAG);
+        let result = i.replace_tag(&OTHER_TAG, OtherService::new(fake::uuid::UUIDv4.fake()));
 
         if let Err(err) = result {
             assert_eq!(
