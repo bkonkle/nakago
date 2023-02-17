@@ -41,6 +41,11 @@ impl Inject {
         self.replace_key(Key::from_type_id::<T>(), dep)
     }
 
+    /// Consume a dependency, removing it from the container and moving it to the caller
+    pub fn consume<T: Any + Sync + Send>(&mut self) -> Result<T> {
+        self.consume_key(Key::from_type_id::<T>())
+    }
+
     // The base methods powering both the Tag and TypeId modes
 
     pub(crate) fn get_key<T: Any>(&self, key: Key) -> Result<&T> {
@@ -100,6 +105,19 @@ impl Inject {
         self.0.insert(key, Box::new(dep));
 
         Ok(())
+    }
+
+    pub(crate) fn consume_key<T: Any + Sync + Send>(&self, key: Key) -> Result<T> {
+        let available = self.available_type_names();
+
+        self.0
+            .remove(&key)
+            .ok_or(Error::NotFound {
+                missing: key,
+                available: self.available_type_names(),
+            })
+            .and_then(|d| d.downcast().map_err(|_| Error::CannotConsume(key)))
+            .map(|d| *d)
     }
 
     pub(crate) fn available_type_names(&self) -> Vec<Key> {

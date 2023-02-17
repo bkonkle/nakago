@@ -1,6 +1,6 @@
 use std::{any::Any, fmt::Display, marker::PhantomData, ops::Deref};
 
-use super::{Error, Key};
+use super::{Key, Result};
 use crate::Inject;
 
 /// A dependency injection Tag representing a specific type
@@ -39,13 +39,12 @@ impl<T> Deref for Tag<T> {
 
 impl Inject {
     /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
-    pub fn get_tag<T: Any>(&self, tag: &'static Tag<T>) -> Result<&T, Error> {
-        println!(">- tag -> {}", tag);
+    pub fn get_tag<T: Any>(&self, tag: &'static Tag<T>) -> Result<&T> {
         self.get_key(Key::from_tag::<T>(tag.tag))
     }
 
     /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub fn get_tag_mut<T: Any>(&mut self, tag: &'static Tag<T>) -> Result<&mut T, Error> {
+    pub fn get_tag_mut<T: Any>(&mut self, tag: &'static Tag<T>) -> Result<&mut T> {
         self.get_key_mut(Key::from_tag::<T>(tag.tag))
     }
 
@@ -60,11 +59,7 @@ impl Inject {
     }
 
     /// Provide a tagged dependency directly
-    pub fn inject_tag<T: Any + Sync + Send>(
-        &mut self,
-        tag: &'static Tag<T>,
-        dep: T,
-    ) -> Result<(), Error> {
+    pub fn inject_tag<T: Any + Sync + Send>(&mut self, tag: &'static Tag<T>, dep: T) -> Result<()> {
         self.inject_key(Key::from_tag::<T>(tag.tag), dep)
     }
 
@@ -73,8 +68,13 @@ impl Inject {
         &mut self,
         tag: &'static Tag<T>,
         dep: T,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         self.replace_key(Key::from_tag::<T>(tag.tag), dep)
+    }
+
+    /// Consume a tagged dependency, removing it from the container and moving it to the caller
+    pub fn consume_tag<T: Any + Sync + Send>(&mut self, tag: &'static Tag<T>) -> Result<T> {
+        self.consume_key(Key::from_tag::<T>(tag.tag))
     }
 }
 
