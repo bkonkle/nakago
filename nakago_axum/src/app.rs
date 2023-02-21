@@ -46,9 +46,11 @@ impl<C: Config, S: State> Application<C, S> {
         // 先ず First of all, initialize the Config
         self.i
             .init(if let Some(config_path) = config_path {
-                vec![ConfigInitializer::<C>::with_custom_path(config_path)]
+                vec![Box::new(ConfigInitializer::<C>::with_custom_path(
+                    config_path,
+                ))]
             } else {
-                vec![ConfigInitializer::<C>::default()]
+                vec![Box::new(ConfigInitializer::<C>::default())]
             })
             .await?;
 

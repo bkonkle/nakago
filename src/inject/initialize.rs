@@ -11,10 +11,7 @@ pub trait Initializer: Send + Sync {
 
 impl Inject {
     /// Use Initializer functions to operate on dependencies
-    pub async fn init<I>(&mut self, initializers: Vec<I>) -> Result<()>
-    where
-        I: Initializer,
-    {
+    pub async fn init(&mut self, initializers: Vec<Box<dyn Initializer>>) -> Result<()> {
         for initializer in initializers {
             initializer.init(self).await?;
         }
