@@ -1,30 +1,49 @@
-use async_trait::async_trait;
 use std::{marker::PhantomData, path::PathBuf};
+
+use async_trait::async_trait;
 
 use super::loader::{Config, ConfigData, ConfigLoader};
 use crate::inject;
 
+/// A Tag for Config loaders
 pub const CONFIG_LOADERS: inject::Tag<Vec<Box<dyn ConfigLoader>>> =
     inject::Tag::new("ConfigLoaders");
 
-/// The dependency injection Provider for the Config
-///
-/// **Provides:** `C: ConfigData`
-///
-/// **Consumes:**
-///   - `Tag(ConfigLoaders)`
+/// A Config Initializer
 #[derive(Default)]
-pub struct ConfigProvider<C: ConfigData> {
+pub struct ConfigInitializer<C: ConfigData> {
     custom_path: Option<PathBuf>,
     _phantom: PhantomData<C>,
 }
 
-#[async_trait]
-impl<C: ConfigData> inject::Provider<C> for ConfigProvider<C> {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<C> {
-        let loaders = i.consume_tag(&CONFIG_LOADERS)?;
-        let config = Config::new(loaders);
+impl<C: ConfigData> ConfigInitializer<C> {
+    /// Create a new Config Initializer with a custom path
+    pub fn with_custom_path(custom_path: PathBuf) -> Self {
+        Self {
+            custom_path: Some(custom_path),
+            _phantom: Default::default(),
+        }
+    }
+}
 
-        Ok(config.load(self.custom_path)?)
+#[async_trait]
+impl<C: ConfigData> inject::Initializer for ConfigInitializer<C> {
+    async fn init(&self, i: &mut inject::Inject) -> inject::Result<()> {
+        let mut loaders = i.consume_tag(&CONFIG_LOADERS).unwrap_or_default();
+
+        loaders.extend(
+            i.consume::<Vec<Box<dyn ConfigLoader>>>()
+                .unwrap_or_default(),
+        );
+
+        let config = Config::<C>::new(loaders);
+
+        let data = config
+            .load(&self.custom_path)
+            .map_err(|e| inject::Error::Provider(e.into()))?;
+
+        i.inject(data)?;
+
+        Ok(())
     }
 }

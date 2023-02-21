@@ -4,7 +4,7 @@ use std::{any::Any, fmt::Debug};
 use super::{Error, Key, Result};
 
 /// A type map for dependency injection
-pub(crate) type TypeMap = FnvHashMap<Key, Box<dyn Any + Sync + Send>>;
+pub(crate) type TypeMap = FnvHashMap<Key, Box<dyn Any + Send + Sync>>;
 
 /// The injection Container
 #[derive(Default, Debug)]
@@ -12,43 +12,43 @@ pub struct Inject(pub(crate) TypeMap);
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub fn get<T: Any>(&self) -> Result<&T> {
+    pub fn get<T: Any + Send + Sync>(&self) -> Result<&T> {
         self.get_key(Key::from_type_id::<T>())
     }
 
     /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub fn get_mut<T: Any>(&mut self) -> Result<&mut T> {
+    pub fn get_mut<T: Any + Send + Sync>(&mut self) -> Result<&mut T> {
         self.get_key_mut(Key::from_type_id::<T>())
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
-    pub fn get_opt<T: Any>(&self) -> Option<&T> {
+    pub fn get_opt<T: Any + Send + Sync>(&self) -> Option<&T> {
         self.get_key_opt(Key::from_type_id::<T>())
     }
 
     /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub fn get_mut_opt<T: Any>(&mut self) -> Option<&mut T> {
+    pub fn get_mut_opt<T: Any + Send + Sync>(&mut self) -> Option<&mut T> {
         self.get_key_mut_opt(Key::from_type_id::<T>())
     }
 
     /// Provide a dependency directly
-    pub fn inject<T: Any + Sync + Send>(&mut self, dep: T) -> Result<()> {
+    pub fn inject<T: Any + Send + Sync>(&mut self, dep: T) -> Result<()> {
         self.inject_key(Key::from_type_id::<T>(), dep)
     }
 
     /// Replace an existing dependency directly
-    pub fn replace<T: Any + Sync + Send>(&mut self, dep: T) -> Result<()> {
+    pub fn replace<T: Any + Send + Sync>(&mut self, dep: T) -> Result<()> {
         self.replace_key(Key::from_type_id::<T>(), dep)
     }
 
     /// Consume a dependency, removing it from the container and moving it to the caller
-    pub fn consume<T: Any + Sync + Send>(&mut self) -> Result<T> {
+    pub fn consume<T: Any + Send + Sync>(&mut self) -> Result<T> {
         self.consume_key(Key::from_type_id::<T>())
     }
 
     // The base methods powering both the Tag and TypeId modes
 
-    pub(crate) fn get_key<T: Any>(&self, key: Key) -> Result<&T> {
+    pub(crate) fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<&T> {
         self.get_key_opt::<T>(key.clone())
             .ok_or_else(|| Error::NotFound {
                 missing: key,
@@ -57,7 +57,7 @@ impl Inject {
     }
 
     /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub(crate) fn get_key_mut<T: Any>(&mut self, key: Key) -> Result<&mut T> {
+    pub(crate) fn get_key_mut<T: Any + Send + Sync>(&mut self, key: Key) -> Result<&mut T> {
         // TODO: Since `self` is borrowed as a mutable ref for `self.get_mut_opt()`, it cannot be
         // used for self.available_type_names() within the `.ok_or_else()` call below. Because of
         // this, the `available` property is pre-loaded here in case there is an error. It must
@@ -73,17 +73,17 @@ impl Inject {
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
-    pub(crate) fn get_key_opt<T: Any>(&self, key: Key) -> Option<&T> {
+    pub(crate) fn get_key_opt<T: Any + Send + Sync>(&self, key: Key) -> Option<&T> {
         self.0.get(&key).and_then(|d| d.downcast_ref::<T>())
     }
 
     /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub(crate) fn get_key_mut_opt<T: Any>(&mut self, key: Key) -> Option<&mut T> {
+    pub(crate) fn get_key_mut_opt<T: Any + Send + Sync>(&mut self, key: Key) -> Option<&mut T> {
         self.0.get_mut(&key).and_then(|d| d.downcast_mut::<T>())
     }
 
     /// Provide a dependency directly
-    pub(crate) fn inject_key<T: Any + Sync + Send>(&mut self, key: Key, dep: T) -> Result<()> {
+    pub(crate) fn inject_key<T: Any + Send + Sync>(&mut self, key: Key, dep: T) -> Result<()> {
         if self.0.contains_key(&key) {
             return Err(Error::Occupied(key));
         }
@@ -94,7 +94,7 @@ impl Inject {
     }
 
     /// Replace an existing dependency directly
-    pub(crate) fn replace_key<T: Any + Sync + Send>(&mut self, key: Key, dep: T) -> Result<()> {
+    pub(crate) fn replace_key<T: Any + Send + Sync>(&mut self, key: Key, dep: T) -> Result<()> {
         if !self.0.contains_key(&key) {
             return Err(Error::NotFound {
                 missing: key,
@@ -107,16 +107,14 @@ impl Inject {
         Ok(())
     }
 
-    pub(crate) fn consume_key<T: Any + Sync + Send>(&self, key: Key) -> Result<T> {
-        let available = self.available_type_names();
-
+    pub(crate) fn consume_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<T> {
         self.0
             .remove(&key)
-            .ok_or(Error::NotFound {
-                missing: key,
+            .ok_or_else(|| Error::NotFound {
+                missing: key.clone(),
                 available: self.available_type_names(),
             })
-            .and_then(|d| d.downcast().map_err(|_| Error::CannotConsume(key)))
+            .and_then(|d| d.downcast().map_err(|_err| Error::CannotConsume(key)))
             .map(|d| *d)
     }
 
@@ -132,7 +130,7 @@ pub(crate) mod test {
 
     use super::*;
 
-    pub trait HasId: Sync + Send {
+    pub trait HasId: Send + Sync {
         fn get_id(&self) -> String;
     }
 

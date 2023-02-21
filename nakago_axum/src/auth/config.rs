@@ -1,24 +1,10 @@
 use figment::providers::Env;
+use nakago::config::loader::ConfigLoader;
 use serde::{Deserialize, Serialize};
-
-use nakago::config::ConfigLoader;
-
-/// HTTP Config
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct HttpConfig {
-    /// The port to bind to
-    pub port: u16,
-
-    /// The IP address to bind to, such as 0.0.0.0 or 127.0.0.1
-    pub address: String,
-
-    /// Auth config
-    pub auth: Auth,
-}
 
 /// Auth config
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Auth {
+pub struct AuthConfig {
     /// OAuth2 url
     pub url: String,
 
@@ -26,12 +12,12 @@ pub struct Auth {
     pub audience: String,
 
     /// Auth client config
-    pub client: AuthClient,
+    pub client: AuthClientConfig,
 }
 
 /// Auth client config
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct AuthClient {
+pub struct AuthClientConfig {
     /// OAuth2 client id
     pub id: Option<String>,
 
@@ -39,7 +25,11 @@ pub struct AuthClient {
     pub secret: Option<String>,
 }
 
-impl ConfigLoader for HttpConfig {
+/// The Auth Config Loader
+#[derive(Default)]
+pub struct AuthConfigLoader {}
+
+impl ConfigLoader for AuthConfigLoader {
     fn load_env(&self, env: Env) -> Env {
         // Split the Auth variables
         env.map(|key| key.as_str().replace("AUTH_CLIENT_", "AUTH.CLIENT.").into())

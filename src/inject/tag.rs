@@ -4,7 +4,7 @@ use super::{Key, Result};
 use crate::Inject;
 
 /// A dependency injection Tag representing a specific type
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Tag<T> {
     tag: &'static str,
     _phantom: fn() -> PhantomData<T>,
@@ -39,22 +39,25 @@ impl<T> Deref for Tag<T> {
 
 impl Inject {
     /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
-    pub fn get_tag<T: Any>(&self, tag: &'static Tag<T>) -> Result<&T> {
+    pub fn get_tag<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<&T> {
         self.get_key(Key::from_tag::<T>(tag.tag))
     }
 
     /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub fn get_tag_mut<T: Any>(&mut self, tag: &'static Tag<T>) -> Result<&mut T> {
+    pub fn get_tag_mut<T: Any + Send + Sync>(&mut self, tag: &'static Tag<T>) -> Result<&mut T> {
         self.get_key_mut(Key::from_tag::<T>(tag.tag))
     }
 
     /// Retrieve a reference to a tagged dependency if it exists in the map
-    pub fn get_tag_opt<T: Any>(&self, tag: &'static Tag<T>) -> Option<&T> {
+    pub fn get_tag_opt<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Option<&T> {
         self.get_key_opt(Key::from_tag::<T>(tag.tag))
     }
 
     /// Retrieve a mutable reference to a tagged dependency if it exists in the map
-    pub fn get_tag_mut_opt<T: Any>(&mut self, tag: &'static Tag<T>) -> Option<&mut T> {
+    pub fn get_tag_mut_opt<T: Any + Send + Sync>(
+        &mut self,
+        tag: &'static Tag<T>,
+    ) -> Option<&mut T> {
         self.get_key_mut_opt(Key::from_tag::<T>(tag.tag))
     }
 

@@ -5,6 +5,12 @@ use figment::{
 use serde::{Deserialize, Serialize};
 use std::{any::Any, marker::PhantomData, path::PathBuf};
 
+/// ConfigData is the final loaded result
+pub trait ConfigData:
+    Any + Clone + Default + Serialize + Send + Sync + for<'a> Deserialize<'a>
+{
+}
+
 /// A ConfigLoader uses hooks to augment the Config loaded for the application
 ///
 /// TODO: Add more hooks! 🙂
@@ -12,9 +18,6 @@ pub trait ConfigLoader: Any + Send + Sync {
     /// Apply transformations to the environment variables loaded by Figment
     fn load_env(&self, env: Env) -> Env;
 }
-
-/// ConfigData is the final loaded result
-pub trait ConfigData: Any + Default + Serialize + Send + Sync + for<'a> Deserialize<'a> {}
 
 /// An extensible Config loader based on Figment
 pub struct Config<C: ConfigData> {
@@ -32,7 +35,7 @@ impl<C: ConfigData> Config<C> {
     }
 
     /// Create a new Config by merging in various sources
-    pub fn load(&self, custom_path: Option<PathBuf>) -> figment::error::Result<C> {
+    pub fn load(&self, custom_path: &Option<PathBuf>) -> figment::error::Result<C> {
         let mut config = Figment::new()
             // Load defaults
             .merge(Serialized::defaults(C::default()))
