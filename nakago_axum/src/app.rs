@@ -1,7 +1,7 @@
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
 use nakago::{app::Application, config::loader::Config, inject};
-use std::{any::Any, ops::Deref};
+use std::{any::Any, ops::Deref, path::PathBuf};
 use tower_http::trace;
 
 use crate::config::HttpConfig;
@@ -37,10 +37,15 @@ impl<C: Config, S: State> HttpApplication<C, S> {
     /// **Depends on:**
     ///   - `C: Config`
     ///   - `S: State`
-    pub async fn run(&mut self) -> anyhow::Result<Server<AddrIncoming, IntoMakeService<Router>>>
+    pub async fn run(
+        &mut self,
+        config_path: Option<PathBuf>,
+    ) -> anyhow::Result<Server<AddrIncoming, IntoMakeService<Router>>>
     where
         HttpConfig: FromRef<C>,
     {
+        self.app.initialize(config_path).await?;
+
         let state = self.app.get::<S>()?;
 
         let app: Router = Router::new()
