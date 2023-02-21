@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::any::Any;
 
-use super::{tag::Tag, Inject, Result};
+use super::{tag::Tag, Error, Inject, Result};
 
 /// A trait for async injection Providers
 #[async_trait]
@@ -49,6 +49,14 @@ impl Inject {
     {
         self.replace_tag::<T>(tag, provider.provide(self).await?)
     }
+}
+
+/// Wrap an error that can be converted into an Anyhow error with an inject Provider error
+pub fn to_provider_error<E>(e: E) -> Error
+where
+    anyhow::Error: From<E>,
+{
+    Error::Provider(e.into())
 }
 
 #[cfg(test)]

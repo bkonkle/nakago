@@ -4,9 +4,6 @@
 /// The top-level Applicaiton
 pub mod app;
 
-/// Application routing
-pub mod router;
-
 /// HTTP config
 pub mod config;
 

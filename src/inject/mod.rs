@@ -20,5 +20,5 @@ pub use container::Inject;
 pub use error::{Error, Result};
 pub use initialize::Initializer;
 pub use key::{Id, Key};
-pub use provide::Provider;
+pub use provide::{to_provider_error, Provider};
 pub use tag::Tag;

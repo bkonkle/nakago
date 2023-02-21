@@ -5,12 +5,6 @@ use figment::{
 use serde::{Deserialize, Serialize};
 use std::{any::Any, marker::PhantomData, path::PathBuf};
 
-/// ConfigData is the final loaded result
-pub trait ConfigData:
-    Any + Clone + Default + Serialize + Send + Sync + for<'a> Deserialize<'a>
-{
-}
-
 /// A ConfigLoader uses hooks to augment the Config loaded for the application
 ///
 /// TODO: Add more hooks! 🙂
@@ -19,13 +13,19 @@ pub trait ConfigLoader: Any + Send + Sync {
     fn load_env(&self, env: Env) -> Env;
 }
 
+/// Config is the final loaded result
+pub trait Config:
+    Any + Clone + Default + Serialize + Send + Sync + for<'a> Deserialize<'a>
+{
+}
+
 /// An extensible Config loader based on Figment
-pub struct Config<C: ConfigData> {
+pub struct Loader<C: Config> {
     loaders: Vec<Box<dyn ConfigLoader>>,
     _phantom: PhantomData<C>,
 }
 
-impl<C: ConfigData> Config<C> {
+impl<C: Config> Loader<C> {
     /// Create a new Config instance with the given loaders
     pub fn new(loaders: Vec<Box<dyn ConfigLoader>>) -> Self {
         Self {

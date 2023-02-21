@@ -7,4 +7,7 @@ pub mod inject;
 /// Configuration utilities based on Figment
 pub mod config;
 
-pub use inject::{provide, Error as InjectError, Inject, Provider, Result as InjectResult, Tag};
+pub use config::loader::{Config, ConfigLoader};
+pub use inject::{
+    provide, to_provider_error, Error as InjectError, Inject, Provider, Result as InjectResult, Tag,
+};
