@@ -4,7 +4,7 @@ use nakago::{
     config::{loader::Config, providers::ConfigInitializer},
     inject,
 };
-use std::{any::Any, marker::PhantomData, path::PathBuf};
+use std::{any::Any, marker::PhantomData, ops::Deref, path::PathBuf};
 use tower_http::trace;
 
 use crate::config::HttpConfig;
@@ -18,6 +18,14 @@ pub struct Application<C: Config, S: State> {
     router: Router<S>,
     i: inject::Inject,
     _phantom: PhantomData<(C, S)>,
+}
+
+impl<C: Config, S: State> Deref for Application<C, S> {
+    type Target = inject::Inject;
+
+    fn deref(&self) -> &Self::Target {
+        &self.i
+    }
 }
 
 impl<C: Config, S: State> Application<C, S> {
@@ -37,7 +45,7 @@ impl<C: Config, S: State> Application<C, S> {
     ///   - `C: Config`
     ///   - `S: State`
     pub async fn run(
-        mut self,
+        &mut self,
         config_path: Option<PathBuf>,
     ) -> anyhow::Result<Server<AddrIncoming, IntoMakeService<Router>>>
     where
