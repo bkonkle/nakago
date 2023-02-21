@@ -16,5 +16,5 @@ pub mod auth;
 #[macro_use]
 extern crate log;
 
-pub use app::Application;
+pub use app::HttpApplication;
 pub use providers::HttpConfigLoaders;

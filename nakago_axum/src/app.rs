@@ -1,10 +1,7 @@
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
-use nakago::{
-    config::{loader::Config, providers::ConfigInitializer},
-    inject,
-};
-use std::{any::Any, marker::PhantomData, ops::Deref, path::PathBuf};
+use nakago::{app::Application, config::loader::Config, inject};
+use std::{any::Any, ops::Deref};
 use tower_http::trace;
 
 use crate::config::HttpConfig;
@@ -13,29 +10,25 @@ use crate::config::HttpConfig;
 pub trait State: Clone + Any + Send + Sync {}
 
 /// The top-level Application struct
-pub struct Application<C: Config, S: State> {
-    initializers: Vec<Box<dyn inject::Initializer>>,
+pub struct HttpApplication<C: Config, S: State> {
+    app: Application<C>,
     router: Router<S>,
-    i: inject::Inject,
-    _phantom: PhantomData<(C, S)>,
 }
 
-impl<C: Config, S: State> Deref for Application<C, S> {
-    type Target = inject::Inject;
+impl<C: Config, S: State> Deref for HttpApplication<C, S> {
+    type Target = Application<C>;
 
     fn deref(&self) -> &Self::Target {
-        &self.i
+        &self.app
     }
 }
 
-impl<C: Config, S: State> Application<C, S> {
+impl<C: Config, S: State> HttpApplication<C, S> {
     /// Create a new Application instance
     pub fn new(initializers: Vec<Box<dyn inject::Initializer>>, router: Router<S>) -> Self {
         Self {
-            initializers,
+            app: Application::new(initializers),
             router,
-            i: inject::Inject::default(),
-            _phantom: Default::default(),
         }
     }
 
@@ -44,29 +37,11 @@ impl<C: Config, S: State> Application<C, S> {
     /// **Depends on:**
     ///   - `C: Config`
     ///   - `S: State`
-    pub async fn run(
-        &mut self,
-        config_path: Option<PathBuf>,
-    ) -> anyhow::Result<Server<AddrIncoming, IntoMakeService<Router>>>
+    pub async fn run(&mut self) -> anyhow::Result<Server<AddrIncoming, IntoMakeService<Router>>>
     where
         HttpConfig: FromRef<C>,
     {
-        // 先ず First of all, initialize the Config
-        self.i
-            .init(if let Some(config_path) = config_path {
-                vec![Box::new(ConfigInitializer::<C>::with_custom_path(
-                    config_path,
-                ))]
-            } else {
-                vec![Box::new(ConfigInitializer::<C>::default())]
-            })
-            .await?;
-
-        for initializer in &self.initializers {
-            initializer.init(&mut self.i).await?;
-        }
-
-        let state = self.i.get::<S>()?;
+        let state = self.app.get::<S>()?;
 
         let app: Router = Router::new()
             .layer(
@@ -76,7 +51,7 @@ impl<C: Config, S: State> Application<C, S> {
             )
             .merge(self.router.clone().with_state(state.clone()));
 
-        let config = self.i.get::<C>()?;
+        let config = self.app.get::<C>()?;
         let http = HttpConfig::from_ref(config);
 
         let server = Server::bind(
