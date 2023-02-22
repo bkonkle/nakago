@@ -1,4 +1,10 @@
-use std::{any::Any, marker::PhantomData, ops::Deref, path::PathBuf};
+use std::{
+    any::Any,
+    fmt::Debug,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+    path::PathBuf,
+};
 
 use crate::{
     config::{loader::Config, providers::ConfigInitializer},
@@ -23,7 +29,13 @@ impl<C: Config> Deref for Application<C> {
     }
 }
 
-impl<C: Config> Application<C> {
+impl<C: Config> DerefMut for Application<C> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.i
+    }
+}
+
+impl<C: Config + Debug> Application<C> {
     /// Create a new Application instance
     pub fn new(initializers: Vec<Box<dyn inject::Initializer>>) -> Self {
         Self {

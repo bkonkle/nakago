@@ -67,7 +67,11 @@ impl<C: Config> Loader<C> {
             env = loader.load_env(env);
         }
 
+        println!(">- env (after) -> {:?}", env);
+
         config = config.merge(env);
+
+        println!(">- config -> {:?}", config);
 
         // Serialize and freeze
         config.extract()

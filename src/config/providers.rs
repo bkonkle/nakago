@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, path::PathBuf};
+use std::{fmt::Debug, marker::PhantomData, path::PathBuf};
 
 use async_trait::async_trait;
 
@@ -10,6 +10,9 @@ pub const CONFIG_LOADERS: inject::Tag<Vec<Box<dyn ConfigLoader>>> =
     inject::Tag::new("ConfigLoaders");
 
 /// A Config Initializer
+///
+/// **Consumes:**
+///   - `Tag(ConfigLoaders)`
 #[derive(Default)]
 pub struct ConfigInitializer<C: Config> {
     custom_path: Option<PathBuf>,
@@ -27,22 +30,19 @@ impl<C: Config> ConfigInitializer<C> {
 }
 
 #[async_trait]
-impl<C: Config> inject::Initializer for ConfigInitializer<C> {
+impl<C: Config + Debug> inject::Initializer for ConfigInitializer<C> {
     async fn init(&self, i: &mut inject::Inject) -> inject::Result<()> {
-        let mut loaders = i.consume_tag(&CONFIG_LOADERS).unwrap_or_default();
+        let loaders = i.consume(&CONFIG_LOADERS).unwrap_or_default();
+        println!(">- loaders -> {:?}", loaders.len());
+        let loader = Loader::<C>::new(loaders);
 
-        loaders.extend(
-            i.consume::<Vec<Box<dyn ConfigLoader>>>()
-                .unwrap_or_default(),
-        );
-
-        let config = Loader::<C>::new(loaders);
-
-        let data = config
+        let config = loader
             .load(&self.custom_path)
             .map_err(|e| inject::Error::Provider(e.into()))?;
 
-        i.inject(data)?;
+        println!(">- config -> {:?}", config);
+
+        i.inject_type(config)?;
 
         Ok(())
     }

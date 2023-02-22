@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the `nakago-axum` crate for HTTP routing
 - Added Config loading based on Figment
 
+### Changed
+
+- Prioritized Tag-driven mode for Inject. Renamed the TypeId-driven fields to have a `_type` prefix, and removed the `_tag` prefix from the Tag-driven fields.
+
 ## [0.4.0] - 2023-02-15
 
 ### Changed

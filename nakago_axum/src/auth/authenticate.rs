@@ -15,6 +15,7 @@ use super::{
 
 /// The state interface needed for Authentication
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct AuthState {
     jwks: Arc<jwks::JWKS>,
 }

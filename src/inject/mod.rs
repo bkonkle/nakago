@@ -16,6 +16,9 @@ pub mod key;
 /// Tagged dependencies
 pub mod tag;
 
+/// TypeId Dependencies
+pub mod type_id;
+
 pub use container::Inject;
 pub use error::{Error, Result};
 pub use initialize::Initializer;

@@ -3,9 +3,7 @@ use axum::extract::FromRef;
 use nakago::{config::loader::Config, inject, Tag};
 use std::{marker::PhantomData, sync::Arc};
 
-use crate::config::HttpConfig;
-
-use super::{authenticate::AuthState, jwks};
+use super::{authenticate::AuthState, config::AuthConfig, jwks};
 
 /// The AuthConfig Tag
 // pub const AUTH_CONFIG: Tag<Box<dyn FromRef<AuthConfig>>> = Tag::new("AuthConfig");
@@ -18,7 +16,7 @@ pub const JWKS: Tag<Arc<jwks::JWKS>> = Tag::new("JWKS");
 /// **Provides:** `Arc<jwks::JWKS>`
 ///
 /// **Depends on:**
-///   - `<C: Config>` - requires that `C` fulfills the `HttpConfig: FromRef<C>` constraint
+///   - `<C: Config>` - requires that `C` fulfills the `AuthConfig: FromRef<C>` constraint
 #[derive(Default)]
 pub struct ProvideJwks<C: Config> {
     _phantom: PhantomData<C>,
@@ -27,12 +25,13 @@ pub struct ProvideJwks<C: Config> {
 #[async_trait]
 impl<C: Config> inject::Provider<Arc<jwks::JWKS>> for ProvideJwks<C>
 where
-    HttpConfig: FromRef<C>,
+    AuthConfig: FromRef<C>,
 {
     async fn provide(&self, i: &inject::Inject) -> inject::Result<Arc<jwks::JWKS>> {
-        let config = i.get::<C>()?;
-        let http = HttpConfig::from_ref(config);
-        let key_set = jwks::init(http.auth).await;
+        let config = i.get_type::<C>()?;
+        let auth = AuthConfig::from_ref(config);
+        println!(">- auth -> {:?}", auth);
+        let key_set = jwks::init(auth).await;
 
         Ok(Arc::new(key_set))
     }
@@ -52,7 +51,7 @@ pub struct ProvideAuthState {}
 #[async_trait]
 impl inject::Provider<AuthState> for ProvideAuthState {
     async fn provide(&self, i: &inject::Inject) -> inject::Result<AuthState> {
-        let jwks = i.get_tag(&JWKS)?;
+        let jwks = i.get(&JWKS)?;
         let auth_state = AuthState::new(jwks.clone());
 
         Ok(auth_state)
