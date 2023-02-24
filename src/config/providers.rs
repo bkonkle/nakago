@@ -1,6 +1,5 @@
-use std::{fmt::Debug, marker::PhantomData, path::PathBuf};
-
 use async_trait::async_trait;
+use std::{fmt::Debug, marker::PhantomData, path::PathBuf};
 
 use super::loader::{Config, ConfigLoader, Loader};
 use crate::inject;
@@ -40,6 +39,36 @@ impl<C: Config + Debug> inject::Initializer for ConfigInitializer<C> {
             .map_err(|e| inject::Error::Provider(e.into()))?;
 
         i.inject_type(config)?;
+
+        Ok(())
+    }
+}
+
+/// Initialize the ConfigLoaders needed for Axum integration. Injects `Tag(ConfigLoaders)` if it
+/// has not been provided yet.
+pub struct ConfigLoaders {
+    loaders: Vec<Box<dyn ConfigLoader>>,
+}
+
+impl ConfigLoaders {
+    /// Create a new ConfigLoaders Initializer
+    pub fn new(loaders: Vec<Box<dyn ConfigLoader>>) -> Self {
+        Self { loaders }
+    }
+}
+
+#[async_trait]
+impl inject::Initializer for ConfigLoaders {
+    /// Add the HttpConfigLoader to the ConfigLoaders list
+    async fn init(&self, i: &mut inject::Inject) -> inject::Result<()> {
+        if let Ok(loaders) = i.get_mut(&CONFIG_LOADERS) {
+            // Add the given ConfigLoaders to the stack
+            for loader in self.loaders.iter() {
+                loaders.push(*loader);
+            }
+        } else {
+            i.inject(&CONFIG_LOADERS, self.loaders)?;
+        }
 
         Ok(())
     }

@@ -57,7 +57,7 @@ impl<C: Config + Debug> Application<C> {
                     config_path,
                 ))]
             } else {
-                vec![Box::new(ConfigInitializer::<C>::default())]
+                vec![Box::<ConfigInitializer<C>>::default()]
             })
             .await?;
 

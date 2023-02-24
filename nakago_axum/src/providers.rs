@@ -14,9 +14,9 @@ impl inject::Initializer for HttpConfigLoaders {
     async fn init(&self, i: &mut inject::Inject) -> inject::Result<()> {
         if let Ok(loaders) = i.get_mut(&CONFIG_LOADERS) {
             // Add the AuthConfigLoader to the stack
-            loaders.push(Box::new(AuthConfigLoader::default()));
+            loaders.push(Box::<AuthConfigLoader>::default());
         } else {
-            i.inject(&CONFIG_LOADERS, vec![Box::new(AuthConfigLoader::default())])?;
+            i.inject(&CONFIG_LOADERS, vec![Box::<AuthConfigLoader>::default()])?;
         }
 
         Ok(())

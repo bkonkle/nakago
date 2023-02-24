@@ -3,7 +3,7 @@ use figment::{
     Figment,
 };
 use serde::{Deserialize, Serialize};
-use std::{any::Any, marker::PhantomData, path::PathBuf};
+use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf};
 
 /// A ConfigLoader uses hooks to augment the Config loaded for the application
 ///
@@ -15,7 +15,7 @@ pub trait ConfigLoader: Any + Send + Sync {
 
 /// Config is the final loaded result
 pub trait Config:
-    Any + Clone + Default + Serialize + Send + Sync + for<'a> Deserialize<'a>
+    Any + Clone + Debug + Default + Serialize + Send + Sync + for<'a> Deserialize<'a>
 {
 }
 
