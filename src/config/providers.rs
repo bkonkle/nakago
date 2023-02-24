@@ -33,14 +33,11 @@ impl<C: Config> ConfigInitializer<C> {
 impl<C: Config + Debug> inject::Initializer for ConfigInitializer<C> {
     async fn init(&self, i: &mut inject::Inject) -> inject::Result<()> {
         let loaders = i.consume(&CONFIG_LOADERS).unwrap_or_default();
-        println!(">- loaders -> {:?}", loaders.len());
         let loader = Loader::<C>::new(loaders);
 
         let config = loader
             .load(&self.custom_path)
             .map_err(|e| inject::Error::Provider(e.into()))?;
-
-        println!(">- config -> {:?}", config);
 
         i.inject_type(config)?;
 

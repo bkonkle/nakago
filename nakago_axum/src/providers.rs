@@ -12,16 +12,10 @@ pub struct HttpConfigLoaders {}
 impl inject::Initializer for HttpConfigLoaders {
     /// Add the HttpConfigLoader to the ConfigLoaders list
     async fn init(&self, i: &mut inject::Inject) -> inject::Result<()> {
-        println!(">------ HttpConfigLoaders ------<");
-
         if let Ok(loaders) = i.get_mut(&CONFIG_LOADERS) {
-            println!(">------ loaders ------<");
-
             // Add the AuthConfigLoader to the stack
             loaders.push(Box::new(AuthConfigLoader::default()));
         } else {
-            println!(">------ no loaders ------<");
-
             i.inject(&CONFIG_LOADERS, vec![Box::new(AuthConfigLoader::default())])?;
         }
 

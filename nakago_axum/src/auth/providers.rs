@@ -5,9 +5,6 @@ use std::{marker::PhantomData, sync::Arc};
 
 use super::{authenticate::AuthState, config::AuthConfig, jwks};
 
-/// The AuthConfig Tag
-// pub const AUTH_CONFIG: Tag<Box<dyn FromRef<AuthConfig>>> = Tag::new("AuthConfig");
-
 /// The JWKS Tag
 pub const JWKS: Tag<Arc<jwks::JWKS>> = Tag::new("JWKS");
 
@@ -30,7 +27,6 @@ where
     async fn provide(&self, i: &inject::Inject) -> inject::Result<Arc<jwks::JWKS>> {
         let config = i.get_type::<C>()?;
         let auth = AuthConfig::from_ref(config);
-        println!(">- auth -> {:?}", auth);
         let key_set = jwks::init(auth).await;
 
         Ok(Arc::new(key_set))
@@ -46,6 +42,7 @@ pub const AUTH_STATE: Tag<AuthState> = Tag::new("AuthState");
 ///
 /// **Depends on:**
 ///   - `Tag(JWKS)`
+#[derive(Default)]
 pub struct ProvideAuthState {}
 
 #[async_trait]
