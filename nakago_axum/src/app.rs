@@ -1,6 +1,6 @@
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
-use nakago::{app::Application, config::loader::Config, inject};
+use nakago::{app::Application, config::loader::Config};
 use std::{
     any::Any,
     fmt::Debug,
@@ -9,7 +9,7 @@ use std::{
 };
 use tower_http::trace;
 
-use crate::{config::HttpConfig, HttpConfigLoaders};
+use crate::{config::HttpConfig, init_config_loaders};
 
 /// State must be clonable and able to be stored in the Inject container
 pub trait State: Clone + Any + Send + Sync {}
@@ -36,9 +36,9 @@ impl<C: Config, S: State> DerefMut for HttpApplication<C, S> {
 
 impl<C: Config + Debug, S: State> HttpApplication<C, S> {
     /// Create a new Application instance
-    pub fn new(initializers: Vec<Box<dyn inject::Initializer>>, router: Router<S>) -> Self {
+    pub fn new(router: Router<S>) -> Self {
         Self {
-            app: Application::new(initializers),
+            app: Application::default(),
             router,
         }
     }
@@ -56,12 +56,10 @@ impl<C: Config + Debug, S: State> HttpApplication<C, S> {
         HttpConfig: FromRef<C>,
     {
         // Add the HTTP Config Initializer
-        self.app
-            .init(vec![Box::new(HttpConfigLoaders::default())])
-            .await?;
+        init_config_loaders(&mut self.app).await?;
 
         // Initialize the underlying App
-        self.app.initialize(config_path).await?;
+        self.app.init(config_path).await?;
 
         let state = self.app.get_type::<S>()?;
 

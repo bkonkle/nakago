@@ -9,6 +9,9 @@ pub const CONFIG_LOADERS: inject::Tag<Vec<Box<dyn ConfigLoader>>> =
 
 /// A Config Initializer
 ///
+/// **Provides:**
+///   - `C: Config`
+///
 /// **Consumes:**
 ///   - `Tag(ConfigLoaders)`
 pub async fn init<C: Config>(
@@ -29,6 +32,9 @@ pub async fn init<C: Config>(
 
 /// Initialize the ConfigLoaders needed for Axum integration. Injects `Tag(ConfigLoaders)` if it
 /// has not been provided yet.
+///
+/// **Provides or Modifies:**
+///   - `Tag(ConfigLoaders)`
 pub async fn init_loaders(
     i: &mut inject::Inject,
     loaders: Vec<Box<dyn ConfigLoader>>,

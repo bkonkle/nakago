@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    config::{loader::Config, providers::ConfigInitializer},
+    config::{self, Config},
     inject,
 };
 
@@ -15,8 +15,8 @@ use crate::{
 pub trait State: Clone + Any + Send + Sync {}
 
 /// The top-level Application struct
+#[derive(Default)]
 pub struct Application<C: Config> {
-    initializers: Vec<Box<dyn inject::Initializer>>,
     i: inject::Inject,
     _phantom: PhantomData<C>,
 }
@@ -36,34 +36,13 @@ impl<C: Config> DerefMut for Application<C> {
 }
 
 impl<C: Config + Debug> Application<C> {
-    /// Create a new Application instance
-    pub fn new(initializers: Vec<Box<dyn inject::Initializer>>) -> Self {
-        Self {
-            initializers,
-            i: inject::Inject::default(),
-            _phantom: Default::default(),
-        }
-    }
-
-    /// Create the Inject container and run initializers
+    /// Initialize the App
     ///
-    /// **Depends on:**
+    /// **Provides:**
     ///   - `C: Config`
-    pub async fn initialize(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
-        // 先ず First of all, initialize the Config
-        self.i
-            .init(if let Some(config_path) = config_path {
-                vec![Box::new(ConfigInitializer::<C>::with_custom_path(
-                    config_path,
-                ))]
-            } else {
-                vec![Box::<ConfigInitializer<C>>::default()]
-            })
-            .await?;
-
-        for initializer in &self.initializers {
-            initializer.init(&mut self.i).await?;
-        }
+    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
+        // Initialize the Config using the given path
+        config::init::<C>(&mut self.i, config_path).await?;
 
         Ok(())
     }
