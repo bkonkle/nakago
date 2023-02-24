@@ -35,7 +35,7 @@ impl<C: Config> Loader<C> {
     }
 
     /// Create a new Config by merging in various sources
-    pub fn load(&self, custom_path: &Option<PathBuf>) -> figment::error::Result<C> {
+    pub fn load(&self, custom_path: Option<PathBuf>) -> figment::error::Result<C> {
         let mut config = Figment::new()
             // Load defaults
             .merge(Serialized::defaults(C::default()))

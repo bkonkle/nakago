@@ -4,4 +4,5 @@ pub mod loader;
 /// Dependency injection Providers
 pub mod providers;
 
-pub use providers::{ConfigInitializer, ConfigLoaders, CONFIG_LOADERS};
+pub use loader::{Config, ConfigLoader};
+pub use providers::{init, init_loaders, CONFIG_LOADERS};
