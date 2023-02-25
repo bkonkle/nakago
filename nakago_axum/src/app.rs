@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
 use nakago::{
@@ -139,16 +138,10 @@ where
     {
         self.init(config_path).await?;
 
-        println!(">------ start ------<");
-
         // Run the startup hook
         self.start().await?;
 
-        println!(">------ state ------<");
-
         let state = self.app.get_type::<S>()?;
-
-        println!(">------ router ------<");
 
         let app: Router = Router::new()
             .layer(
@@ -158,12 +151,8 @@ where
             )
             .merge(self.router.clone().with_state(state.clone()));
 
-        println!(">------ config ------<");
-
         let config = self.app.get_type::<C>()?;
         let http = HttpConfig::from_ref(config);
-
-        println!(">------ server ------<");
 
         let server = Server::bind(
             &format!("0.0.0.0:{}", http.port)
@@ -177,22 +166,19 @@ where
 
     /// Initialize the underlying App
     pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
-        println!(">------ Http app init ------<");
-        self.app.init(config_path).await?;
-
         // Add the HTTP Config Initializer
-        init_config_loaders(&mut self.app).await
+        init_config_loaders(&mut self.app).await?;
+
+        self.app.init(config_path).await
     }
 
     /// Start up the underlying App
     pub async fn start(&mut self) -> inject::Result<()> {
-        println!(">------ Http app start ------<");
         self.app.start().await
     }
 
     /// Shut down the underlying App
     pub async fn stop(&mut self) -> inject::Result<()> {
-        println!(">------ Http app stop ------<");
         self.app.stop().await
     }
 }
