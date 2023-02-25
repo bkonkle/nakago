@@ -12,6 +12,7 @@ pub struct Inject(pub(crate) TypeMap);
 
 // The base methods powering both the Tag and TypeId modes
 impl Inject {
+    /// Retrieve a reference to a dependency if it exists, and return an error otherwise
     pub(crate) fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<&T> {
         self.get_key_opt::<T>(key.clone())
             .ok_or_else(|| Error::NotFound {
@@ -71,6 +72,7 @@ impl Inject {
         Ok(())
     }
 
+    /// Remove a dependency from the map and return it for use
     pub(crate) fn consume_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<T> {
         self.0
             .remove(&key)
@@ -82,6 +84,7 @@ impl Inject {
             .map(|d| *d)
     }
 
+    /// Return a list of all available type names in the map
     pub(crate) fn available_type_names(&self) -> Vec<Key> {
         self.0.keys().cloned().collect()
     }

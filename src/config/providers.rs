@@ -18,6 +18,8 @@ pub async fn init<C: Config>(
     i: &mut inject::Inject,
     custom_path: Option<PathBuf>,
 ) -> inject::Result<()> {
+    println!(">------ config::init ------<");
+
     let loaders = i.consume(&CONFIG_LOADERS).unwrap_or_default();
     let loader = Loader::<C>::new(loaders);
 
@@ -39,6 +41,8 @@ pub async fn init_loaders(
     i: &mut inject::Inject,
     loaders: Vec<Box<dyn ConfigLoader>>,
 ) -> inject::Result<()> {
+    println!(">------ config::init_loaders ------<");
+
     if let Ok(existing) = i.get_mut(&CONFIG_LOADERS) {
         // Add the given ConfigLoaders to the stack
         for loader in loaders {

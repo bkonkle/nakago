@@ -15,12 +15,20 @@ use crate::{config::HttpConfig, init_config_loaders};
 pub trait State: Clone + Any + Send + Sync {}
 
 /// The top-level Application struct
-pub struct HttpApplication<C: Config, S: State> {
+pub struct HttpApplication<C, S>
+where
+    C: Config + Debug,
+    S: State,
+{
     app: Application<C>,
     router: Router<S>,
 }
 
-impl<C: Config, S: State> Deref for HttpApplication<C, S> {
+impl<C, S> Deref for HttpApplication<C, S>
+where
+    C: Config + Debug,
+    S: State,
+{
     type Target = Application<C>;
 
     fn deref(&self) -> &Self::Target {
@@ -28,13 +36,21 @@ impl<C: Config, S: State> Deref for HttpApplication<C, S> {
     }
 }
 
-impl<C: Config, S: State> DerefMut for HttpApplication<C, S> {
+impl<C, S> DerefMut for HttpApplication<C, S>
+where
+    C: Config + Debug,
+    S: State,
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.app
     }
 }
 
-impl<C: Config + Debug, S: State> HttpApplication<C, S> {
+impl<C, S> HttpApplication<C, S>
+where
+    C: Config + Debug,
+    S: State,
+{
     /// Create a new Application instance
     pub fn new(router: Router<S>) -> Self {
         Self {
@@ -55,13 +71,21 @@ impl<C: Config + Debug, S: State> HttpApplication<C, S> {
     where
         HttpConfig: FromRef<C>,
     {
+        println!(">------ init_config_loaders ------<");
+
         // Add the HTTP Config Initializer
         init_config_loaders(&mut self.app).await?;
 
+        println!(">------ self.app.init ------<");
+
         // Initialize the underlying App
-        self.app.init(config_path).await?;
+        self.app.start(config_path).await?;
+
+        println!(">------ state ------<");
 
         let state = self.app.get_type::<S>()?;
+
+        println!(">------ router ------<");
 
         let app: Router = Router::new()
             .layer(
@@ -71,8 +95,12 @@ impl<C: Config + Debug, S: State> HttpApplication<C, S> {
             )
             .merge(self.router.clone().with_state(state.clone()));
 
+        println!(">------ config ------<");
+
         let config = self.app.get_type::<C>()?;
         let http = HttpConfig::from_ref(config);
+
+        println!(">------ server ------<");
 
         let server = Server::bind(
             &format!("0.0.0.0:{}", http.port)

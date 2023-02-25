@@ -1,6 +1,5 @@
 use std::{
     any::Any,
-    fmt::Debug,
     marker::PhantomData,
     ops::{Deref, DerefMut},
     path::PathBuf,
@@ -16,12 +15,18 @@ pub trait State: Clone + Any + Send + Sync {}
 
 /// The top-level Application struct
 #[derive(Default)]
-pub struct Application<C: Config> {
+pub struct Application<C>
+where
+    C: Config,
+{
     i: inject::Inject,
     _phantom: PhantomData<C>,
 }
 
-impl<C: Config> Deref for Application<C> {
+impl<C> Deref for Application<C>
+where
+    C: Config,
+{
     type Target = inject::Inject;
 
     fn deref(&self) -> &Self::Target {
@@ -29,18 +34,24 @@ impl<C: Config> Deref for Application<C> {
     }
 }
 
-impl<C: Config> DerefMut for Application<C> {
+impl<C> DerefMut for Application<C>
+where
+    C: Config,
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.i
     }
 }
 
-impl<C: Config + Debug> Application<C> {
+impl<C> Application<C>
+where
+    C: Config,
+{
     /// Initialize the App
     ///
     /// **Provides:**
     ///   - `C: Config`
-    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
+    pub async fn start(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
         // Initialize the Config using the given path
         config::init::<C>(&mut self.i, config_path).await?;
 
