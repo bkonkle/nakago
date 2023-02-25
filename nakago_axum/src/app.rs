@@ -1,6 +1,9 @@
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
-use nakago::{app::Application, config::loader::Config};
+use nakago::{
+    app::{Application, LifecycleHook},
+    config::loader::Config,
+};
 use std::{
     any::Any,
     fmt::Debug,
@@ -15,6 +18,7 @@ use crate::{config::HttpConfig, init_config_loaders};
 pub trait State: Clone + Any + Send + Sync {}
 
 /// The top-level Application struct
+#[derive(Default)]
 pub struct HttpApplication<C, S>
 where
     C: Config + Debug,
@@ -51,10 +55,30 @@ where
     C: Config + Debug,
     S: State,
 {
-    /// Create a new Application instance
-    pub fn new(router: Router<S>) -> Self {
+    /// Create a new Application instance with a startup hook
+    pub fn with_startup<H: LifecycleHook + 'static>(router: Router<S>, startup: H) -> Self {
         Self {
-            app: Application::default(),
+            app: Application::with_startup(startup),
+            router,
+        }
+    }
+
+    /// Create a new Application instance with a shutdown hook
+    pub fn with_shutdown<H: LifecycleHook + 'static>(router: Router<S>, shutdown: H) -> Self {
+        Self {
+            app: Application::with_shutdown(shutdown),
+            router,
+        }
+    }
+
+    /// Create a new Application instance with a startup and shutdown hook
+    pub fn with_hooks<H1: LifecycleHook + 'static, H2: LifecycleHook + 'static>(
+        router: Router<S>,
+        startup: H1,
+        shutdown: H2,
+    ) -> Self {
+        Self {
+            app: Application::with_hooks(startup, shutdown),
             router,
         }
     }
