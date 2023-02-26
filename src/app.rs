@@ -23,7 +23,7 @@ pub trait LifecycleHook {
 }
 
 /// A no-op hook that does nothing, for use as a default
-struct NoOpHook {}
+pub struct NoOpHook {}
 
 #[async_trait]
 impl LifecycleHook for NoOpHook {
@@ -34,8 +34,9 @@ impl LifecycleHook for NoOpHook {
 
 /// The top-level Application struct
 pub struct Application<C: Config> {
-    startup: Box<dyn LifecycleHook>,
-    shutdown: Box<dyn LifecycleHook>,
+    init: Box<dyn LifecycleHook + Send>,
+    startup: Box<dyn LifecycleHook + Send>,
+    shutdown: Box<dyn LifecycleHook + Send>,
     i: inject::Inject,
     _phantom: PhantomData<C>,
 }
@@ -43,6 +44,7 @@ pub struct Application<C: Config> {
 impl<C: Config> Default for Application<C> {
     fn default() -> Self {
         Self {
+            init: Box::new(NoOpHook {}),
             startup: Box::new(NoOpHook {}),
             shutdown: Box::new(NoOpHook {}),
             i: inject::Inject::default(),
@@ -52,9 +54,40 @@ impl<C: Config> Default for Application<C> {
 }
 
 impl<C: Config> Application<C> {
-    /// Create a new Application instance with a startup hook
-    pub fn with_startup<H: LifecycleHook + 'static>(startup: H) -> Self {
+    /// Create a new Application instance with a startup and shutdown hook
+    pub fn with_hooks<
+        H1: LifecycleHook + Send + 'static,
+        H2: LifecycleHook + Send + 'static,
+        H3: LifecycleHook + Send + 'static,
+    >(
+        init: H1,
+        startup: H2,
+        shutdown: H3,
+    ) -> Self {
         Self {
+            init: Box::new(init),
+            startup: Box::new(startup),
+            shutdown: Box::new(shutdown),
+            i: inject::Inject::default(),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Create a new Application instance with an init hook
+    pub fn with_init<H: LifecycleHook + Send + 'static>(init: H) -> Self {
+        Self {
+            init: Box::new(init),
+            startup: Box::new(NoOpHook {}),
+            shutdown: Box::new(NoOpHook {}),
+            i: inject::Inject::default(),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Create a new Application instance with a startup hook
+    pub fn with_startup<H: LifecycleHook + Send + 'static>(startup: H) -> Self {
+        Self {
+            init: Box::new(NoOpHook {}),
             startup: Box::new(startup),
             shutdown: Box::new(NoOpHook {}),
             i: inject::Inject::default(),
@@ -63,8 +96,9 @@ impl<C: Config> Application<C> {
     }
 
     /// Create a new Application instance with a shutdown hook
-    pub fn with_shutdown<H: LifecycleHook + 'static>(shutdown: H) -> Self {
+    pub fn with_shutdown<H: LifecycleHook + Send + 'static>(shutdown: H) -> Self {
         Self {
+            init: Box::new(NoOpHook {}),
             startup: Box::new(NoOpHook {}),
             shutdown: Box::new(shutdown),
             i: inject::Inject::default(),
@@ -72,16 +106,27 @@ impl<C: Config> Application<C> {
         }
     }
 
-    /// Create a new Application instance with a startup and shutdown hook
-    pub fn with_hooks<H1: LifecycleHook + 'static, H2: LifecycleHook + 'static>(
-        startup: H1,
-        shutdown: H2,
-    ) -> Self {
+    /// Set the init hook while building the Application
+    pub fn and_init<H: LifecycleHook + Send + 'static>(self, init: H) -> Self {
+        Self {
+            init: Box::new(init),
+            ..self
+        }
+    }
+
+    /// Set the startup hook while building the Application
+    pub fn and_startup<H: LifecycleHook + Send + 'static>(self, startup: H) -> Self {
         Self {
             startup: Box::new(startup),
+            ..self
+        }
+    }
+
+    /// Set the shutdown hook while building the Application
+    pub fn and_shutdown<H: LifecycleHook + Send + 'static>(self, shutdown: H) -> Self {
+        Self {
             shutdown: Box::new(shutdown),
-            i: inject::Inject::default(),
-            _phantom: PhantomData,
+            ..self
         }
     }
 }
@@ -114,12 +159,20 @@ where
     ///
     /// **Provides:**
     ///   - `C: Config`
-    pub async fn start(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
-        // Run the startup hook
-        self.startup.handle(&mut self.i).await?;
+    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
+        // Run the init hook
+        self.init.handle(&mut self.i).await?;
 
         // Initialize the Config using the given path
         config::init::<C>(&mut self.i, config_path).await?;
+
+        Ok(())
+    }
+
+    /// Start the App
+    pub async fn start(&mut self) -> inject::Result<()> {
+        // Run the startup hook
+        self.startup.handle(&mut self.i).await?;
 
         Ok(())
     }

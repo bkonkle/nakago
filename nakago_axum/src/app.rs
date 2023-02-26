@@ -1,8 +1,10 @@
+use async_trait::async_trait;
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
 use nakago::{
     app::{Application, LifecycleHook},
     config::loader::Config,
+    inject,
 };
 use std::{
     any::Any,
@@ -55,8 +57,33 @@ where
     C: Config + Debug,
     S: State,
 {
+    /// Create a new Application instance with a startup and shutdown hook
+    pub fn with_hooks<
+        H1: LifecycleHook + Send + 'static,
+        H2: LifecycleHook + Send + 'static,
+        H3: LifecycleHook + Send + 'static,
+    >(
+        router: Router<S>,
+        init: H1,
+        startup: H2,
+        shutdown: H3,
+    ) -> Self {
+        Self {
+            app: Application::with_hooks(init, startup, shutdown),
+            router,
+        }
+    }
+
+    /// Create a new Application instance with an init hook
+    pub fn with_init<H: LifecycleHook + Send + 'static>(router: Router<S>, init: H) -> Self {
+        Self {
+            app: Application::with_init(init),
+            router,
+        }
+    }
+
     /// Create a new Application instance with a startup hook
-    pub fn with_startup<H: LifecycleHook + 'static>(router: Router<S>, startup: H) -> Self {
+    pub fn with_startup<H: LifecycleHook + Send + 'static>(router: Router<S>, startup: H) -> Self {
         Self {
             app: Application::with_startup(startup),
             router,
@@ -64,22 +91,37 @@ where
     }
 
     /// Create a new Application instance with a shutdown hook
-    pub fn with_shutdown<H: LifecycleHook + 'static>(router: Router<S>, shutdown: H) -> Self {
+    pub fn with_shutdown<H: LifecycleHook + Send + 'static>(
+        router: Router<S>,
+        shutdown: H,
+    ) -> Self {
         Self {
             app: Application::with_shutdown(shutdown),
             router,
         }
     }
 
-    /// Create a new Application instance with a startup and shutdown hook
-    pub fn with_hooks<H1: LifecycleHook + 'static, H2: LifecycleHook + 'static>(
-        router: Router<S>,
-        startup: H1,
-        shutdown: H2,
-    ) -> Self {
+    /// Set the init hook
+    pub fn and_init<H: LifecycleHook + Send + 'static>(self, init: H) -> Self {
         Self {
-            app: Application::with_hooks(startup, shutdown),
-            router,
+            app: self.app.and_init(init),
+            ..self
+        }
+    }
+
+    /// Set the startup hook
+    pub fn and_startup<H: LifecycleHook + Send + 'static>(self, startup: H) -> Self {
+        Self {
+            app: self.app.and_startup(startup),
+            ..self
+        }
+    }
+
+    /// Set the shutdown hook
+    pub fn and_shutdown<H: LifecycleHook + Send + 'static>(self, shutdown: H) -> Self {
+        Self {
+            app: self.app.and_shutdown(shutdown),
+            ..self
         }
     }
 
@@ -95,15 +137,12 @@ where
     where
         HttpConfig: FromRef<C>,
     {
-        println!(">------ init_config_loaders ------<");
+        self.init(config_path).await?;
 
-        // Add the HTTP Config Initializer
-        init_config_loaders(&mut self.app).await?;
+        println!(">------ start ------<");
 
-        println!(">------ self.app.init ------<");
-
-        // Initialize the underlying App
-        self.app.start(config_path).await?;
+        // Run the startup hook
+        self.start().await?;
 
         println!(">------ state ------<");
 
@@ -134,5 +173,26 @@ where
         .serve(app.into_make_service());
 
         Ok(server)
+    }
+
+    /// Initialize the underlying App
+    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
+        println!(">------ Http app init ------<");
+        self.app.init(config_path).await?;
+
+        // Add the HTTP Config Initializer
+        init_config_loaders(&mut self.app).await
+    }
+
+    /// Start up the underlying App
+    pub async fn start(&mut self) -> inject::Result<()> {
+        println!(">------ Http app start ------<");
+        self.app.start().await
+    }
+
+    /// Shut down the underlying App
+    pub async fn stop(&mut self) -> inject::Result<()> {
+        println!(">------ Http app stop ------<");
+        self.app.stop().await
     }
 }
