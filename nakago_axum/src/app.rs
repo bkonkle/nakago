@@ -132,7 +132,7 @@ where
     pub async fn run(
         &mut self,
         config_path: Option<PathBuf>,
-    ) -> anyhow::Result<Server<AddrIncoming, IntoMakeService<Router>>>
+    ) -> inject::Result<Server<AddrIncoming, IntoMakeService<Router>>>
     where
         HttpConfig: FromRef<C>,
     {

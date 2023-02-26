@@ -1,11 +1,15 @@
+use async_trait::async_trait;
+use backtrace::Backtrace;
+use crossterm::{execute, style::Print};
 use std::{
     any::Any,
+    io,
     marker::PhantomData,
     ops::{Deref, DerefMut},
+    panic::{self, PanicInfo},
     path::PathBuf,
 };
-
-use async_trait::async_trait;
+use tracing_subscriber::prelude::*;
 
 use crate::{
     config::{self, Config},
@@ -160,6 +164,16 @@ where
     /// **Provides:**
     ///   - `C: Config`
     pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
+        tracing_subscriber::registry()
+            .with(tracing_subscriber::EnvFilter::new(
+                std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()),
+            ))
+            .with(tracing_subscriber::fmt::layer())
+            .init();
+
+        // Process setup
+        panic::set_hook(Box::new(handle_panic));
+
         // Run the init hook
         self.init.handle(&mut self.i).await?;
 
@@ -183,5 +197,30 @@ where
         self.shutdown.handle(&mut self.i).await?;
 
         Ok(())
+    }
+}
+
+fn handle_panic(info: &PanicInfo<'_>) {
+    if cfg!(debug_assertions) {
+        let location = info.location().unwrap();
+
+        let msg = match info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => match info.payload().downcast_ref::<String>() {
+                Some(s) => &s[..],
+                None => "Box<Any>",
+            },
+        };
+
+        let stacktrace: String = format!("{:?}", Backtrace::new()).replace('\n', "\n\r");
+
+        execute!(
+            io::stdout(),
+            Print(format!(
+                "thread '<unnamed>' panicked at '{}', {}\n\r{}",
+                msg, location, stacktrace
+            ))
+        )
+        .unwrap();
     }
 }
