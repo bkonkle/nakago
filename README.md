@@ -26,7 +26,7 @@ NOTE: This library is in early development, and the API may shift rapidly as it 
 ## Features
 
 - [Dependency Injection](docs/dependency-injection.md)
-- HTTP Adapter using [Axum](https://github.com/tokio-rs/axum) (upcoming)
+- [HTTP Adapter](docs/axum-http.md) using [Axum](https://github.com/tokio-rs/axum)
 - GraphQL Adapter using [Async-GraphQL](https://github.com/async-graphql/async-graphql) (upcoming)
 - CQRS Adapter using [CQRS-ES](https://crates.io/crates/cqrs-es) (upcoming)
 

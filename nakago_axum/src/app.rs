@@ -57,18 +57,13 @@ where
     S: State,
 {
     /// Create a new Application instance with a startup and shutdown hook
-    pub fn with_hooks<
-        H1: LifecycleHook + Send + 'static,
-        H2: LifecycleHook + Send + 'static,
-        H3: LifecycleHook + Send + 'static,
-    >(
+    pub fn with_hooks<H1: LifecycleHook + Send + 'static, H2: LifecycleHook + Send + 'static>(
         router: Router<S>,
         init: H1,
         startup: H2,
-        shutdown: H3,
     ) -> Self {
         Self {
-            app: Application::with_hooks(init, startup, shutdown),
+            app: Application::with_hooks(init, startup),
             router,
         }
     }
@@ -89,17 +84,6 @@ where
         }
     }
 
-    /// Create a new Application instance with a shutdown hook
-    pub fn with_shutdown<H: LifecycleHook + Send + 'static>(
-        router: Router<S>,
-        shutdown: H,
-    ) -> Self {
-        Self {
-            app: Application::with_shutdown(shutdown),
-            router,
-        }
-    }
-
     /// Set the init hook
     pub fn and_init<H: LifecycleHook + Send + 'static>(self, init: H) -> Self {
         Self {
@@ -112,14 +96,6 @@ where
     pub fn and_startup<H: LifecycleHook + Send + 'static>(self, startup: H) -> Self {
         Self {
             app: self.app.and_startup(startup),
-            ..self
-        }
-    }
-
-    /// Set the shutdown hook
-    pub fn and_shutdown<H: LifecycleHook + Send + 'static>(self, shutdown: H) -> Self {
-        Self {
-            app: self.app.and_shutdown(shutdown),
             ..self
         }
     }
@@ -175,10 +151,5 @@ where
     /// Start up the underlying App
     pub async fn start(&mut self) -> inject::Result<()> {
         self.app.start().await
-    }
-
-    /// Shut down the underlying App
-    pub async fn stop(&mut self) -> inject::Result<()> {
-        self.app.stop().await
     }
 }

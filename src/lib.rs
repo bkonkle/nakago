@@ -10,6 +10,7 @@ pub mod config;
 /// Application initialization
 pub mod app;
 
+pub use app::{Application, State};
 pub use config::loader::{Config, ConfigLoader};
 pub use inject::{
     provide, to_provider_error, Error as InjectError, Inject, Provider, Result as InjectResult, Tag,

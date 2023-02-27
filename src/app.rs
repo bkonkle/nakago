@@ -19,28 +19,10 @@ use crate::{
 /// State must be clonable and able to be stored in the Inject container
 pub trait State: Clone + Any + Send + Sync {}
 
-/// A trait for async
-#[async_trait]
-pub trait LifecycleHook {
-    /// Provide a dependency for the container
-    async fn handle(&mut self, i: &mut inject::Inject) -> inject::Result<()>;
-}
-
-/// A no-op hook that does nothing, for use as a default
-pub struct NoOpHook {}
-
-#[async_trait]
-impl LifecycleHook for NoOpHook {
-    async fn handle(&mut self, _i: &mut inject::Inject) -> inject::Result<()> {
-        Ok(())
-    }
-}
-
 /// The top-level Application struct
 pub struct Application<C: Config> {
     init: Box<dyn LifecycleHook + Send>,
     startup: Box<dyn LifecycleHook + Send>,
-    shutdown: Box<dyn LifecycleHook + Send>,
     i: inject::Inject,
     _phantom: PhantomData<C>,
 }
@@ -50,7 +32,6 @@ impl<C: Config> Default for Application<C> {
         Self {
             init: Box::new(NoOpHook {}),
             startup: Box::new(NoOpHook {}),
-            shutdown: Box::new(NoOpHook {}),
             i: inject::Inject::default(),
             _phantom: PhantomData,
         }
@@ -59,19 +40,13 @@ impl<C: Config> Default for Application<C> {
 
 impl<C: Config> Application<C> {
     /// Create a new Application instance with a startup and shutdown hook
-    pub fn with_hooks<
-        H1: LifecycleHook + Send + 'static,
-        H2: LifecycleHook + Send + 'static,
-        H3: LifecycleHook + Send + 'static,
-    >(
+    pub fn with_hooks<H1: LifecycleHook + Send + 'static, H2: LifecycleHook + Send + 'static>(
         init: H1,
         startup: H2,
-        shutdown: H3,
     ) -> Self {
         Self {
             init: Box::new(init),
             startup: Box::new(startup),
-            shutdown: Box::new(shutdown),
             i: inject::Inject::default(),
             _phantom: PhantomData,
         }
@@ -82,7 +57,6 @@ impl<C: Config> Application<C> {
         Self {
             init: Box::new(init),
             startup: Box::new(NoOpHook {}),
-            shutdown: Box::new(NoOpHook {}),
             i: inject::Inject::default(),
             _phantom: PhantomData,
         }
@@ -93,18 +67,6 @@ impl<C: Config> Application<C> {
         Self {
             init: Box::new(NoOpHook {}),
             startup: Box::new(startup),
-            shutdown: Box::new(NoOpHook {}),
-            i: inject::Inject::default(),
-            _phantom: PhantomData,
-        }
-    }
-
-    /// Create a new Application instance with a shutdown hook
-    pub fn with_shutdown<H: LifecycleHook + Send + 'static>(shutdown: H) -> Self {
-        Self {
-            init: Box::new(NoOpHook {}),
-            startup: Box::new(NoOpHook {}),
-            shutdown: Box::new(shutdown),
             i: inject::Inject::default(),
             _phantom: PhantomData,
         }
@@ -122,14 +84,6 @@ impl<C: Config> Application<C> {
     pub fn and_startup<H: LifecycleHook + Send + 'static>(self, startup: H) -> Self {
         Self {
             startup: Box::new(startup),
-            ..self
-        }
-    }
-
-    /// Set the shutdown hook while building the Application
-    pub fn and_shutdown<H: LifecycleHook + Send + 'static>(self, shutdown: H) -> Self {
-        Self {
-            shutdown: Box::new(shutdown),
             ..self
         }
     }
@@ -187,14 +141,6 @@ where
     pub async fn start(&mut self) -> inject::Result<()> {
         // Run the startup hook
         self.startup.handle(&mut self.i).await?;
-
-        Ok(())
-    }
-
-    /// Shutdown the App
-    pub async fn stop(&mut self) -> inject::Result<()> {
-        // Run the shutdown hook
-        self.shutdown.handle(&mut self.i).await?;
 
         Ok(())
     }
