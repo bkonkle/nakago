@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use std::any::{Any, TypeId};
+use std::any::Any;
 
 use super::{tag::Tag, Error, Inject, Result};
 
@@ -14,38 +14,22 @@ where
 }
 
 impl Inject {
-    /// Use a Provider function to inject a dependency. If the type returned from the `provide()`
-    /// is a (), it will not be injected.
+    /// Use a Provider function to inject a dependency.
     pub async fn provide_type<T, P>(&mut self, provider: P) -> Result<()>
     where
         T: Any + Sync + Send,
         P: Provider<T>,
     {
-        // If the type is (), we don't need to inject it
-        if TypeId::of::<T>() == TypeId::of::<()>() {
-            provider.provide(self).await?;
-
-            Ok(())
-        } else {
-            self.inject_type::<T>(provider.provide(self).await?)
-        }
+        self.inject_type::<T>(provider.provide(self).await?)
     }
 
-    /// Use a Provider function to replace an existing dependency. If the type returned from the
-    /// `provide()` is a (), it will not be replaced.
+    /// Use a Provider function to replace an existing dependency.
     pub async fn replace_type_with<T, P>(&mut self, provider: P) -> Result<()>
     where
         T: Any + Sync + Send,
         P: Provider<T>,
     {
-        // If the type is (), we don't need to replace it
-        if TypeId::of::<T>() == TypeId::of::<()>() {
-            provider.provide(self).await?;
-
-            Ok(())
-        } else {
-            self.replace_type::<T>(provider.provide(self).await?)
-        }
+        self.replace_type::<T>(provider.provide(self).await?)
     }
 
     /// Use a Provider function to inject a tagged dependency
