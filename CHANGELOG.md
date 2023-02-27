@@ -11,14 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added the `nakago-axum` crate for HTTP routes
 - Added Config loading based on Figment
+- Added Hooks to the inject module, which are like Providers but can mutate the Inject container
 - Added a top-level Application with Init (pre-config) and Startup (pre-run) hooks
 - Added an Axum HTTP Application with a `run()` method that starts the server
 
 ### Changed
 
 - Prioritized Tag-driven mode for Inject. Renamed the TypeId-driven fields to have a `_type` prefix, and removed the `_tag` prefix from the Tag-driven fields.
-- Allowed Providers to accept a mutable reference to the Inject container
-- Allowed Providers to return a unit that does not attempt to inject the result.
 
 ## [0.4.0] - 2023-02-15
 

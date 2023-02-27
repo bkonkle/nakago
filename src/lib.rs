@@ -8,10 +8,10 @@ pub mod inject;
 pub mod config;
 
 /// Application initialization
-pub mod app;
+pub mod system;
 
-pub use app::{Application, State};
 pub use config::loader::{Config, ConfigLoader};
 pub use inject::{
     provide, to_provider_error, Error as InjectError, Inject, Provider, Result as InjectResult, Tag,
 };
+pub use system::System;

@@ -1,7 +1,6 @@
 use backtrace::Backtrace;
 use crossterm::{execute, style::Print};
 use std::{
-    any::Any,
     io,
     marker::PhantomData,
     ops::{Deref, DerefMut},
@@ -15,18 +14,15 @@ use crate::{
     inject::{self, Hook},
 };
 
-/// State must be clonable and able to be stored in the Inject container
-pub trait State: Clone + Any + Send + Sync {}
-
-/// The top-level Application struct
-pub struct Application<C: Config> {
+/// The top-level System struct
+pub struct System<C: Config> {
     init: Box<dyn Hook>,
     startup: Box<dyn Hook>,
     i: inject::Inject,
     _phantom: PhantomData<C>,
 }
 
-impl<C: Config> Default for Application<C> {
+impl<C: Config> Default for System<C> {
     fn default() -> Self {
         Self {
             init: Box::new(inject::NoOpHook {}),
@@ -37,8 +33,8 @@ impl<C: Config> Default for Application<C> {
     }
 }
 
-impl<C: Config> Application<C> {
-    /// Create a new Application instance with a startup and shutdown hook
+impl<C: Config> System<C> {
+    /// Create a new System instance with a startup and shutdown hook
     pub fn with_hooks<H1: Hook, H2: Hook>(init: H1, startup: H2) -> Self {
         Self {
             init: Box::new(init),
@@ -48,7 +44,7 @@ impl<C: Config> Application<C> {
         }
     }
 
-    /// Create a new Application instance with an init hook
+    /// Create a new System instance with an init hook
     pub fn with_init<H: Hook>(init: H) -> Self {
         Self {
             init: Box::new(init),
@@ -58,7 +54,7 @@ impl<C: Config> Application<C> {
         }
     }
 
-    /// Create a new Application instance with a startup hook
+    /// Create a new System instance with a startup hook
     pub fn with_startup<H: Hook>(startup: H) -> Self {
         Self {
             init: Box::new(inject::NoOpHook {}),
@@ -68,7 +64,7 @@ impl<C: Config> Application<C> {
         }
     }
 
-    /// Set the init hook while building the Application
+    /// Set the init hook while building the System
     pub fn and_init<H: Hook>(self, init: H) -> Self {
         Self {
             init: Box::new(init),
@@ -76,7 +72,7 @@ impl<C: Config> Application<C> {
         }
     }
 
-    /// Set the startup hook while building the Application
+    /// Set the startup hook while building the System
     pub fn and_startup<H: Hook>(self, startup: H) -> Self {
         Self {
             startup: Box::new(startup),
@@ -85,7 +81,7 @@ impl<C: Config> Application<C> {
     }
 }
 
-impl<C> Deref for Application<C>
+impl<C> Deref for System<C>
 where
     C: Config,
 {
@@ -96,7 +92,7 @@ where
     }
 }
 
-impl<C> DerefMut for Application<C>
+impl<C> DerefMut for System<C>
 where
     C: Config,
 {
@@ -105,7 +101,7 @@ where
     }
 }
 
-impl<C> Application<C>
+impl<C> System<C>
 where
     C: Config,
 {

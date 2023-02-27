@@ -42,7 +42,7 @@ impl<C: Config> InitConfig<C> {
 
 #[async_trait]
 impl<C: Config> inject::Hook for InitConfig<C> {
-    async fn handle(&mut self, i: &mut inject::Inject) -> inject::Result<()> {
+    async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
         let loaders = i.consume(&CONFIG_LOADERS).unwrap_or_default();
         let loader = Loader::<C>::new(loaders);
 
@@ -74,7 +74,7 @@ impl AddConfigLoaders {
 
 #[async_trait]
 impl inject::Hook for AddConfigLoaders {
-    async fn handle(&mut self, i: &mut inject::Inject) -> inject::Result<()> {
+    async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
         if let Ok(existing) = i.get_mut(&CONFIG_LOADERS) {
             // Add the given ConfigLoaders to the stack
             for loader in self.loaders.iter() {
