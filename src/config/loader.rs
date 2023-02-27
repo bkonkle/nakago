@@ -3,7 +3,7 @@ use figment::{
     Figment,
 };
 use serde::{Deserialize, Serialize};
-use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf};
+use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf, sync::Arc};
 
 /// A ConfigLoader uses hooks to augment the Config loaded for the application
 ///
@@ -21,13 +21,13 @@ pub trait Config:
 
 /// An extensible Config loader based on Figment
 pub struct Loader<C: Config> {
-    loaders: Vec<Box<dyn ConfigLoader>>,
+    loaders: Vec<Arc<dyn ConfigLoader>>,
     _phantom: PhantomData<C>,
 }
 
 impl<C: Config> Loader<C> {
     /// Create a new Config instance with the given loaders
-    pub fn new(loaders: Vec<Box<dyn ConfigLoader>>) -> Self {
+    pub fn new(loaders: Vec<Arc<dyn ConfigLoader>>) -> Self {
         Self {
             loaders,
             _phantom: Default::default(),

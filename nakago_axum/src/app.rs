@@ -1,9 +1,9 @@
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
 use nakago::{
-    app::{Application, LifecycleHook},
+    app::Application,
     config::loader::Config,
-    inject,
+    inject::{self, Hook},
 };
 use std::{
     any::Any,
@@ -13,7 +13,7 @@ use std::{
 };
 use tower_http::trace;
 
-use crate::{config::HttpConfig, init_config_loaders};
+use crate::{add_http_config_loaders, config::HttpConfig};
 
 /// State must be clonable and able to be stored in the Inject container
 pub trait State: Clone + Any + Send + Sync {}
@@ -57,7 +57,7 @@ where
     S: State,
 {
     /// Create a new Application instance with a startup and shutdown hook
-    pub fn with_hooks<H1: LifecycleHook + Send + 'static, H2: LifecycleHook + Send + 'static>(
+    pub fn with_hooks<H1: inject::Hook, H2: inject::Hook>(
         router: Router<S>,
         init: H1,
         startup: H2,
@@ -69,7 +69,7 @@ where
     }
 
     /// Create a new Application instance with an init hook
-    pub fn with_init<H: LifecycleHook + Send + 'static>(router: Router<S>, init: H) -> Self {
+    pub fn with_init<H: inject::Hook>(router: Router<S>, init: H) -> Self {
         Self {
             app: Application::with_init(init),
             router,
@@ -77,7 +77,7 @@ where
     }
 
     /// Create a new Application instance with a startup hook
-    pub fn with_startup<H: LifecycleHook + Send + 'static>(router: Router<S>, startup: H) -> Self {
+    pub fn with_startup<H: inject::Hook>(router: Router<S>, startup: H) -> Self {
         Self {
             app: Application::with_startup(startup),
             router,
@@ -85,7 +85,7 @@ where
     }
 
     /// Set the init hook
-    pub fn and_init<H: LifecycleHook + Send + 'static>(self, init: H) -> Self {
+    pub fn and_init<H: inject::Hook>(self, init: H) -> Self {
         Self {
             app: self.app.and_init(init),
             ..self
@@ -93,7 +93,7 @@ where
     }
 
     /// Set the startup hook
-    pub fn and_startup<H: LifecycleHook + Send + 'static>(self, startup: H) -> Self {
+    pub fn and_startup<H: inject::Hook>(self, startup: H) -> Self {
         Self {
             app: self.app.and_startup(startup),
             ..self
@@ -143,7 +143,7 @@ where
     /// Initialize the underlying App
     pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
         // Add the HTTP Config Initializer
-        init_config_loaders(&mut self.app).await?;
+        add_http_config_loaders().handle(&mut self.app).await?;
 
         self.app.init(config_path).await
     }

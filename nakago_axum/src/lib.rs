@@ -17,4 +17,4 @@ pub mod auth;
 extern crate log;
 
 pub use app::HttpApplication;
-pub use providers::init_config_loaders;
+pub use providers::add_http_config_loaders;

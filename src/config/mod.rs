@@ -5,4 +5,4 @@ pub mod loader;
 pub mod providers;
 
 pub use loader::{Config, ConfigLoader};
-pub use providers::{init, init_loaders, CONFIG_LOADERS};
+pub use providers::{AddConfigLoaders, InitConfig, CONFIG_LOADERS};

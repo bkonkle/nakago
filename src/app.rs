@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use backtrace::Backtrace;
 use crossterm::{execute, style::Print};
 use std::{
@@ -12,34 +11,17 @@ use std::{
 use tracing_subscriber::prelude::*;
 
 use crate::{
-    config::{self, Config},
-    inject,
+    config::{Config, InitConfig},
+    inject::{self, Hook},
 };
 
 /// State must be clonable and able to be stored in the Inject container
 pub trait State: Clone + Any + Send + Sync {}
 
-/// A trait for async
-#[async_trait]
-pub trait LifecycleHook {
-    /// Provide a dependency for the container
-    async fn handle(&mut self, i: &mut inject::Inject) -> inject::Result<()>;
-}
-
-/// A no-op hook that does nothing, for use as a default
-pub struct NoOpHook {}
-
-#[async_trait]
-impl LifecycleHook for NoOpHook {
-    async fn handle(&mut self, _i: &mut inject::Inject) -> inject::Result<()> {
-        Ok(())
-    }
-}
-
 /// The top-level Application struct
 pub struct Application<C: Config> {
-    init: Box<dyn LifecycleHook + Send>,
-    startup: Box<dyn LifecycleHook + Send>,
+    init: Box<dyn Hook>,
+    startup: Box<dyn Hook>,
     i: inject::Inject,
     _phantom: PhantomData<C>,
 }
@@ -47,8 +29,8 @@ pub struct Application<C: Config> {
 impl<C: Config> Default for Application<C> {
     fn default() -> Self {
         Self {
-            init: Box::new(NoOpHook {}),
-            startup: Box::new(NoOpHook {}),
+            init: Box::new(inject::NoOpHook {}),
+            startup: Box::new(inject::NoOpHook {}),
             i: inject::Inject::default(),
             _phantom: PhantomData,
         }
@@ -57,10 +39,7 @@ impl<C: Config> Default for Application<C> {
 
 impl<C: Config> Application<C> {
     /// Create a new Application instance with a startup and shutdown hook
-    pub fn with_hooks<H1: LifecycleHook + Send + 'static, H2: LifecycleHook + Send + 'static>(
-        init: H1,
-        startup: H2,
-    ) -> Self {
+    pub fn with_hooks<H1: Hook, H2: Hook>(init: H1, startup: H2) -> Self {
         Self {
             init: Box::new(init),
             startup: Box::new(startup),
@@ -70,19 +49,19 @@ impl<C: Config> Application<C> {
     }
 
     /// Create a new Application instance with an init hook
-    pub fn with_init<H: LifecycleHook + Send + 'static>(init: H) -> Self {
+    pub fn with_init<H: Hook>(init: H) -> Self {
         Self {
             init: Box::new(init),
-            startup: Box::new(NoOpHook {}),
+            startup: Box::new(inject::NoOpHook {}),
             i: inject::Inject::default(),
             _phantom: PhantomData,
         }
     }
 
     /// Create a new Application instance with a startup hook
-    pub fn with_startup<H: LifecycleHook + Send + 'static>(startup: H) -> Self {
+    pub fn with_startup<H: Hook>(startup: H) -> Self {
         Self {
-            init: Box::new(NoOpHook {}),
+            init: Box::new(inject::NoOpHook {}),
             startup: Box::new(startup),
             i: inject::Inject::default(),
             _phantom: PhantomData,
@@ -90,7 +69,7 @@ impl<C: Config> Application<C> {
     }
 
     /// Set the init hook while building the Application
-    pub fn and_init<H: LifecycleHook + Send + 'static>(self, init: H) -> Self {
+    pub fn and_init<H: Hook>(self, init: H) -> Self {
         Self {
             init: Box::new(init),
             ..self
@@ -98,7 +77,7 @@ impl<C: Config> Application<C> {
     }
 
     /// Set the startup hook while building the Application
-    pub fn and_startup<H: LifecycleHook + Send + 'static>(self, startup: H) -> Self {
+    pub fn and_startup<H: Hook>(self, startup: H) -> Self {
         Self {
             startup: Box::new(startup),
             ..self
@@ -149,7 +128,9 @@ where
         self.init.handle(&mut self.i).await?;
 
         // Initialize the Config using the given path
-        config::init::<C>(&mut self.i, config_path).await?;
+        InitConfig::<C>::new(config_path)
+            .handle(&mut self.i)
+            .await?;
 
         Ok(())
     }
