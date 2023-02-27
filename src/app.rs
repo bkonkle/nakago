@@ -19,6 +19,23 @@ use crate::{
 /// State must be clonable and able to be stored in the Inject container
 pub trait State: Clone + Any + Send + Sync {}
 
+/// A trait for async
+#[async_trait]
+pub trait LifecycleHook {
+    /// Provide a dependency for the container
+    async fn handle(&mut self, i: &mut inject::Inject) -> inject::Result<()>;
+}
+
+/// A no-op hook that does nothing, for use as a default
+pub struct NoOpHook {}
+
+#[async_trait]
+impl LifecycleHook for NoOpHook {
+    async fn handle(&mut self, _i: &mut inject::Inject) -> inject::Result<()> {
+        Ok(())
+    }
+}
+
 /// The top-level Application struct
 pub struct Application<C: Config> {
     init: Box<dyn LifecycleHook + Send>,
