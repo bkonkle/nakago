@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Added the `nakago-axum` crate for HTTP routes
+- Added Config loading based on Figment
+- Added Hooks to the inject module, which are like Providers but can mutate the Inject container
+- Added a top-level Application with Init (pre-config) and Startup (pre-run) hooks
+- Added an Axum HTTP Application with a `run()` method that starts the server
+
+### Changed
+
+- Prioritized Tag-driven mode for Inject. Renamed the TypeId-driven fields to have a `_type` prefix, and removed the `_tag` prefix from the Tag-driven fields.
+
 ## [0.4.0] - 2023-02-15
 
 ### Changed

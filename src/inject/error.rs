@@ -23,6 +23,12 @@ pub enum Error {
 
     /// An error thrown from a Provider
     Provider(#[from] anyhow::Error),
+
+    /// The given Key was unable to be removed from the Inject container
+    CannotConsume(
+        /// The Key of the type that consumption was attempted for
+        Key,
+    ),
 }
 
 /// A Dependency Injection Result
@@ -31,7 +37,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Occupied(name) => write!(f, "{name} has already been provided"),
+            Self::Occupied(key) => write!(f, "{key} has already been provided"),
             Self::NotFound { missing, available } => {
                 let avail_lines = if !available.is_empty() {
                     format!(
@@ -49,6 +55,7 @@ impl Display for Error {
                 write!(f, "{missing} was not found\n\nAvailable:{avail_lines}")
             }
             Self::Provider(_) => write!(f, "provider failure"),
+            Self::CannotConsume(key) => write!(f, "{key} was not able to be consumed"),
         }
     }
 }

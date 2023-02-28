@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::any::Any;
 
-use super::{tag::Tag, Inject, Result};
+use super::{tag::Tag, Error, Inject, Result};
 
 /// A trait for async injection Providers
 #[async_trait]
@@ -14,41 +14,49 @@ where
 }
 
 impl Inject {
-    /// Use a Provider function to inject a dependency
-    pub async fn provide<T, P>(&mut self, provider: P) -> Result<()>
+    /// Use a Provider function to inject a dependency.
+    pub async fn provide_type<T, P>(&mut self, provider: P) -> Result<()>
     where
         T: Any + Sync + Send,
         P: Provider<T>,
     {
-        self.inject::<T>(provider.provide(self).await?)
+        self.inject_type::<T>(provider.provide(self).await?)
     }
 
-    /// Use a Provider function to replace an existing dependency
-    pub async fn replace_with<T, P>(&mut self, provider: P) -> Result<()>
+    /// Use a Provider function to replace an existing dependency.
+    pub async fn replace_type_with<T, P>(&mut self, provider: P) -> Result<()>
     where
         T: Any + Sync + Send,
         P: Provider<T>,
     {
-        self.replace::<T>(provider.provide(self).await?)
+        self.replace_type::<T>(provider.provide(self).await?)
     }
 
     /// Use a Provider function to inject a tagged dependency
-    pub async fn provide_tag<T, P>(&mut self, tag: &'static Tag<T>, provider: P) -> Result<()>
+    pub async fn provide<T, P>(&mut self, tag: &'static Tag<T>, provider: P) -> Result<()>
     where
         T: Any + Sync + Send,
         P: Provider<T>,
     {
-        self.inject_tag::<T>(tag, provider.provide(self).await?)
+        self.inject::<T>(tag, provider.provide(self).await?)
     }
 
     /// Use a Provider function to replace a tagged dependency
-    pub async fn replace_tag_with<T, P>(&mut self, tag: &'static Tag<T>, provider: P) -> Result<()>
+    pub async fn replace_with<T, P>(&mut self, tag: &'static Tag<T>, provider: P) -> Result<()>
     where
         T: Any + Sync + Send,
         P: Provider<T>,
     {
-        self.replace_tag::<T>(tag, provider.provide(self).await?)
+        self.replace::<T>(tag, provider.provide(self).await?)
     }
+}
+
+/// Wrap an error that can be converted into an Anyhow error with an inject Provider error
+pub fn to_provider_error<E>(e: E) -> Error
+where
+    anyhow::Error: From<E>,
+{
+    Error::Provider(e.into())
 }
 
 #[cfg(test)]
@@ -116,7 +124,7 @@ mod test {
         async fn provide(&self, i: &Inject) -> Result<Arc<dyn HasId>> {
             // Trigger a borrow so that the reference to `Inject` has to be held across the await
             // point below, to test issues with Inject thread safety.
-            let _ = i.get::<String>();
+            let _ = i.get_type::<String>();
 
             sleep(Duration::from_millis(1)).await;
 
@@ -128,7 +136,7 @@ mod test {
     async fn test_provide_success() -> Result<()> {
         let mut i = Inject::default();
 
-        i.provide(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+        i.provide_type(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
             .await?;
 
         assert!(
@@ -143,7 +151,7 @@ mod test {
     async fn test_provide_dyn_success() -> Result<()> {
         let mut i = Inject::default();
 
-        i.provide(TestServiceHasIdProvider::default()).await?;
+        i.provide_type(TestServiceHasIdProvider::default()).await?;
 
         assert!(
             i.0.contains_key(&Key::from_type_id::<Arc<dyn HasId>>()),
@@ -157,11 +165,11 @@ mod test {
     async fn test_provide_occupied() -> Result<()> {
         let mut i = Inject::default();
 
-        i.provide(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+        i.provide_type(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
             .await?;
 
         let result = i
-            .provide(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .provide_type(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
             .await;
 
         if let Err(err) = result {
@@ -182,14 +190,14 @@ mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+        i.provide_type(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
             .await?;
 
         // Override the instance that was injected the first time
-        i.replace_with(TestServiceProvider::new(expected.clone()))
+        i.replace_type_with(TestServiceProvider::new(expected.clone()))
             .await?;
 
-        let result = i.get::<TestService>()?;
+        let result = i.get_type::<TestService>()?;
 
         assert_eq!(expected, result.id);
 
@@ -200,12 +208,14 @@ mod test {
     async fn test_replace_with_not_found() -> Result<()> {
         let mut i = Inject::default();
 
-        i.provide(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+        i.provide_type(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
             .await?;
 
         // Override a type that doesn't have any instances yet
         let result = i
-            .replace_with::<OtherService, _>(OtherServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .replace_type_with::<OtherService, _>(OtherServiceProvider::new(
+                fake::uuid::UUIDv4.fake(),
+            ))
             .await;
 
         if let Err(err) = result {
@@ -228,7 +238,7 @@ mod test {
     async fn test_provide_tag_success() -> Result<()> {
         let mut i = Inject::default();
 
-        i.provide_tag(
+        i.provide(
             &SERVICE_TAG,
             TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
         )
@@ -246,7 +256,7 @@ mod test {
     async fn test_provide_tag_dyn_success() -> Result<()> {
         let mut i = Inject::default();
 
-        i.provide_tag(&DYN_TAG, TestServiceHasIdProvider::default())
+        i.provide(&DYN_TAG, TestServiceHasIdProvider::default())
             .await?;
 
         assert!(
@@ -261,14 +271,14 @@ mod test {
     async fn test_provide_tag_occupied() -> Result<()> {
         let mut i = Inject::default();
 
-        i.provide_tag(
+        i.provide(
             &SERVICE_TAG,
             TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
         )
         .await?;
 
         let result = i
-            .provide_tag(
+            .provide(
                 &SERVICE_TAG,
                 TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
             )
@@ -292,17 +302,17 @@ mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide_tag(
+        i.provide(
             &SERVICE_TAG,
             TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
         )
         .await?;
 
         // Override the instance that was injected the first time
-        i.replace_tag_with(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.replace_with(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        let result = i.get_tag::<TestService>(&SERVICE_TAG)?;
+        let result = i.get(&SERVICE_TAG)?;
 
         assert_eq!(expected, result.id);
 
@@ -313,7 +323,7 @@ mod test {
     async fn test_replace_tag_with_not_found() -> Result<()> {
         let mut i = Inject::default();
 
-        i.provide_tag(
+        i.provide(
             &SERVICE_TAG,
             TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
         )
@@ -321,7 +331,7 @@ mod test {
 
         // Override a type that doesn't have any instances yet
         let result = i
-            .replace_tag_with(
+            .replace_with(
                 &OTHER_TAG,
                 OtherServiceProvider::new(fake::uuid::UUIDv4.fake()),
             )
