@@ -1,0 +1,136 @@
+[config]
+main_project_member = "apps/api"
+default_to_workspace = false
+
+[tasks.lint]
+command = "cargo"
+args = [
+    "clippy",
+    "--tests",
+    "--examples",
+    "--all-targets",
+    "--all-features",
+    "--workspace",
+]
+
+[tasks.format]
+command = "cargo"
+args = ["fmt", "--all", "--", "--check"]
+
+[tasks.test]
+env = { "RUN_MODE" = "test", "RUST_LOG" = "info" }
+command = "cargo"
+args = ["nextest", "run", "--workspace", "${@}"]
+
+[tasks.test-ci]
+env = { "RUN_MODE" = "ci", "RUST_LOG" = "info" }
+command = "cargo"
+args = ["nextest", "run", "--workspace"]
+
+[tasks.cov]
+command = "cargo"
+env = { "RUN_MODE" = "test" }
+args = ["llvm-cov", "nextest", "${@}"]
+
+[tasks.cov-ci]
+command = "cargo"
+env = { "RUN_MODE" = "ci" }
+args = ["llvm-cov", "nextest", "--lcov", "--output-path", "lcov.info"]
+
+[tasks.integration]
+env = { "RUN_MODE" = "test", "RUST_LOG" = "info,sqlx::query=warn", "RUST_BACKTRACE" = 1 }
+command = "cargo"
+args = [
+    "nextest",
+    "run",
+    "--features=integration",
+    "--workspace",
+    "--run-ignored=ignored-only",
+    "${@}",
+]
+
+[tasks.integration-ci]
+env = { "RUN_MODE" = "ci", "RUST_LOG" = "info,sqlx::query=warn" }
+command = "cargo"
+args = [
+    "nextest",
+    "run",
+    "--features=integration",
+    "--workspace",
+    "--run-ignored=ignored-only",
+]
+
+[tasks.docs]
+command = "cargo"
+args = [
+    "doc",
+    "--no-deps",
+    "--all-features",
+    "--document-private-items",
+    "--workspace",
+    "--examples",
+]
+
+[tasks.audit]
+command = "cargo"
+# Ignore RUSTSEC-2020-0071 due to https://github.com/launchbadge/sqlx/issues/1586
+args = ["audit", "--ignore", "RUSTSEC-2020-0071"]
+
+[tasks.timings]
+script = '''
+    cargo clean
+    cargo build --release --quiet --timings
+    xdg-open /target/cargo-timings/cargo-timing.html
+'''
+
+[tasks.pre-commit]
+script = '''
+    cargo make test
+    cargo make docs
+    cargo spellcheck fix
+    cargo spellcheck reflow
+'''
+
+[tasks.dev]
+env = { "RUST_LOG" = "info,sqlx::query=warn" }
+command = "cargo"
+args = ["run", "--bin", "caster-api"]
+watch = true
+
+[tasks.db-create]
+cwd = "./"
+command = "sqlx"
+args = ["db", "create"]
+
+[tasks.db-migrate]
+cwd = "./"
+command = "sqlx"
+args = ["migrate", "run"]
+
+[tasks.db-reset]
+cwd = "./"
+command = "sqlx"
+args = ["db", "reset"]
+
+[tasks.docker]
+cwd = "./"
+command = "docker-compose"
+args = ["-f", "docker-compose.yml", "${@}"]
+
+[tasks.docker-api]
+cwd = "./apps/api"
+command = "docker-compose"
+args = [
+    "-f",
+    "../../docker-compose.yml",
+    "-f",
+    "docker-compose.app.yml",
+    "--env-file",
+    "../../.env",
+    "${@}",
+]
+
+[tasks.schema]
+cwd = "./"
+command = "cargo"
+args = ["run", "--bin", "caster-schema"]

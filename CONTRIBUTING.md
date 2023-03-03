@@ -1,16 +1,12 @@
 # Contribution guidelines
 
-First off, thank you for considering contributing to nakago.
+First off, thank you for considering contributing to Nakago!
 
-If your contribution is not straightforward, please first discuss the change you
-wish to make by creating a new issue before making the change.
+If your contribution is not straightforward, please first create a [Discussion](https://github.com/bkonkle/nakago/discussions) for the change you wish to make so that we can talk about the approach. I'd love to hear from you!
 
 ## Reporting issues
 
-Before reporting an issue on the
-[issue tracker](https://github.com/bkonkle/nakago/issues),
-please check that it has not already been reported by searching for some related
-keywords.
+Before reporting an issue on the [issue tracker](https://github.com/bkonkle/nakago/issues), please check that it has not already been reported by searching for some related keywords.
 
 ## Pull requests
 
@@ -18,13 +14,9 @@ Try to do one pull request per change.
 
 ### Updating the changelog
 
-Update the changes you have made in
-[CHANGELOG](https://github.com/bkonkle/nakago/blob/main/CHANGELOG.md)
-file under the **Unreleased** section.
+Update the changes you have made in [CHANGELOG](https://github.com/bkonkle/nakago/blob/main/CHANGELOG.md) file under the **Unreleased** section.
 
-Add the changes of your pull request to one of the following subsections,
-depending on the types of changes defined by
-[Keep a changelog](https://keepachangelog.com/en/1.0.0/):
+Add the changes of your pull request to one of the following subsections, depending on the types of changes defined by [Keep a changelog](https://keepachangelog.com/en/1.0.0/):
 
 - `Added` for new features.
 - `Changed` for changes in existing functionality.
@@ -33,52 +25,8 @@ depending on the types of changes defined by
 - `Fixed` for any bug fixes.
 - `Security` in case of vulnerabilities.
 
-If the required subsection does not exist yet under **Unreleased**, create it!
+If the required subsection does not exist yet under **Unreleased**, you're welcome to add it.
 
 ## Developing
 
-### Set up
-
-This is no different than other Rust projects.
-
-```shell
-git clone https://github.com/bkonkle/nakago
-cd nakago
-cargo test
-```
-
-### Useful Commands
-
-
-
-- Build and run release version:
-
-  ```shell
-  cargo build --release && cargo run --release
-  ```
-
-
-
-- Run Clippy:
-
-  ```shell
-  cargo clippy --all-targets --all-features --workspace
-  ```
-
-- Run all tests:
-
-  ```shell
-  cargo test --all-features --workspace
-  ```
-
-- Check to see if there are code formatting issues
-
-  ```shell
-  cargo fmt --all -- --check
-  ```
-
-- Format the code in the project
-
-  ```shell
-  cargo fmt --all
-  ```
+See [docs/development.md](docs/development.md).
