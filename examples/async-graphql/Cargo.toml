@@ -26,7 +26,7 @@ nakago-axum = { path = "../../nakago_axum" }
 oso = "0.26"
 pretty_env_logger = "0.4"
 rand = "0.8"
-sea-orm = { version = "0.10", features = [
+sea-orm = { version = "0.11", features = [
     "macros",
     "mock",
     "runtime-tokio-rustls",
