@@ -6,7 +6,7 @@ use std::sync::Arc;
 use super::{
     model::User,
     mutations::{CreateUserInput, MutateUserResult, UpdateUserInput},
-    service::UsersServiceTrait,
+    service::UsersService,
 };
 use crate::{
     domains::profiles::{mutations::CreateProfileInput, service::ProfilesService},
@@ -42,7 +42,7 @@ impl UsersMutation {
         input: CreateUserInput,
     ) -> Result<MutateUserResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let users = ctx.data_unchecked::<Arc<dyn UsersServiceTrait>>();
+        let users = ctx.data_unchecked::<Arc<dyn UsersService>>();
         let profiles = ctx.data_unchecked::<Arc<dyn ProfilesService>>();
         let subject = ctx.data_unchecked::<Subject>();
 
@@ -91,7 +91,7 @@ impl UsersMutation {
         input: UpdateUserInput,
     ) -> Result<MutateUserResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let users = ctx.data_unchecked::<Arc<dyn UsersServiceTrait>>();
+        let users = ctx.data_unchecked::<Arc<dyn UsersService>>();
 
         // Check to see if the associated Profile is selected
         let with_roles = ctx.look_ahead().field("user").field("roles").exists();

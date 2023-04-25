@@ -22,7 +22,7 @@ use nakago_examples_async_graphql::{
         episodes::{model::Episode, mutations::CreateEpisodeInput, providers::EPISODES_SERVICE},
         profiles::{model::Profile, mutations::CreateProfileInput, providers::PROFILES_SERVICE},
         shows::{model::Show, mutations::CreateShowInput, providers::SHOWS_SERVICE},
-        users::{model::User, providers::USERS_SERVICE, service::UsersServiceTrait},
+        users::{model::User, providers::USERS_SERVICE},
     },
     providers::{InitApp, StartApp},
     router::{self, AppState},

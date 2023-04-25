@@ -114,10 +114,10 @@ script = '''
 
 # Run example projects
 
-[tasks.async-graphql]
+[tasks.run-async-graphql]
 env = { "RUST_LOG" = "info,sqlx::query=warn" }
 command = "cargo"
-args = ["run", "--bin", "nakago-examples-async-graphql"]
+args = ["run", "-p", "nakago-examples-async-graphql"]
 watch = true
 
 # Database tasks for example projects

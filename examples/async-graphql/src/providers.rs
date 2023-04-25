@@ -20,8 +20,8 @@ use crate::{
         providers::{CONNECTIONS, SOCKET_HANDLER},
         ProvideConnections, ProvideSocket,
     },
-    graphql::InitGraphQLSchema,
-    handlers::EventsState,
+    graphql::{InitGraphQLSchema, GRAPHQL_SCHEMA},
+    handlers::{EventsState, GraphQLState},
     router::AppState,
     utils::providers::{add_app_config_loaders, ProvideOso, OSO},
 };
@@ -43,10 +43,12 @@ impl inject::Provider<AppState> for ProvideAppState {
         let auth = i.get(&AUTH_STATE)?;
         let users = i.get(&USERS_SERVICE)?;
         let handler = i.get(&SOCKET_HANDLER)?;
+        let schema = i.get(&GRAPHQL_SCHEMA)?;
 
         let events = EventsState::new(users, handler.clone());
+        let graphql = GraphQLState::new(users, schema.clone());
 
-        Ok(AppState::new(auth.clone(), events))
+        Ok(AppState::new(auth.clone(), events, graphql))
     }
 }
 
