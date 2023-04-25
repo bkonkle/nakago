@@ -7,6 +7,7 @@ use nakago_axum::auth::{
 use oso::PolarClass;
 
 use crate::{
+    config::AppConfig,
     db::providers::{ProvideDatabaseConnection, DATABASE_CONNECTION},
     domains::{
         episodes::{self, model::Episode},
@@ -23,7 +24,6 @@ use crate::{
     handlers::EventsState,
     router::AppState,
     utils::providers::{add_app_config_loaders, ProvideOso, OSO},
-    AppConfig,
 };
 
 /// Provide the AppState for Axum

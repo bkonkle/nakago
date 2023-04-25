@@ -1,39 +1,57 @@
 name: Build
 
 on:
-    push:
-        branches:
-            - main
+  push:
+    branches:
+      - main
 
 jobs:
-    docs:
-        name: Docs
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v3
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-            - name: Install Rust toolchain
-              uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-            - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
 
-            - name: Check documentation
-              run: cargo doc --no-deps --document-private-items --all-features --workspace --examples
-              env:
-                  RUSTDOCFLAGS: -D warnings
+      - name: Check documentation
+        run: cargo doc --no-deps --document-private-items --all-features --workspace --examples
+        env:
+          RUSTDOCFLAGS: -D warnings
 
-    publish-dry-run:
-        name: Publish dry run
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v3
+      - name: Release build
+        run: cargo build --release
 
-            - name: Install Rust toolchain
-              uses: dtolnay/rust-toolchain@stable
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-            - uses: Swatinem/rust-cache@v2
+      - name: Docker build
+        id: docker_build
+        uses: docker/build-push-action@v3
+        with:
+          context: ./
+          file: ./examples/async-graphql/Dockerfile
+          push: false
+          tags: async-graphql:latest
 
-            - name: Dry run
-              run: cargo publish --dry-run
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
+
+  publish-dry-run:
+    name: Publish dry run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Dry run
+        run: cargo publish --dry-run

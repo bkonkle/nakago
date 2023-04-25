@@ -13,4 +13,11 @@ Cargo.lock
 
 .DS_Store
 
+# Build files
+dist/
+
+# Config files
+.envrc
+config.toml
+
 lcov.info
