@@ -2,12 +2,6 @@ use async_graphql::{EmptySubscription, MergedObject, Schema};
 use async_trait::async_trait;
 use nakago::inject;
 
-use crate::domains::{
-    episodes::resolver::{EpisodesMutation, EpisodesQuery},
-    profiles::resolver::{ProfilesMutation, ProfilesQuery},
-    shows::resolver::{ShowsMutation, ShowsQuery},
-    users::resolver::{UsersMutation, UsersQuery},
-};
 use crate::{
     config::AppConfig,
     domains::{
@@ -17,7 +11,15 @@ use crate::{
         shows::providers::{SHOWS_SERVICE, SHOW_LOADER},
         users::providers::{USERS_SERVICE, USER_LOADER},
     },
-    providers::OSO,
+};
+use crate::{
+    domains::{
+        episodes::resolver::{EpisodesMutation, EpisodesQuery},
+        profiles::resolver::{ProfilesMutation, ProfilesQuery},
+        shows::resolver::{ShowsMutation, ShowsQuery},
+        users::resolver::{UsersMutation, UsersQuery},
+    },
+    utils::providers::OSO,
 };
 
 /// The GraphQL top-level Query type
@@ -45,17 +47,17 @@ pub const GRAPHQL_SCHEMA: inject::Tag<GraphQLSchema> = inject::Tag::new("GraphQL
 ///
 /// **Depends on:**
 ///  - `Tag(AppConfig)`
-/// - `Tag(OSO)`
-/// - `Tag(UsersService)`
-/// - `Tag(UserLoader)`
-/// - `Tag(ProfilesService)`
-/// - `Tag(ProfileLoader)`
-/// - `Tag(RoleGrantsService)`
-/// - `Tag(RoleGrantLoader)`
-/// - `Tag(ShowsService)`
-/// - `Tag(ShowLoader)`
-/// - `Tag(EpisodesService)`
-/// - `Tag(EpisodeLoader)`
+///  - `Tag(OSO)`
+///  - `Tag(UsersService)`
+///  - `Tag(UserLoader)`
+///  - `Tag(ProfilesService)`
+///  - `Tag(ProfileLoader)`
+///  - `Tag(RoleGrantsService)`
+///  - `Tag(RoleGrantLoader)`
+///  - `Tag(ShowsService)`
+///  - `Tag(ShowLoader)`
+///  - `Tag(EpisodesService)`
+///  - `Tag(EpisodeLoader)`
 #[derive(Default)]
 pub struct InitGraphQLSchema {}
 

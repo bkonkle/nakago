@@ -33,3 +33,8 @@ pretty_assertions = "1.2"
 
 [workspace]
 members = ["nakago_axum", "examples/*"]
+default-members = ["nakago_axum"]
+
+[patch.crates-io]
+nakago = { path = "./" }
+nakago-axum = { path = "./nakago_axum" }
