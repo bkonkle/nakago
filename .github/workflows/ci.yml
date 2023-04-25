@@ -61,6 +61,13 @@ jobs:
     name: Integration Test
     runs-on: ubuntu-latest
     needs: check
+    env:
+      DATABASE_HOSTNAME: localhost
+      DATABASE_USERNAME: async_graphql
+      DATABASE_PASSWORD: async_graphql
+      DATABASE_NAME: async_graphql
+      DATABASE_PORT: 1701
+      DATABASE_URL: postgresql://async_graphql:async_graphql@localhost:1701/async_graphql
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -77,6 +84,19 @@ jobs:
 
       - name: Run docker-compose
         run: docker-compose -f docker-compose.yml up -d
+
+      - name: Install SQLx CLI
+        uses: baptiste0928/cargo-install@v1
+        with:
+          crate: sqlx-cli
+          args: --no-default-features --features rustls,postgres
+          version: latest
+
+      - name: Create Async-GraphQL Database
+        run: cargo make db-create-async-graphql
+
+      - name: Migrate Async-GraphQL Database
+        run: cargo make db-migrate-async-graphql
 
       - name: Run Integration Tests
         run: cargo make integration-ci
