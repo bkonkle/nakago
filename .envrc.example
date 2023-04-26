@@ -5,6 +5,4 @@ export DATABASE_NAME=async-graphql
 export DATABASE_PORT=1701
 export DATABASE_URL=postgresql://async-graphql:async-graphql@localhost:1701/async-graphql
 
-export AUTH_URL="https://your.oauth.server.com"
-export AUTH_CLIENT_ID=client-id
-export AUTH_CLIENT_SECRET=client-secret
+export AUTH_URL="https://caster-api-dev.us.auth0.com"
