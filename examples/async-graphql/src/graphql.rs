@@ -47,7 +47,7 @@ pub const GRAPHQL_SCHEMA: inject::Tag<GraphQLSchema> = inject::Tag::new("GraphQL
 ///
 /// **Depends on:**
 ///  - `Tag(AppConfig)`
-///  - `Tag(OSO)`
+///  - `Tag(Oso)`
 ///  - `Tag(UsersService)`
 ///  - `Tag(UserLoader)`
 ///  - `Tag(ProfilesService)`

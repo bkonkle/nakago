@@ -96,6 +96,7 @@ impl inject::Hook for StartApp {
             .await?;
 
         init_domains(i).await?;
+        init_authz(i).await?;
 
         InitGraphQLSchema::default().handle(i).await?;
 
@@ -104,11 +105,14 @@ impl inject::Hook for StartApp {
 
         i.provide_type(ProvideAppState::default()).await?;
 
-        init_authz(i).await
+        Ok(())
     }
 }
 
-/// Initialize the authorization system
+/// Initialize the authorization system. Must be initialized before the InitGraphQLSchema hook.
+///
+/// **Depends on (and modifies):**
+///   - `Tag(Oso)`
 pub async fn init_authz(i: &mut inject::Inject) -> inject::Result<()> {
     // Set up authorization
     let oso = i.get_mut(&OSO)?;
