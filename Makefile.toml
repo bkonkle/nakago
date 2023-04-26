@@ -123,19 +123,19 @@ watch = true
 # Database tasks for example projects
 
 [tasks.db-create-async-graphql]
-cwd = "./"
+cwd = "./examples/async-graphql"
 command = "sqlx"
-args = ["db", "create", "--source=examples/async-graphql/migrations"]
+args = ["db", "create"]
 
 [tasks.db-migrate-async-graphql]
-cwd = "./"
+cwd = "./examples/async-graphql"
 command = "sqlx"
-args = ["migrate", "run", "--source=examples/async-graphql/migrations"]
+args = ["migrate", "run"]
 
 [tasks.db-reset-async-graphql]
-cwd = "./"
+cwd = "./examples/async-graphql"
 command = "sqlx"
-args = ["db", "reset", "--source=examples/async-graphql/migrations"]
+args = ["db", "reset"]
 
 # Infrastructure commands for example projects
 
