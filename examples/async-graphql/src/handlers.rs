@@ -1,10 +1,16 @@
+use std::sync::Arc;
+
+use async_graphql::http::GraphiQLSource;
+use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
     extract::{State, WebSocketUpgrade},
-    response::IntoResponse,
+    response::{Html, IntoResponse},
     Json,
 };
 use nakago_axum::auth::Subject;
 use serde::{Deserialize, Serialize};
+
+use crate::{domains::users::service::UsersService, graphql::GraphQLSchema};
 
 use super::events::SocketHandler;
 
@@ -29,27 +35,90 @@ pub async fn health_handler() -> Json<HealthResponse> {
     })
 }
 
+// GraphQL
+// -------
+
+/// State for the GraphQL Handler
+#[derive(Clone)]
+pub struct GraphQLState {
+    users: Arc<dyn UsersService>,
+    schema: GraphQLSchema,
+}
+
+impl GraphQLState {
+    /// Create a new GraphQLState instance
+    pub fn new(users: &Arc<dyn UsersService>, schema: GraphQLSchema) -> Self {
+        Self {
+            users: users.clone(),
+            schema,
+        }
+    }
+}
+
+/// Handle GraphiQL Requests
+pub async fn graphiql() -> impl IntoResponse {
+    Html(GraphiQLSource::build().endpoint("/graphql").finish())
+}
+
+/// Handle GraphQL Requests
+pub async fn graphql_handler(
+    State(state): State<GraphQLState>,
+    sub: Subject,
+    req: GraphQLRequest,
+) -> GraphQLResponse {
+    // Retrieve the request User, if username is present
+    let user = if let Subject(Some(ref username)) = sub {
+        state
+            .users
+            .get_by_username(username, &true)
+            .await
+            .unwrap_or(None)
+    } else {
+        None
+    };
+
+    // Add the Subject and optional User to the context
+    let request = req.into_inner().data(sub).data(user);
+
+    state.schema.execute(request).await.into()
+}
+
 // Events
 // ------
 
 /// State for the WebSocket Events Handler
 #[derive(Clone)]
 pub struct EventsState {
+    users: Arc<dyn UsersService>,
     handler: SocketHandler,
 }
 
 impl EventsState {
     /// Create a new EventsState instance
-    pub fn new(handler: SocketHandler) -> Self {
-        Self { handler }
+    pub fn new(users: &Arc<dyn UsersService>, handler: SocketHandler) -> Self {
+        Self {
+            users: users.clone(),
+            handler,
+        }
     }
 }
 
 /// Handle WebSocket upgrade requests
 pub async fn events_handler(
     State(state): State<EventsState>,
-    _sub: Subject,
+    sub: Subject,
     ws: WebSocketUpgrade,
 ) -> axum::response::Result<impl IntoResponse> {
-    Ok(ws.on_upgrade(|socket| async move { state.handler.handle(socket).await }))
+    // Retrieve the request User, if username is present
+    let user = if let Subject(Some(ref username)) = sub {
+        state
+            .users
+            .get_by_username(username, &true)
+            .await
+            .unwrap_or(None)
+    } else {
+        None
+    };
+
+    Ok(ws.on_upgrade(|socket| async move { state.handler.handle(socket, user).await }))
 }

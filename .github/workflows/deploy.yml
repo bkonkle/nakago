@@ -1,83 +1,83 @@
 name: CD # Continuous Deployment
 
 on:
-    push:
-        tags:
-            - "[v]?[0-9]+.[0-9]+.[0-9]+"
+  push:
+    tags:
+      - "[v]?[0-9]+.[0-9]+.[0-9]+"
 
 env:
-    CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: always
 
 jobs:
-    release:
-        if: ${{ false }} # disable for now
-        name: Publishing for ${{ matrix.job.target }}
-        runs-on: ${{ matrix.job.os }}
-        strategy:
-            fail-fast: false
-            matrix:
-                rust: [stable]
-                job:
-                    - os: ubuntu-latest
-                      target: x86_64-unknown-linux-gnu
-                    - os: ubuntu-latest
-                      target: aarch64-unknown-linux-gnu
-                    - os: ubuntu-latest
-                      target: i686-unknown-linux-gnu
-                    - os: macos-latest
-                      target: x86_64-apple-darwin
-                    - os: windows-latest
-                      target: x86_64-pc-windows-msvc
-        steps:
-            - uses: actions/checkout@v3
-              if: ${{ inputs.upload-dist-archive }}
-            - uses: dtolnay/rust-toolchain@v1
-              with:
-                  toolchain: ${{ matrix.rust }}
-              if: ${{ inputs.upload-dist-archive }}
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  key: ${{ matrix.job.target }}
-              if: ${{ inputs.upload-dist-archive }}
-            - name: Install cross
-              uses: taiki-e/install-action@cross
-              if: ${{ inputs.upload-dist-archive }}
+  release:
+    if: ${{ false }} # disable for now
+    name: Publishing for ${{ matrix.job.target }}
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable]
+        job:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v3
+        if: ${{ inputs.upload-dist-archive }}
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+        if: ${{ inputs.upload-dist-archive }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.job.target }}
+        if: ${{ inputs.upload-dist-archive }}
+      - name: Install cross
+        uses: taiki-e/install-action@cross
+        if: ${{ inputs.upload-dist-archive }}
 
-            - name: cargo xtask dist
-              uses: actions-rs/cargo@v1
-              with:
-                  command: xtask
-                  toolchain: ${{ matrix.rust }}
-                  args: dist --use-cross-if-needed --target ${{ matrix.job.target }}
-              if: ${{ inputs.upload-dist-archive }}
+      - name: cargo xtask dist
+        uses: actions-rs/cargo@v1
+        with:
+          command: xtask
+          toolchain: ${{ matrix.rust }}
+          args: dist --use-cross-if-needed --target ${{ matrix.job.target }}
+        if: ${{ inputs.upload-dist-archive }}
 
-            - name: Upload binaries as artifacts
-              uses: actions/upload-artifact@v3
-              with:
-                  path: target/dist/*
-              if: ${{ inputs.upload-dist-archive }}
+      - name: Upload binaries as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: target/dist/*
+        if: ${{ inputs.upload-dist-archive }}
 
-            - name: Releasing assets
-              uses: softprops/action-gh-release@v1
-              with:
-                  files: target/dist/*
-                  generate_release_notes: true
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              if: ${{ startsWith(github.ref, 'refs/tags/') }}
+      - name: Releasing assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: target/dist/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
 
-    publish:
-        if: ${{ false }} # disable for now
-        name: Publishing to Cargo
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v3
+  publish:
+    if: ${{ false }} # disable for now
+    name: Publishing to Cargo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-            - name: Install Rust toolchain
-              uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-            - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
 
-            - name: Publish
-              run: cargo publish --token "${{ secrets.CARGO_API_KEY }}"
+      - name: Publish
+        run: cargo publish --token "${{ secrets.CARGO_API_KEY }}"

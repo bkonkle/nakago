@@ -15,7 +15,7 @@ use crate::domains::role_grants::model as role_grant_model;
 /// A UsersService appliies business logic to a dynamic UsersRepository implementation.
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait UsersServiceTrait: Sync + Send {
+pub trait UsersService: Sync + Send {
     /// Get an individual `User` by id
     async fn get(&self, id: &str) -> Result<Option<User>>;
 
@@ -38,22 +38,22 @@ pub trait UsersServiceTrait: Sync + Send {
     async fn delete(&self, id: &str) -> Result<()>;
 }
 
-/// The default `UsersServiceTrait` implementation
-pub struct UsersService {
+/// The default `UsersService` implementation
+pub struct DefaultUsersService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
 }
 
 /// The default `UsersService` implementation
-impl UsersService {
-    /// Create a new `UsersService` instance
+impl DefaultUsersService {
+    /// Create a new `DefaultUsersService` instance
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 }
 
 #[async_trait]
-impl UsersServiceTrait for UsersService {
+impl UsersService for DefaultUsersService {
     async fn get(&self, id: &str) -> Result<Option<User>> {
         let user = model::Entity::find_by_id(id.to_owned())
             .one(&*self.db)
@@ -163,13 +163,13 @@ impl UsersServiceTrait for UsersService {
 /// A dataloader for `User` instances
 pub struct UserLoader {
     /// The SeaOrm database connection
-    locations: Arc<dyn UsersServiceTrait>,
+    locations: Arc<dyn UsersService>,
 }
 
 /// The default implementation for the `UserLoader`
 impl UserLoader {
     /// Create a new instance
-    pub fn new(locations: Arc<dyn UsersServiceTrait>) -> Self {
+    pub fn new(locations: Arc<dyn UsersService>) -> Self {
         Self { locations }
     }
 }

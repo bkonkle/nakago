@@ -36,15 +36,19 @@ args = [
     "--workspace",
 ]
 
+[tasks.format]
+command = "cargo"
+args = ["fmt", "--all", "--", "--check"]
+
 [tasks.test]
 env = { "RUST_LOG" = "info" }
 command = "cargo"
-args = ["nextest", "run", "--all-features", "--workspace", "${@}"]
+args = ["nextest", "run", "--workspace", "${@}"]
 
 [tasks.test-ci]
 env = { "RUST_LOG" = "info", "RUN_MODE" = "ci" }
 command = "cargo"
-args = ["nextest", "run", "--all-features", "--workspace"]
+args = ["nextest", "run", "--workspace"]
 
 [tasks.docs]
 command = "cargo"
@@ -59,11 +63,34 @@ args = [
 
 [tasks.cov]
 command = "cargo"
-args = ["llvm-cov", "${@}"]
+args = ["llvm-cov", "nextest", "${@}"]
 
 [tasks.cov-ci]
 command = "cargo"
-args = ["llvm-cov", "--lcov", "--output-path", "lcov.info", "${@}"]
+args = ["llvm-cov", "nextest", "--lcov", "--output-path", "lcov.info"]
+
+[tasks.integration]
+env = { "RUN_MODE" = "test", "RUST_LOG" = "info,sqlx::query=warn", "RUST_BACKTRACE" = 1 }
+command = "cargo"
+args = [
+    "nextest",
+    "run",
+    "--features=integration",
+    "--workspace",
+    "--run-ignored=ignored-only",
+    "${@}",
+]
+
+[tasks.integration-ci]
+env = { "RUN_MODE" = "ci", "RUST_LOG" = "info,sqlx::query=warn" }
+command = "cargo"
+args = [
+    "nextest",
+    "run",
+    "--features=integration",
+    "--workspace",
+    "--run-ignored=ignored-only",
+]
 
 [tasks.audit]
 command = "cargo"
@@ -84,3 +111,48 @@ script = '''
     cargo spellcheck fix
     cargo spellcheck reflow
 '''
+
+# Run example projects
+
+[tasks.run-async-graphql]
+env = { "RUST_LOG" = "info,sqlx::query=warn" }
+command = "cargo"
+args = ["run", "-p", "nakago-examples-async-graphql"]
+watch = true
+
+# Database tasks for example projects
+
+[tasks.db-create-async-graphql]
+cwd = "./examples/async-graphql"
+command = "sqlx"
+args = ["db", "create"]
+
+[tasks.db-migrate-async-graphql]
+cwd = "./examples/async-graphql"
+command = "sqlx"
+args = ["migrate", "run"]
+
+[tasks.db-reset-async-graphql]
+cwd = "./examples/async-graphql"
+command = "sqlx"
+args = ["db", "reset"]
+
+# Infrastructure commands for example projects
+
+[tasks.docker]
+cwd = "./"
+command = "docker-compose"
+args = ["-f", "docker-compose.yml", "${@}"]
+
+[tasks.docker-async-graphql]
+cwd = "./examples/async-graphql"
+command = "docker-compose"
+args = [
+    "-f",
+    "../../docker-compose.yml",
+    "-f",
+    "docker-compose.app.yml",
+    "--env-file",
+    "../../.env",
+    "${@}",
+]

@@ -6,6 +6,8 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
+use crate::{domains::users::model::User, events::connections::Session};
+
 use super::{
     connections::Connections,
     messages::IncomingMessage,
@@ -29,7 +31,7 @@ impl SocketHandler {
 
     /// Handle `WebSocket` connections by setting up a message handler that deserializes them and
     /// determines how to handle
-    pub async fn handle(&self, socket: WebSocket) {
+    pub async fn handle(&self, socket: WebSocket, user: Option<User>) {
         let (mut ws_write, mut ws_read) = socket.split();
 
         let (tx, rx) = mpsc::unbounded_channel();
@@ -46,7 +48,7 @@ impl SocketHandler {
             }
         });
 
-        let conn_id = self.connections.insert(tx).await;
+        let conn_id = self.connections.insert(tx, Session::new(user)).await;
 
         while let Some(result) = ws_read.next().await {
             let msg = match result {

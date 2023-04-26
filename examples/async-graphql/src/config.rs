@@ -67,17 +67,18 @@ impl Default for AppConfig {
                 address: "0.0.0.0".to_string(),
             },
             auth: AuthConfig {
-                url: "https://caster.us.auth0.com".to_string(),
+                url: "https://async-graphql.us.auth0.com".to_string(),
                 audience: "localhost".to_string(),
                 client: AuthClientConfig::default(),
             },
             database: Database {
                 hostname: "localhost".to_string(),
-                username: "caster".to_string(),
-                password: "caster".to_string(),
-                name: "caster".to_string(),
+                username: "async-graphql".to_string(),
+                password: "async-graphql".to_string(),
+                name: "async-graphql".to_string(),
                 port: 1701,
-                url: "postgresql://caster:caster@localhost:1701/caster".to_string(),
+                url: "postgresql://async-graphql:async-graphql@localhost:1701/async-graphql"
+                    .to_string(),
                 debug: false,
                 pool: DbPool::default(),
             },

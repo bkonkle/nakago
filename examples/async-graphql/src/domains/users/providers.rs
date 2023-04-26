@@ -3,15 +3,15 @@ use async_trait::async_trait;
 use nakago::inject;
 use std::sync::Arc;
 
-use super::service::{UserLoader, UsersService};
+use super::service::{DefaultUsersService, UserLoader, UsersService};
 use crate::db::providers::DATABASE_CONNECTION;
 
 /// Tag(UsersService)
-pub const USERS_SERVICE: inject::Tag<Arc<UsersService>> = inject::Tag::new("UsersService");
+pub const USERS_SERVICE: inject::Tag<Arc<dyn UsersService>> = inject::Tag::new("UsersService");
 
 /// Provide the UsersService
 ///
-/// **Provides:** `Arc<UsersService>`
+/// **Provides:** `Arc<dyn UsersServiceTrait>`
 ///
 /// **Depends on:**
 ///   - `Tag(DatabaseConnection)`
@@ -19,11 +19,11 @@ pub const USERS_SERVICE: inject::Tag<Arc<UsersService>> = inject::Tag::new("User
 pub struct ProvideUsersService {}
 
 #[async_trait]
-impl inject::Provider<Arc<UsersService>> for ProvideUsersService {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<Arc<UsersService>> {
+impl inject::Provider<Arc<dyn UsersService>> for ProvideUsersService {
+    async fn provide(&self, i: &inject::Inject) -> inject::Result<Arc<dyn UsersService>> {
         let db = i.get(&DATABASE_CONNECTION)?;
 
-        Ok(Arc::new(UsersService::new(db.clone())))
+        Ok(Arc::new(DefaultUsersService::new(db.clone())))
     }
 }
 

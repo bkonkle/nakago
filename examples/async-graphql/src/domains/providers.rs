@@ -29,7 +29,7 @@ use super::{
 ///  - Tag(EpisodeLoader)
 ///
 /// **Depends on:**
-///   - `Tag(DatabaseConnection)`
+///  - `Tag(DatabaseConnection)`
 pub async fn init_domains(i: &mut inject::Inject) -> inject::Result<()> {
     i.provide(&USERS_SERVICE, ProvideUsersService::default())
         .await?;
