@@ -125,17 +125,17 @@ watch = true
 [tasks.db-create-async-graphql]
 cwd = "./"
 command = "sqlx"
-args = ["db", "create", "--source", "examples/async-graphql/migrations"]
+args = ["db", "create", "--source=examples/async-graphql/migrations"]
 
 [tasks.db-migrate-async-graphql]
 cwd = "./"
 command = "sqlx"
-args = ["migrate", "run", "--source", "examples/async-graphql/migrations"]
+args = ["migrate", "run", "--source=examples/async-graphql/migrations"]
 
 [tasks.db-reset-async-graphql]
 cwd = "./"
 command = "sqlx"
-args = ["db", "reset", "--source", "examples/async-graphql/migrations"]
+args = ["db", "reset", "--source=examples/async-graphql/migrations"]
 
 # Infrastructure commands for example projects
 
