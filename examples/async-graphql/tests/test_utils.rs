@@ -253,7 +253,7 @@ impl TestUtils {
                 let body: Option<JsonError> = response
                     .body()
                     .as_ref()
-                    .and_then(|body| serde_json::from_str(body).unwrap_or(None));
+                    .and_then(|body| serde_json::from_slice(body).unwrap_or(None));
 
                 if let Some(error) = body {
                     error.error.unwrap_or(format!("{:?}", err))
