@@ -1,22 +1,15 @@
 [package]
-name = "nakago-axum"
+name = "nakago-sea-orm"
 version = "0.5.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
-description = "An Axum HTTP routes integration for Nakago"
+description = "A SeaORM integration for Nakago"
 repository = "https://github.com/bkonkle/nakago"
 license = "MIT"
 
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
-axum = { version = "0.6", features = ["ws", "macros"] }
-biscuit = "0.6.0-beta1"
-figment = { version = "0.10", features = ["env"] }
-http = "0.2"
-hyper = "0.14"
-hyper-tls = "0.5"
-jsonwebtoken = "8.0"
 log = "0.4"
 nakago = "0.5"
 pretty_env_logger = "0.4"
@@ -25,12 +18,10 @@ serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = "1.0"
 thiserror = "1.0"
-tower-http = { version = "0.4", features = ["trace"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 
 [dev-dependencies]
-criterion = "0.4"
 fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 mockall = "0.11"
 pretty_assertions = "1.2"

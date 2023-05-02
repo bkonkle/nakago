@@ -1,6 +1,6 @@
 [workspace]
-members = ["nakago", "nakago_axum", "examples/*"]
-default-members = ["nakago", "nakago_axum"]
+members = ["nakago", "nakago_axum", "nakago_sea_orm", "examples/*"]
+default-members = ["nakago", "nakago_axum", "nakago_sea_orm"]
 
 [patch.crates-io]
 nakago = { path = "./nakago" }
