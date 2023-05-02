@@ -5,6 +5,7 @@ default-members = ["nakago", "nakago_axum", "nakago_sea_orm"]
 [patch.crates-io]
 nakago = { path = "./nakago" }
 nakago-axum = { path = "./nakago_axum" }
+nakago-sea-orm = { path = "./nakago_sea_orm" }
 
 [profile.release]
 strip = true      # Automatically strip symbols from the binary.
