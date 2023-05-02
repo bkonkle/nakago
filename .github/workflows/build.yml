@@ -7,7 +7,7 @@ on:
 
 jobs:
   docs:
-    name: Docs
+    name: Docker build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
