@@ -1,0 +1,4 @@
+# Local testing
+
+port = 0
+run_mode = "test"

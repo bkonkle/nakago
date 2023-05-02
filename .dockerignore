@@ -1,0 +1,8 @@
+# Start by ignoring everything
+*
+
+# Binary
+!target/release/nakago-examples-async-graphql
+
+# Configs
+!examples/async-graphql/config/
