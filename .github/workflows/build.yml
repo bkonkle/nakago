@@ -53,5 +53,8 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Dry run
-        run: cargo publish --dry-run
+      - name: Dry run - Nakago
+        run: cargo publish --dry-run -p nakago
+
+      - name: Dry run - Nakago Axum
+        run: cargo publish --dry-run -p nakago-axum
