@@ -82,3 +82,42 @@ Then, update and check for any major dependency changes:
 cargo update
 cargo outdated
 ```
+
+## Examples: Docker Build
+
+To build locally, use Buildkit:
+
+```sh
+DOCKER_BUILDKIT=1 docker build -t async-graphql -f examples/async-graphql/Dockerfile .
+```
+
+To clear the build cache:
+
+```sh
+docker builder prune --filter type=exec.cachemount
+```
+
+To inspect the local filesystem:
+
+```sh
+docker run --rm -it --entrypoint=/bin/bash async-graphql
+```
+
+To inspect the full build context:
+
+```sh
+docker image build --no-cache -t build-context -f - . <<EOF
+FROM busybox
+WORKDIR /build-context
+COPY . .
+CMD find .
+EOF
+
+docker container run --rm build-context
+```
+
+And to clean up the build context test image:
+
+```sh
+docker image rm build-context
+```

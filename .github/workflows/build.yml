@@ -24,7 +24,7 @@ jobs:
           RUSTDOCFLAGS: -D warnings
 
       - name: Release build
-        run: cargo build --release
+        run: cargo build --release --workspace
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
