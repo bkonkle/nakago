@@ -15,7 +15,7 @@ use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
 use hyper::{client::HttpConnector, Body, Client, Method, Request};
 use hyper_tls::HttpsConnector;
 use nakago::inject;
-use nakago_axum::{auth::config::AuthConfig, HttpApplication};
+use nakago_axum::{auth::config::AuthConfig, AxumApplication};
 use nakago_examples_async_graphql::{
     config::AppConfig,
     domains::{
@@ -48,9 +48,9 @@ pub fn http_client() -> Client<HttpsConnector<HttpConnector>> {
 }
 
 /// Run the Application Server
-pub async fn run_server() -> Result<(HttpApplication<AppConfig, AppState>, SocketAddr)> {
+pub async fn run_server() -> Result<(AxumApplication<AppConfig, AppState>, SocketAddr)> {
     let mut app =
-        HttpApplication::<AppConfig, AppState>::with_init(router::init(), InitApp::default())
+        AxumApplication::<AppConfig, AppState>::with_init(router::init(), InitApp::default())
             .and_startup(StartApp::default());
 
     let server = app.run(None).await?;
@@ -80,7 +80,7 @@ impl inject::Provider<Client<HttpsConnector<HttpConnector>>> for HttpClientProvi
 
 /// Common test utils
 pub struct TestUtils {
-    pub app: HttpApplication<AppConfig, AppState>,
+    pub app: AxumApplication<AppConfig, AppState>,
     pub auth: AuthConfig,
     pub addr: SocketAddr,
     pub http_client: &'static Client<HttpsConnector<HttpConnector>>,

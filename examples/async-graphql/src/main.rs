@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use config::AppConfig;
 use log::info;
-use nakago_axum::HttpApplication;
+use nakago_axum::AxumApplication;
 use pico_args::{Arguments, Error};
 use providers::{InitApp, StartApp};
 use router::AppState;
@@ -51,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let mut app =
-        HttpApplication::<AppConfig, AppState>::with_init(router::init(), InitApp::default())
+        AxumApplication::<AppConfig, AppState>::with_init(router::init(), InitApp::default())
             .and_startup(StartApp::default());
 
     let server = app.run(args.config_path).await?;

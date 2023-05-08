@@ -14,15 +14,15 @@ use crate::{
     inject::{self, Hook},
 };
 
-/// The top-level System struct
-pub struct System<C: Config> {
+/// The top-level Application struct
+pub struct Application<C: Config> {
     init: Box<dyn Hook>,
     startup: Box<dyn Hook>,
     i: inject::Inject,
     _phantom: PhantomData<C>,
 }
 
-impl<C: Config> Default for System<C> {
+impl<C: Config> Default for Application<C> {
     fn default() -> Self {
         Self {
             init: Box::new(inject::NoOpHook {}),
@@ -33,8 +33,8 @@ impl<C: Config> Default for System<C> {
     }
 }
 
-impl<C: Config> System<C> {
-    /// Create a new System instance with a startup and shutdown hook
+impl<C: Config> Application<C> {
+    /// Create a new Application instance with a startup and shutdown hook
     pub fn with_hooks<H1: Hook, H2: Hook>(init: H1, startup: H2) -> Self {
         Self {
             init: Box::new(init),
@@ -44,7 +44,7 @@ impl<C: Config> System<C> {
         }
     }
 
-    /// Create a new System instance with an init hook
+    /// Create a new Application instance with an init hook
     pub fn with_init<H: Hook>(init: H) -> Self {
         Self {
             init: Box::new(init),
@@ -54,7 +54,7 @@ impl<C: Config> System<C> {
         }
     }
 
-    /// Create a new System instance with a startup hook
+    /// Create a new Application instance with a startup hook
     pub fn with_startup<H: Hook>(startup: H) -> Self {
         Self {
             init: Box::new(inject::NoOpHook {}),
@@ -64,7 +64,7 @@ impl<C: Config> System<C> {
         }
     }
 
-    /// Set the init hook while building the System
+    /// Set the init hook while building the Application
     pub fn and_init<H: Hook>(self, init: H) -> Self {
         Self {
             init: Box::new(init),
@@ -72,7 +72,7 @@ impl<C: Config> System<C> {
         }
     }
 
-    /// Set the startup hook while building the System
+    /// Set the startup hook while building the Application
     pub fn and_startup<H: Hook>(self, startup: H) -> Self {
         Self {
             startup: Box::new(startup),
@@ -81,7 +81,7 @@ impl<C: Config> System<C> {
     }
 }
 
-impl<C> Deref for System<C>
+impl<C> Deref for Application<C>
 where
     C: Config,
 {
@@ -92,7 +92,7 @@ where
     }
 }
 
-impl<C> DerefMut for System<C>
+impl<C> DerefMut for Application<C>
 where
     C: Config,
 {
@@ -101,7 +101,7 @@ where
     }
 }
 
-impl<C> System<C>
+impl<C> Application<C>
 where
     C: Config,
 {

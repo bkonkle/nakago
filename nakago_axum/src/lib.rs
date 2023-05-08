@@ -16,5 +16,5 @@ pub mod auth;
 #[macro_use]
 extern crate log;
 
-pub use app::HttpApplication;
+pub use app::AxumApplication;
 pub use providers::add_http_config_loaders;

@@ -1,6 +1,6 @@
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
-use nakago::{config::loader::Config, inject, System};
+use nakago::{config::loader::Config, inject, Application};
 use std::{
     any::Any,
     fmt::Debug,
@@ -16,28 +16,28 @@ pub trait State: Clone + Any + Send + Sync {}
 
 /// An Axum HTTP Application
 #[derive(Default)]
-pub struct HttpApplication<C, S>
+pub struct AxumApplication<C, S>
 where
     C: Config + Debug,
     S: State,
 {
-    sys: System<C>,
+    sys: Application<C>,
     router: Router<S>,
 }
 
-impl<C, S> Deref for HttpApplication<C, S>
+impl<C, S> Deref for AxumApplication<C, S>
 where
     C: Config + Debug,
     S: State,
 {
-    type Target = System<C>;
+    type Target = Application<C>;
 
     fn deref(&self) -> &Self::Target {
         &self.sys
     }
 }
 
-impl<C, S> DerefMut for HttpApplication<C, S>
+impl<C, S> DerefMut for AxumApplication<C, S>
 where
     C: Config + Debug,
     S: State,
@@ -47,7 +47,7 @@ where
     }
 }
 
-impl<C, S> HttpApplication<C, S>
+impl<C, S> AxumApplication<C, S>
 where
     C: Config + Debug,
     S: State,
@@ -59,7 +59,7 @@ where
         startup: H2,
     ) -> Self {
         Self {
-            sys: System::with_hooks(init, startup),
+            sys: Application::with_hooks(init, startup),
             router,
         }
     }
@@ -67,7 +67,7 @@ where
     /// Create a new Application instance with an init hook
     pub fn with_init<H: inject::Hook>(router: Router<S>, init: H) -> Self {
         Self {
-            sys: System::with_init(init),
+            sys: Application::with_init(init),
             router,
         }
     }
@@ -75,7 +75,7 @@ where
     /// Create a new Application instance with a startup hook
     pub fn with_startup<H: inject::Hook>(router: Router<S>, startup: H) -> Self {
         Self {
-            sys: System::with_startup(startup),
+            sys: Application::with_startup(startup),
             router,
         }
     }
