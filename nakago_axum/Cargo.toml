@@ -7,6 +7,9 @@ description = "An Axum HTTP routes integration for Nakago"
 repository = "https://github.com/bkonkle/nakago"
 license = "MIT"
 
+[features]
+integration = []
+
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"

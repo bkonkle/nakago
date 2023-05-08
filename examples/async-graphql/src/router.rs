@@ -29,7 +29,7 @@ impl State for AppState {}
 /// Initialize the top-level app Router
 pub fn init() -> Router<AppState> {
     Router::new()
-        .nest("/health", Router::new().route("/", get(health_handler)))
+        .route("/health", get(health_handler))
         .route("/graphql", get(graphiql).post(graphql_handler))
-        .nest("/events", Router::new().route("/", get(events_handler)))
+        .route("/events", get(events_handler))
 }
