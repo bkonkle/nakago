@@ -10,8 +10,8 @@ pub mod events;
 /// Dependency Injection providers
 pub mod providers;
 
-/// The Router
-pub mod router;
+/// Axum Routes
+pub mod routes;
 
 /// Application domains
 pub mod domains;

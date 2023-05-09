@@ -1,6 +1,6 @@
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
-use nakago::{config::loader::Config, inject, System};
+use nakago::{config::loader::Config, inject, Application};
 use std::{
     any::Any,
     fmt::Debug,
@@ -9,91 +9,50 @@ use std::{
 };
 use tower_http::trace;
 
-use crate::{add_http_config_loaders, config::HttpConfig};
+use crate::{add_http_config_loaders, config::HttpConfig, Route};
 
 /// State must be clonable and able to be stored in the Inject container
 pub trait State: Clone + Any + Send + Sync {}
 
-/// An Axum HTTP Application
-#[derive(Default)]
-pub struct HttpApplication<C, S>
+impl<C> Deref for AxumApplication<C>
 where
     C: Config + Debug,
-    S: State,
 {
-    sys: System<C>,
-    router: Router<S>,
-}
-
-impl<C, S> Deref for HttpApplication<C, S>
-where
-    C: Config + Debug,
-    S: State,
-{
-    type Target = System<C>;
+    type Target = Application<C>;
 
     fn deref(&self) -> &Self::Target {
-        &self.sys
+        &self.app
     }
 }
 
-impl<C, S> DerefMut for HttpApplication<C, S>
+impl<C> DerefMut for AxumApplication<C>
 where
     C: Config + Debug,
-    S: State,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.sys
+        &mut self.app
     }
 }
 
-impl<C, S> HttpApplication<C, S>
+/// An Axum HTTP Application
+#[derive(Default)]
+pub struct AxumApplication<C>
 where
     C: Config + Debug,
-    S: State,
 {
-    /// Create a new Application instance with a startup and shutdown hook
-    pub fn with_hooks<H1: inject::Hook, H2: inject::Hook>(
-        router: Router<S>,
-        init: H1,
-        startup: H2,
-    ) -> Self {
-        Self {
-            sys: System::with_hooks(init, startup),
-            router,
-        }
-    }
+    app: Application<C>,
+}
 
-    /// Create a new Application instance with an init hook
-    pub fn with_init<H: inject::Hook>(router: Router<S>, init: H) -> Self {
-        Self {
-            sys: System::with_init(init),
-            router,
-        }
-    }
+impl<C> AxumApplication<C>
+where
+    C: Config + Debug,
+{
+    /// Initialize the underlying App
+    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
+        // Add the HTTP Config Initializer
+        self.app.handle(add_http_config_loaders()).await?;
 
-    /// Create a new Application instance with a startup hook
-    pub fn with_startup<H: inject::Hook>(router: Router<S>, startup: H) -> Self {
-        Self {
-            sys: System::with_startup(startup),
-            router,
-        }
-    }
-
-    /// Set the init hook
-    pub fn and_init<H: inject::Hook>(self, init: H) -> Self {
-        Self {
-            sys: self.sys.and_init(init),
-            ..self
-        }
-    }
-
-    /// Set the startup hook
-    pub fn and_startup<H: inject::Hook>(self, startup: H) -> Self {
-        Self {
-            sys: self.sys.and_startup(startup),
-            ..self
-        }
+        self.app.init(config_path).await
     }
 
     /// Start the server and return the bound address and a `Future`.
@@ -101,19 +60,27 @@ where
     /// **Depends on:**
     ///   - `C: Config`
     ///   - `S: State`
-    pub async fn run(
+    pub async fn run<S: State>(
         &mut self,
         config_path: Option<PathBuf>,
     ) -> inject::Result<Server<AddrIncoming, IntoMakeService<Router>>>
     where
         HttpConfig: FromRef<C>,
     {
+        // Trigger the Init lifecycle event
         self.init(config_path).await?;
 
-        // Run the startup hook
+        // Trigger the Startup lifecycle event
         self.start().await?;
 
-        let state = self.sys.get_type::<S>()?;
+        let mut router = Router::<S>::new();
+
+        let routes = self.app.consume_type::<Vec<Route<S>>>()?;
+        for route in routes {
+            router = router.nest(&route.path, route.router.into_inner());
+        }
+
+        let state = self.app.get_type::<S>()?.clone();
 
         let app: Router = Router::new()
             .layer(
@@ -121,9 +88,9 @@ where
                     .make_span_with(trace::DefaultMakeSpan::new().level(tracing::Level::INFO))
                     .on_response(trace::DefaultOnResponse::new().level(tracing::Level::INFO)),
             )
-            .merge(self.router.clone().with_state(state.clone()));
+            .merge(router.with_state(state));
 
-        let config = self.sys.get_type::<C>()?;
+        let config = self.app.get_type::<C>()?;
         let http = HttpConfig::from_ref(config);
 
         let server = Server::bind(
@@ -134,18 +101,5 @@ where
         .serve(app.into_make_service());
 
         Ok(server)
-    }
-
-    /// Initialize the underlying App
-    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
-        // Add the HTTP Config Initializer
-        self.sys.handle(add_http_config_loaders()).await?;
-
-        self.sys.init(config_path).await
-    }
-
-    /// Start up the underlying App
-    pub async fn start(&mut self) -> inject::Result<()> {
-        self.sys.start().await
     }
 }

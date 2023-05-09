@@ -5,10 +5,11 @@ use std::path::PathBuf;
 
 use config::AppConfig;
 use log::info;
-use nakago_axum::HttpApplication;
+use nakago::EventType;
+use nakago_axum::AxumApplication;
 use pico_args::{Arguments, Error};
 use providers::{InitApp, StartApp};
-use router::AppState;
+use routes::{init_events_route, init_graphql_route, init_health_route, AppState};
 
 mod config;
 mod db;
@@ -17,7 +18,7 @@ mod events;
 mod graphql;
 mod handlers;
 mod providers;
-mod router;
+mod routes;
 mod utils;
 
 /// Error macros
@@ -50,11 +51,14 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let mut app =
-        HttpApplication::<AppConfig, AppState>::with_init(router::init(), InitApp::default())
-            .and_startup(StartApp::default());
+    let mut app = AxumApplication::<AppConfig>::default();
+    app.on(&EventType::Init, InitApp::default());
+    app.on(&EventType::Init, init_health_route());
+    app.on(&EventType::Init, init_graphql_route());
+    app.on(&EventType::Init, init_events_route());
+    app.on(&EventType::Startup, StartApp::default());
 
-    let server = app.run(args.config_path).await?;
+    let server = app.run::<AppState>(args.config_path).await?;
     let addr = server.local_addr();
 
     info!("Started on port: {port}", port = addr.port());

@@ -37,7 +37,7 @@ const CREATE_EPISODE: &str = "
 /// It creates a new episode
 #[tokio::test]
 #[ignore]
-async fn test_episode_create() -> Result<()> {
+async fn test_episode_create_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();

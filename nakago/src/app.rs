@@ -12,76 +12,28 @@ use tracing_subscriber::prelude::*;
 use crate::{
     config::{Config, InitConfig},
     inject::{self, Hook},
+    lifecycle::Events,
+    EventType,
 };
 
-/// The top-level System struct
-pub struct System<C: Config> {
-    init: Box<dyn Hook>,
-    startup: Box<dyn Hook>,
+/// The top-level Application struct
+pub struct Application<C: Config> {
+    events: Events,
     i: inject::Inject,
     _phantom: PhantomData<C>,
 }
 
-impl<C: Config> Default for System<C> {
+impl<C: Config> Default for Application<C> {
     fn default() -> Self {
         Self {
-            init: Box::new(inject::NoOpHook {}),
-            startup: Box::new(inject::NoOpHook {}),
+            events: Events::default(),
             i: inject::Inject::default(),
             _phantom: PhantomData,
         }
     }
 }
 
-impl<C: Config> System<C> {
-    /// Create a new System instance with a startup and shutdown hook
-    pub fn with_hooks<H1: Hook, H2: Hook>(init: H1, startup: H2) -> Self {
-        Self {
-            init: Box::new(init),
-            startup: Box::new(startup),
-            i: inject::Inject::default(),
-            _phantom: PhantomData,
-        }
-    }
-
-    /// Create a new System instance with an init hook
-    pub fn with_init<H: Hook>(init: H) -> Self {
-        Self {
-            init: Box::new(init),
-            startup: Box::new(inject::NoOpHook {}),
-            i: inject::Inject::default(),
-            _phantom: PhantomData,
-        }
-    }
-
-    /// Create a new System instance with a startup hook
-    pub fn with_startup<H: Hook>(startup: H) -> Self {
-        Self {
-            init: Box::new(inject::NoOpHook {}),
-            startup: Box::new(startup),
-            i: inject::Inject::default(),
-            _phantom: PhantomData,
-        }
-    }
-
-    /// Set the init hook while building the System
-    pub fn and_init<H: Hook>(self, init: H) -> Self {
-        Self {
-            init: Box::new(init),
-            ..self
-        }
-    }
-
-    /// Set the startup hook while building the System
-    pub fn and_startup<H: Hook>(self, startup: H) -> Self {
-        Self {
-            startup: Box::new(startup),
-            ..self
-        }
-    }
-}
-
-impl<C> Deref for System<C>
+impl<C> Deref for Application<C>
 where
     C: Config,
 {
@@ -92,7 +44,7 @@ where
     }
 }
 
-impl<C> DerefMut for System<C>
+impl<C> DerefMut for Application<C>
 where
     C: Config,
 {
@@ -101,10 +53,20 @@ where
     }
 }
 
-impl<C> System<C>
+impl<C> Application<C>
 where
     C: Config,
 {
+    /// Set a new lifecycle hook that will fire on the given EventType
+    pub fn on(&mut self, event: &EventType, hook: impl Hook) {
+        self.events.on(event, hook);
+    }
+
+    /// Trigger the given lifecycle event
+    pub async fn trigger(&mut self, event: &EventType) -> inject::Result<()> {
+        self.events.trigger(event, &mut self.i).await
+    }
+
     /// Initialize the App
     ///
     /// **Provides:**
@@ -120,8 +82,8 @@ where
         // Process setup
         panic::set_hook(Box::new(handle_panic));
 
-        // Run the init hook
-        self.init.handle(&mut self.i).await?;
+        // Trigger the Init lifecycle event
+        self.events.trigger(&EventType::Init, &mut self.i).await?;
 
         // Initialize the Config using the given path
         InitConfig::<C>::new(config_path)
@@ -131,10 +93,22 @@ where
         Ok(())
     }
 
-    /// Start the App
+    /// Run the Application by starting the listener
     pub async fn start(&mut self) -> inject::Result<()> {
-        // Run the startup hook
-        self.startup.handle(&mut self.i).await?;
+        // Trigger the Start lifecycle event
+        self.events
+            .trigger(&EventType::Startup, &mut self.i)
+            .await?;
+
+        Ok(())
+    }
+
+    /// Shut down the Application by stopping the listener
+    pub async fn stop(&mut self) -> inject::Result<()> {
+        // Trigger the Stop lifecycle event
+        self.events
+            .trigger(&EventType::Shutdown, &mut self.i)
+            .await?;
 
         Ok(())
     }

@@ -13,8 +13,12 @@ pub mod providers;
 /// Authentication
 pub mod auth;
 
+/// Routes
+pub mod routes;
+
 #[macro_use]
 extern crate log;
 
-pub use app::HttpApplication;
+pub use app::AxumApplication;
 pub use providers::add_http_config_loaders;
+pub use routes::{InitRoute, Route};

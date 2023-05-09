@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2023-05-08
+
+### Added
+
+- Added `Init`, `Startup`, and `Shutdown` lifecycle events, which Hooks can now be attached to in the renamed top-level `Application` struct (see below).
+- Added `Route` specifiers to `nakago-axum` based on `Axum` routes, which are attached to the top-level `Router` via nesting.
+
+### Changed
+
+- Renamed `nakago::system::System` to `nakago::app::Application`
+- Moved to a registry system of Hooks attached to lifecycle Events.
+- Moved away from `FnvHashMap` because the keys are possibly textual rather than simple integers.
+- Renamed `HttpApplication` to `AxumApplication` to better reflect the specific library used behind the scenes.
+- Revised the Async-GraphQL example to use the new lifecycle events.
+
+### Removed
+
+- Removed most of the constructors for `Application` and `AxumApplication` (formerly `System` and `HttpApplication`) because they aren't needed now.
+
 ## [0.5.0] - 2023-02-27
 
 ### Added
@@ -60,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Injection Providers
 - Documentation
 
+[0.6.0]: https://github.com/bkonkle/nakago/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/bkonkle/nakago/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/bkonkle/nakago/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/bkonkle/nakago/compare/0.2.0...0.3.0

@@ -14,8 +14,8 @@ use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
 use hyper::{client::HttpConnector, Body, Client, Method, Request};
 use hyper_tls::HttpsConnector;
-use nakago::inject;
-use nakago_axum::{auth::config::AuthConfig, HttpApplication};
+use nakago::{inject, EventType};
+use nakago_axum::{auth::config::AuthConfig, AxumApplication};
 use nakago_examples_async_graphql::{
     config::AppConfig,
     domains::{
@@ -25,7 +25,7 @@ use nakago_examples_async_graphql::{
         users::{model::User, providers::USERS_SERVICE},
     },
     providers::{InitApp, StartApp},
-    router::{self, AppState},
+    routes::{init_events_route, init_graphql_route, init_health_route, AppState},
 };
 use once_cell::sync::Lazy;
 use serde::Deserialize;
@@ -48,12 +48,15 @@ pub fn http_client() -> Client<HttpsConnector<HttpConnector>> {
 }
 
 /// Run the Application Server
-pub async fn run_server() -> Result<(HttpApplication<AppConfig, AppState>, SocketAddr)> {
-    let mut app =
-        HttpApplication::<AppConfig, AppState>::with_init(router::init(), InitApp::default())
-            .and_startup(StartApp::default());
+pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
+    let mut app = AxumApplication::<AppConfig>::default();
+    app.on(&EventType::Init, InitApp::default());
+    app.on(&EventType::Init, init_health_route());
+    app.on(&EventType::Init, init_graphql_route());
+    app.on(&EventType::Init, init_events_route());
+    app.on(&EventType::Startup, StartApp::default());
 
-    let server = app.run(None).await?;
+    let server = app.run::<AppState>(None).await?;
     let addr = server.local_addr();
 
     // Spawn the server in the background
@@ -80,7 +83,7 @@ impl inject::Provider<Client<HttpsConnector<HttpConnector>>> for HttpClientProvi
 
 /// Common test utils
 pub struct TestUtils {
-    pub app: HttpApplication<AppConfig, AppState>,
+    pub app: AxumApplication<AppConfig>,
     pub auth: AuthConfig,
     pub addr: SocketAddr,
     pub http_client: &'static Client<HttpsConnector<HttpConnector>>,
