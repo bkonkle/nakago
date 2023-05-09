@@ -1,10 +1,9 @@
-use fnv::FnvHashMap;
-use std::{any::Any, fmt::Debug};
+use std::{any::Any, collections::HashMap, fmt::Debug};
 
 use super::{Error, Key, Result};
 
 /// A type map for dependency injection
-pub(crate) type TypeMap = FnvHashMap<Key, Box<dyn Any + Send + Sync>>;
+pub(crate) type TypeMap = HashMap<Key, Box<dyn Any + Send + Sync>>;
 
 /// The injection Container
 #[derive(Default, Debug)]

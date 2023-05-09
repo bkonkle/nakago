@@ -22,7 +22,7 @@ use crate::{
     },
     graphql::{InitGraphQLSchema, GRAPHQL_SCHEMA},
     handlers::{EventsState, GraphQLState},
-    router::AppState,
+    routes::AppState,
     utils::providers::{add_app_config_loaders, ProvideOso, OSO},
 };
 

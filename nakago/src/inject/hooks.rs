@@ -10,18 +10,8 @@ pub trait Hook: Any + Send {
     async fn handle(&self, i: &mut Inject) -> Result<()>;
 }
 
-/// A no-op hook that does nothing, for use as a default
-pub struct NoOpHook {}
-
-#[async_trait]
-impl Hook for NoOpHook {
-    async fn handle(&self, _i: &mut Inject) -> Result<()> {
-        Ok(())
-    }
-}
-
 impl Inject {
-    /// Use a Provider function to inject a dependency.
+    /// Handle a hook by running it against the Inject container
     pub async fn handle<H>(&mut self, hook: H) -> Result<()>
     where
         H: Hook,

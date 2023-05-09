@@ -10,8 +10,12 @@ pub mod config;
 /// Application initialization
 pub mod app;
 
+/// Lifecycle hooks
+pub mod lifecycle;
+
 pub use app::Application;
 pub use config::loader::{Config, ConfigLoader};
 pub use inject::{
     provide, to_provider_error, Error as InjectError, Inject, Provider, Result as InjectResult, Tag,
 };
+pub use lifecycle::EventType;
