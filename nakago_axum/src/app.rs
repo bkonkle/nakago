@@ -70,6 +70,9 @@ where
         // Trigger the Init lifecycle event
         self.init(config_path).await?;
 
+        // Trigger the Startup lifecycle event
+        self.start().await?;
+
         let mut router = Router::<S>::new();
 
         let routes = self.app.consume_type::<Vec<Route<S>>>()?;
@@ -78,9 +81,6 @@ where
         }
 
         let state = self.app.get_type::<S>()?.clone();
-
-        // Trigger the Startup lifecycle event
-        self.start().await?;
 
         let app: Router = Router::new()
             .layer(
