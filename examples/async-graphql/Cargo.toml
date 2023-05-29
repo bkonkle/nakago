@@ -45,7 +45,7 @@ ulid = "1.0"
 
 [dev-dependencies]
 biscuit = "0.6.0-beta1"
-criterion = "0.4"
+criterion = "0.5"
 fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 futures-util = { version = "0.3", default-features = false, features = [
     "sink",
