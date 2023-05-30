@@ -21,7 +21,7 @@ pub mod hooks;
 
 pub use container::Inject;
 pub use error::{Error, Result};
-pub use hooks::Hook;
+pub use hooks::{Hook, Hooks};
 pub use key::{Id, Key};
-pub use provide::{to_provider_error, Provider};
+pub use provide::{to_provider_error, Provide};
 pub use tag::Tag;

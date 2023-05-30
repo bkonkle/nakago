@@ -1,15 +1,15 @@
 //! The main entry point for the async-graphql example.
 #![forbid(unsafe_code)]
 
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
-use config::AppConfig;
+use config::{AppConfig, DatabaseConfigLoader};
 use log::info;
-use nakago::EventType;
-use nakago_axum::AxumApplication;
+use nakago::{app::default_init_hooks, AddConfigLoaders, EventType};
+use nakago_axum::{AxumApplication, InitRouter};
 use pico_args::{Arguments, Error};
-use providers::{InitApp, StartApp};
-use routes::{init_events_route, init_graphql_route, init_health_route, AppState};
+use providers::StartApp;
+use routes::{init_app_router, AppState};
 
 mod config;
 mod db;
@@ -52,10 +52,16 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let mut app = AxumApplication::<AppConfig>::default();
-    app.on(&EventType::Init, InitApp::default());
-    app.on(&EventType::Init, init_health_route());
-    app.on(&EventType::Init, init_graphql_route());
-    app.on(&EventType::Init, init_events_route());
+
+    app.when(
+        &EventType::Init,
+        default_init_hooks()
+            .and(AddConfigLoaders::new(vec![
+                Arc::<DatabaseConfigLoader>::default(),
+            ]))
+            .and(InitRouter::new(init_app_router)),
+    );
+
     app.on(&EventType::Startup, StartApp::default());
 
     let server = app.run::<AppState>(args.config_path).await?;

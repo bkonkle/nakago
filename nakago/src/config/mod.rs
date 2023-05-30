@@ -1,8 +1,8 @@
-/// The extensible Config Loader
+/// Extensible Config provider
+pub mod provider;
+
+/// Config Loaders
 pub mod loader;
 
-/// Dependency injection Providers
-pub mod providers;
-
-pub use loader::{Config, ConfigLoader};
-pub use providers::{AddConfigLoaders, InitConfig, CONFIG_LOADERS};
+pub use loader::{AddLoaders, Loader, CONFIG_LOADERS};
+pub use provider::{Config, Provider};

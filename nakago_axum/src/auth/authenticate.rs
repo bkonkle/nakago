@@ -4,7 +4,7 @@ use axum::{
     extract::{FromRef, FromRequestParts, State},
     Extension,
 };
-use biscuit::{jwa::SignatureAlgorithm, jws::Header, Empty, JWT};
+use biscuit::{jwa::SignatureAlgorithm, jwk::JWKSet, jws::Header, Empty, JWT};
 use http::{header::AUTHORIZATION, request::Parts, HeaderMap, HeaderValue};
 use std::sync::Arc;
 
@@ -17,12 +17,12 @@ use super::{
 #[derive(Clone)]
 #[allow(dead_code)]
 pub struct AuthState {
-    jwks: Arc<jwks::JWKS>,
+    jwks: Arc<JWKSet<Empty>>,
 }
 
 impl AuthState {
     /// Create a new AuthState instance
-    pub fn new(jwks: Arc<jwks::JWKS>) -> Self {
+    pub fn new(jwks: Arc<JWKSet<Empty>>) -> Self {
         Self { jwks }
     }
 }

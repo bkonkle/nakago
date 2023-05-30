@@ -1,7 +1,9 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use axum::extract::ws::WebSocket;
 use futures::{SinkExt, StreamExt, TryFutureExt};
 use log::error;
+use nakago::{Inject, InjectResult, Provide, Tag};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -9,13 +11,35 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use crate::{domains::users::model::User, events::connections::Session};
 
 use super::{
-    connections::Connections,
+    connections::{Connections, CONNECTIONS},
     messages::IncomingMessage,
     messages::{
         IncomingMessage::Ping,
         OutgoingMessage::{Error, Pong},
     },
 };
+
+/// The SocketHandler Tag
+pub const SOCKET_HANDLER: Tag<SocketHandler> = Tag::new("SocketHandler");
+
+/// Provide a new WebSocket Event Handler
+///
+/// **Provides:** `SocketHandler`
+///
+/// **Depends on:**
+///   - `Tag(Connections)`
+///   - `Tag(CommandsController)`
+#[derive(Default)]
+pub struct Provider {}
+
+#[async_trait]
+impl Provide<SocketHandler> for Provider {
+    async fn provide(&self, i: &Inject) -> InjectResult<SocketHandler> {
+        let connections = i.get(&CONNECTIONS)?;
+
+        Ok(SocketHandler::new(connections.clone()))
+    }
+}
 
 /// WebSocket Event Handler
 #[derive(Clone)]

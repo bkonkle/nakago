@@ -2,9 +2,9 @@ use anyhow::Result;
 use fake::{faker::internet::en::FreeEmail, Fake, Faker};
 use hyper::body::to_bytes;
 use nakago_examples_async_graphql::domains::{
-    role_grants::{model::CreateRoleGrantInput, providers::ROLE_GRANTS_SERVICE},
-    shows::{mutations::CreateShowInput, providers::SHOWS_SERVICE},
-    users::providers::USERS_SERVICE,
+    role_grants::{model::CreateRoleGrantInput, ROLE_GRANTS_SERVICE},
+    shows::{mutations::CreateShowInput, SHOWS_SERVICE},
+    users::USERS_SERVICE,
 };
 use pretty_assertions::assert_eq;
 use serde_json::{json, Value};

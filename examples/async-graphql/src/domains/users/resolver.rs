@@ -6,10 +6,10 @@ use std::sync::Arc;
 use super::{
     model::User,
     mutations::{CreateUserInput, MutateUserResult, UpdateUserInput},
-    service::UsersService,
+    UsersService,
 };
 use crate::{
-    domains::profiles::{mutations::CreateProfileInput, service::ProfilesService},
+    domains::profiles::{mutations::CreateProfileInput, ProfilesService},
     utils::graphql::{as_graphql_error, graphql_error},
 };
 

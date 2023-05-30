@@ -1,17 +1,41 @@
+use std::sync::Arc;
+
 use anyhow::Result;
-use async_graphql::{dataloader::Loader, FieldError};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
+use nakago::{Inject, InjectResult, Provide, Tag};
 use sea_orm::{entity::*, query::*, Condition, DatabaseConnection, EntityTrait};
-use std::{collections::HashMap, sync::Arc};
+
+use crate::db::provider::DATABASE_CONNECTION;
 
 use super::model::{self, CreateRoleGrantInput, RoleGrant};
 
-/// A RoleGrantsService appliies business logic to a dynamic RoleGrantsRepository implementation.
+/// Tag(RoleGrantsService)
+pub const ROLE_GRANTS_SERVICE: Tag<Arc<dyn Service>> = Tag::new("RoleGrantsService");
+
+/// Provide the RoleGrantsService
+///
+/// **Provides:** `Arc<dyn Service>`
+///
+/// **Depends on:**
+///   - `Tag(DatabaseConnection)`
+#[derive(Default)]
+pub struct Provider {}
+
+#[async_trait]
+impl Provide<Arc<dyn Service>> for Provider {
+    async fn provide(&self, i: &Inject) -> InjectResult<Arc<dyn Service>> {
+        let db = i.get(&DATABASE_CONNECTION)?;
+
+        Ok(Arc::new(DefaultService::new(db.clone())))
+    }
+}
+
+/// A Service appliies business logic to a dynamic RoleGrantsRepository implementation.
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait RoleGrantsService: Sync + Send {
+pub trait Service: Sync + Send {
     /// Get an individual `RoleGrant` by id
     async fn get(&self, id: &str) -> Result<Option<RoleGrant>>;
 
@@ -25,22 +49,22 @@ pub trait RoleGrantsService: Sync + Send {
     async fn delete(&self, id: &str) -> Result<()>;
 }
 
-/// The default `RoleGrantsService` struct.
-pub struct DefaultRoleGrantsService {
+/// The default `Service` struct.
+pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
 }
 
-/// The default `RoleGrantsService` implementation
-impl DefaultRoleGrantsService {
-    /// Create a new `RoleGrantsService` instance
+/// The default `Service` implementation
+impl DefaultService {
+    /// Create a new `Service` instance
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 }
 
 #[async_trait]
-impl RoleGrantsService for DefaultRoleGrantsService {
+impl Service for DefaultService {
     async fn get(&self, id: &str) -> Result<Option<RoleGrant>> {
         let query = model::Entity::find_by_id(id.to_owned());
 
@@ -89,34 +113,5 @@ impl RoleGrantsService for DefaultRoleGrantsService {
         let _result = role_grant.delete(&*self.db).await?;
 
         Ok(())
-    }
-}
-
-/// A dataloader for `RoleGrant` instances
-pub struct RoleGrantLoader {
-    /// The SeaOrm database connection
-    role_grants: Arc<dyn RoleGrantsService>,
-}
-
-/// The default implementation for the `RoleGrantLoader`
-impl RoleGrantLoader {
-    /// Create a new instance
-    pub fn new(role_grants: Arc<dyn RoleGrantsService>) -> Self {
-        Self { role_grants }
-    }
-}
-
-#[async_trait]
-impl Loader<String> for RoleGrantLoader {
-    type Value = RoleGrant;
-    type Error = FieldError;
-
-    async fn load(&self, keys: &[String]) -> Result<HashMap<String, Self::Value>, Self::Error> {
-        let role_grants = self.role_grants.get_by_ids(keys.into()).await?;
-
-        Ok(role_grants
-            .into_iter()
-            .map(|role_grant| (role_grant.id.clone(), role_grant))
-            .collect())
     }
 }

@@ -1,21 +1,42 @@
 use anyhow::Result;
-use async_graphql::{dataloader::Loader, FieldError};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
+use nakago::{Inject, InjectResult, Provide, Tag};
 use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use super::{
     model::{self, User, UserOption},
     mutations::UpdateUserInput,
 };
-use crate::domains::role_grants::model as role_grant_model;
+use crate::{db::provider::DATABASE_CONNECTION, domains::role_grants::model as role_grant_model};
 
-/// A UsersService appliies business logic to a dynamic UsersRepository implementation.
+/// Tag(UsersService)
+pub const USERS_SERVICE: Tag<Arc<dyn Service>> = Tag::new("UsersService");
+
+/// Provide the Users Service
+///
+/// **Provides:** `Arc<dyn Service>`
+///
+/// **Depends on:**
+///   - `Tag(DatabaseConnection)`
+#[derive(Default)]
+pub struct Provider {}
+
+#[async_trait]
+impl Provide<Arc<dyn Service>> for Provider {
+    async fn provide(&self, i: &Inject) -> InjectResult<Arc<dyn Service>> {
+        let db = i.get(&DATABASE_CONNECTION)?;
+
+        Ok(Arc::new(DefaultService::new(db.clone())))
+    }
+}
+
+/// A Service appliies business logic to a dynamic UsersRepository implementation.
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait UsersService: Sync + Send {
+pub trait Service: Sync + Send {
     /// Get an individual `User` by id
     async fn get(&self, id: &str) -> Result<Option<User>>;
 
@@ -38,22 +59,22 @@ pub trait UsersService: Sync + Send {
     async fn delete(&self, id: &str) -> Result<()>;
 }
 
-/// The default `UsersService` implementation
-pub struct DefaultUsersService {
+/// The default `Service` implementation
+pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
 }
 
-/// The default `UsersService` implementation
-impl DefaultUsersService {
-    /// Create a new `DefaultUsersService` instance
+/// The default `Service` implementation
+impl DefaultService {
+    /// Create a new `DefaultService` instance
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 }
 
 #[async_trait]
-impl UsersService for DefaultUsersService {
+impl Service for DefaultService {
     async fn get(&self, id: &str) -> Result<Option<User>> {
         let user = model::Entity::find_by_id(id.to_owned())
             .one(&*self.db)
@@ -157,34 +178,5 @@ impl UsersService for DefaultUsersService {
         let _result = user.delete(&*self.db).await?;
 
         Ok(())
-    }
-}
-
-/// A dataloader for `User` instances
-pub struct UserLoader {
-    /// The SeaOrm database connection
-    locations: Arc<dyn UsersService>,
-}
-
-/// The default implementation for the `UserLoader`
-impl UserLoader {
-    /// Create a new instance
-    pub fn new(locations: Arc<dyn UsersService>) -> Self {
-        Self { locations }
-    }
-}
-
-#[async_trait]
-impl Loader<String> for UserLoader {
-    type Value = User;
-    type Error = FieldError;
-
-    async fn load(&self, keys: &[String]) -> Result<HashMap<String, Self::Value>, Self::Error> {
-        let locations = self.locations.get_by_ids(keys.into()).await?;
-
-        Ok(locations
-            .into_iter()
-            .map(|location| (location.id.clone(), location))
-            .collect())
     }
 }

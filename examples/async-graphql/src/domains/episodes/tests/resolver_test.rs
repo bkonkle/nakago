@@ -10,15 +10,13 @@ use crate::domains::{
     episodes::{
         model::Episode,
         resolver::{EpisodesMutation, EpisodesQuery},
-        service::{EpisodesService, MockEpisodesService},
+        service::{MockService, Service},
     },
-    shows::service::{MockShowsService, ShowLoader, ShowsService},
+    shows::{loader::ShowLoader, MockShowsService, ShowsService},
 };
 
-fn init(
-    service: MockEpisodesService,
-) -> Schema<EpisodesQuery, EpisodesMutation, EmptySubscription> {
-    let service: Arc<dyn EpisodesService> = Arc::new(service);
+fn init(service: MockService) -> Schema<EpisodesQuery, EpisodesMutation, EmptySubscription> {
+    let service: Arc<dyn Service> = Arc::new(service);
 
     let shows_service: Arc<dyn ShowsService> = Arc::new(MockShowsService::new());
     let show_loader = ShowLoader::new(shows_service);
@@ -61,7 +59,7 @@ async fn test_episodes_resolver_get_simple() -> Result<()> {
     episode.title = episode_title.to_string();
     episode.show = Some(Faker.fake());
 
-    let mut service = MockEpisodesService::new();
+    let mut service = MockService::new();
     service
         .expect_get()
         .with(eq(episode_id), eq(&true))

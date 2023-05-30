@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use nakago::{inject, Tag};
+use nakago::{to_provider_error, Inject, InjectResult, Provide, Tag};
 use sea_orm::DatabaseConnection;
 
 use crate::config::AppConfig;
@@ -16,17 +16,17 @@ pub const DATABASE_CONNECTION: Tag<Arc<DatabaseConnection>> = Tag::new("Database
 /// **Depends on:**
 ///   - `AppConfig`
 #[derive(Default)]
-pub struct ProvideDatabaseConnection {}
+pub struct DatabaseConnectionProvider {}
 
 #[async_trait]
-impl inject::Provider<Arc<DatabaseConnection>> for ProvideDatabaseConnection {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<Arc<DatabaseConnection>> {
+impl Provide<Arc<DatabaseConnection>> for DatabaseConnectionProvider {
+    async fn provide(&self, i: &Inject) -> InjectResult<Arc<DatabaseConnection>> {
         let config = i.get_type::<AppConfig>()?;
 
         Ok(Arc::new(
             sea_orm::Database::connect(&config.database.url)
                 .await
-                .map_err(inject::to_provider_error)?,
+                .map_err(to_provider_error)?,
         ))
     }
 }

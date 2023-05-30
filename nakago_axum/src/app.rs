@@ -1,15 +1,19 @@
+use anyhow::anyhow;
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
-use nakago::{config::loader::Config, inject, Application};
+use nakago::{AddConfigLoaders, Application, Config, InjectResult};
 use std::{
     any::Any,
     fmt::Debug,
     ops::{Deref, DerefMut},
     path::PathBuf,
+    sync::Arc,
 };
 use tower_http::trace;
 
-use crate::{add_http_config_loaders, config::HttpConfig, Route};
+use crate::{config::HttpConfig, routes::Routers};
+
+use super::AuthConfigLoader;
 
 /// State must be clonable and able to be stored in the Inject container
 pub trait State: Clone + Any + Send + Sync {}
@@ -48,9 +52,13 @@ where
     C: Config + Debug,
 {
     /// Initialize the underlying App
-    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
+    pub async fn init(&mut self, config_path: Option<PathBuf>) -> InjectResult<()> {
         // Add the HTTP Config Initializer
-        self.app.handle(add_http_config_loaders()).await?;
+        self.app
+            .handle(AddConfigLoaders::new(vec![
+                Arc::<AuthConfigLoader>::default(),
+            ]))
+            .await?;
 
         self.app.init(config_path).await
     }
@@ -63,7 +71,7 @@ where
     pub async fn run<S: State>(
         &mut self,
         config_path: Option<PathBuf>,
-    ) -> inject::Result<Server<AddrIncoming, IntoMakeService<Router>>>
+    ) -> InjectResult<Server<AddrIncoming, IntoMakeService<Router>>>
     where
         HttpConfig: FromRef<C>,
     {
@@ -75,9 +83,12 @@ where
 
         let mut router = Router::<S>::new();
 
-        let routes = self.app.consume_type::<Vec<Route<S>>>()?;
-        for route in routes {
-            router = router.nest(&route.path, route.router.into_inner());
+        let routers = self.app.consume_type::<Routers<S>>()?;
+        for rtr in routers {
+            router = router.merge(
+                rtr.into_inner()
+                    .map_err(|_err| anyhow!("Unable to unwrap Router"))?,
+            );
         }
 
         let state = self.app.get_type::<S>()?.clone();

@@ -1,14 +1,11 @@
 use anyhow::Result;
-use async_graphql::{
-    dataloader::Loader,
-    FieldError,
-    MaybeUndefined::{Null, Undefined, Value},
-};
+use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
+use nakago::{Inject, InjectResult, Provide, Tag};
 use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use super::{
     model::{self, Profile, ProfileList, ProfileOption},
@@ -16,14 +13,36 @@ use super::{
     queries::{ProfileCondition, ProfilesOrderBy},
 };
 use crate::{
+    db::provider::DATABASE_CONNECTION,
     domains::users::model as user_model,
     utils::{ordering::Ordering, pagination::ManyResponse},
 };
 
-/// A ProfilesService applies business logic to a dynamic ProfilesRepository implementation.
+/// Tag(ProfilesService)
+pub const PROFILES_SERVICE: Tag<Arc<dyn Service>> = Tag::new("ProfilesService");
+
+/// Provide the Profiles Service
+///
+/// **Provides:** `Arc<dyn Service>`
+///
+/// **Depends on:**
+///   - `Tag(DatabaseConnection)`
+#[derive(Default)]
+pub struct Provider {}
+
+#[async_trait]
+impl Provide<Arc<dyn Service>> for Provider {
+    async fn provide(&self, i: &Inject) -> InjectResult<Arc<dyn Service>> {
+        let db = i.get(&DATABASE_CONNECTION)?;
+
+        Ok(Arc::new(DefaultService::new(db.clone())))
+    }
+}
+
+/// A Service applies business logic to a dynamic ProfilesRepository implementation.
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait ProfilesService: Sync + Send {
+pub trait Service: Sync + Send {
     /// Get an individual `Profile` by id
     async fn get(&self, id: &str, with_user: &bool) -> Result<Option<Profile>>;
 
@@ -66,22 +85,22 @@ pub trait ProfilesService: Sync + Send {
     async fn delete(&self, id: &str) -> Result<()>;
 }
 
-/// The default `ProfilesService` struct
-pub struct DefaultProfilesService {
+/// The default `Service` struct
+pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
 }
 
-/// The default `ProfilesService` implementation
-impl DefaultProfilesService {
-    /// Create a new `ProfilesService` instance
+/// The default `Service` implementation
+impl DefaultService {
+    /// Create a new `Service` instance
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 }
 
 #[async_trait]
-impl ProfilesService for DefaultProfilesService {
+impl Service for DefaultService {
     async fn get(&self, id: &str, with_user: &bool) -> Result<Option<Profile>> {
         let query = model::Entity::find_by_id(id.to_owned());
 
@@ -344,36 +363,5 @@ impl ProfilesService for DefaultProfilesService {
         let _result = profile.delete(&*self.db).await?;
 
         Ok(())
-    }
-}
-
-/// A dataloader for `Profile` instances
-pub struct ProfileLoader {
-    /// The SeaOrm database connection
-    profiles: Arc<dyn ProfilesService>,
-}
-
-/// The default implementation for the `ProfileLoader`
-impl ProfileLoader {
-    /// Create a new instance
-    pub fn new(profiles: Arc<dyn ProfilesService>) -> Self {
-        Self {
-            profiles: profiles.clone(),
-        }
-    }
-}
-
-#[async_trait]
-impl Loader<String> for ProfileLoader {
-    type Value = Profile;
-    type Error = FieldError;
-
-    async fn load(&self, keys: &[String]) -> Result<HashMap<String, Self::Value>, Self::Error> {
-        let profiles = self.profiles.get_by_ids(keys.into()).await?;
-
-        Ok(profiles
-            .into_iter()
-            .map(|profile| (profile.id.clone(), profile))
-            .collect())
     }
 }

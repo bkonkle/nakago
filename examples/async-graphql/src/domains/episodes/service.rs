@@ -1,14 +1,11 @@
 use anyhow::Result;
-use async_graphql::{
-    dataloader::Loader,
-    FieldError,
-    MaybeUndefined::{Null, Undefined, Value},
-};
+use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
+use nakago::{Inject, InjectResult, Provide, Tag};
 use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use super::{
     model::{self, Episode, EpisodeList, EpisodeOption},
@@ -16,14 +13,36 @@ use super::{
     queries::{EpisodeCondition, EpisodesOrderBy},
 };
 use crate::{
+    db::provider::DATABASE_CONNECTION,
     domains::shows::model as show_model,
     utils::{ordering::Ordering, pagination::ManyResponse},
 };
 
-/// An EpisodesService applies business logic to a dynamic EpisodesRepository implementation.
+/// Tag(EpisodesService)
+pub const EPISODES_SERVICE: Tag<Arc<dyn Service>> = Tag::new("EpisodesService");
+
+/// Provide the Episodes Service
+///
+/// **Provides:** `Arc<dyn Service>`
+///
+/// **Depends on:**
+///   - `Tag(DatabaseConnection)`
+#[derive(Default)]
+pub struct Provider {}
+
+#[async_trait]
+impl Provide<Arc<dyn Service>> for Provider {
+    async fn provide(&self, i: &Inject) -> InjectResult<Arc<dyn Service>> {
+        let db = i.get(&DATABASE_CONNECTION)?;
+
+        Ok(Arc::new(DefaultService::new(db.clone())))
+    }
+}
+
+/// An Episodes Service applies business logic to a dynamic EpisodesRepository implementation.
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait EpisodesService: Sync + Send {
+pub trait Service: Sync + Send {
     /// Get an individual `Episode` by id
     async fn get(&self, id: &str, with_show: &bool) -> Result<Option<Episode>>;
 
@@ -55,22 +74,22 @@ pub trait EpisodesService: Sync + Send {
     async fn delete(&self, id: &str) -> Result<()>;
 }
 
-/// The default `EpisodesService` struct.
-pub struct DefaultEpisodesService {
+/// The default `Service` struct.
+pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
 }
 
-/// The default `EpisodesService` implementation
-impl DefaultEpisodesService {
-    /// Create a new `EpisodesService` instance
+/// The default `Service` implementation
+impl DefaultService {
+    /// Create a new `Service` instance
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 }
 
 #[async_trait]
-impl EpisodesService for DefaultEpisodesService {
+impl Service for DefaultService {
     async fn get(&self, id: &str, with_show: &bool) -> Result<Option<Episode>> {
         let query = model::Entity::find_by_id(id.to_owned());
 
@@ -274,34 +293,5 @@ impl EpisodesService for DefaultEpisodesService {
         let _result = episode.delete(&*self.db).await?;
 
         Ok(())
-    }
-}
-
-/// A dataloader for `Episode` instances
-pub struct EpisodeLoader {
-    /// The SeaOrm database connection
-    episodes: Arc<dyn EpisodesService>,
-}
-
-/// The default implementation for the `EpisodeLoader`
-impl EpisodeLoader {
-    /// Create a new instance
-    pub fn new(episodes: Arc<dyn EpisodesService>) -> Self {
-        Self { episodes }
-    }
-}
-
-#[async_trait]
-impl Loader<String> for EpisodeLoader {
-    type Value = Episode;
-    type Error = FieldError;
-
-    async fn load(&self, keys: &[String]) -> Result<HashMap<String, Self::Value>, Self::Error> {
-        let episodes = self.episodes.get_by_ids(keys.into()).await?;
-
-        Ok(episodes
-            .into_iter()
-            .map(|episode| (episode.id.clone(), episode))
-            .collect())
     }
 }

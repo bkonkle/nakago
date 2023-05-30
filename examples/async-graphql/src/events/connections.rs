@@ -1,4 +1,6 @@
+use async_trait::async_trait;
 use axum::extract::ws::Message;
+use nakago::{Inject, InjectResult, Provide, Tag};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{
@@ -8,6 +10,22 @@ use tokio::sync::{
 use ulid::Ulid;
 
 use crate::domains::users::model::User;
+
+/// The Connections Tag
+pub const CONNECTIONS: Tag<Arc<Connections>> = Tag::new("Connections");
+
+/// Provide the default Connections implementation
+///
+/// **Provides:** `Arc<Connections>`
+#[derive(Default)]
+pub struct Provider {}
+
+#[async_trait]
+impl Provide<Arc<Connections>> for Provider {
+    async fn provide(&self, _i: &Inject) -> InjectResult<Arc<Connections>> {
+        Ok(Arc::new(Connections::default()))
+    }
+}
 
 /// User Connection for WebSocket connections
 pub struct Connection {

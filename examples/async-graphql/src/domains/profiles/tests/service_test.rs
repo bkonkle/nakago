@@ -11,7 +11,7 @@ use crate::{
             model::{Model, ProfileList},
             mutations::{CreateProfileInput, UpdateProfileInput},
             queries::{ProfileCondition, ProfilesOrderBy},
-            service::{DefaultProfilesService, ProfilesService},
+            service::{DefaultService, Service},
         },
         users::model::User,
     },
@@ -34,7 +34,7 @@ async fn test_profiles_service_get() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service.get(&profile.id, &false).await?;
 
@@ -74,7 +74,7 @@ async fn test_profiles_service_get_with_related() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service.get(&profile.id, &true).await?;
 
@@ -122,7 +122,7 @@ async fn test_profiles_service_get_many() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .get_many(
@@ -197,7 +197,7 @@ async fn test_profiles_service_get_many_with_related() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .get_many(
@@ -297,7 +297,7 @@ async fn test_profiles_service_get_many_pagination() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .get_many(
@@ -396,7 +396,7 @@ async fn test_profiles_service_get_many_pagination_with_related() -> Result<()> 
             .into_connection(),
     );
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .get_many(
@@ -463,7 +463,7 @@ async fn test_profiles_service_create() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .create(
@@ -523,7 +523,7 @@ async fn test_profiles_service_create_with_related() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .create(
@@ -594,7 +594,7 @@ async fn test_profiles_service_update() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .update(
@@ -660,7 +660,7 @@ async fn test_profiles_service_update_with_related() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .update(
@@ -724,7 +724,7 @@ async fn test_profiles_service_delete() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     service.delete(&profile.id).await?;
 

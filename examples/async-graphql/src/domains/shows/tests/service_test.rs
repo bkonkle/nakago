@@ -10,7 +10,7 @@ use crate::{
         model::Show,
         mutations::{CreateShowInput, UpdateShowInput},
         queries::{ShowCondition, ShowsOrderBy},
-        service::{DefaultShowsService, ShowsService},
+        DefaultShowsService, ShowsService,
     },
     utils::pagination::ManyResponse,
 };

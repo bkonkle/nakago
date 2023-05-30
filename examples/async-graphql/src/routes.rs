@@ -1,5 +1,6 @@
 use axum::{extract::FromRef, routing::get, Router};
-use nakago_axum::{app::State, auth::authenticate::AuthState, InitRoute, Route};
+use nakago::inject;
+use nakago_axum::{app::State, auth::authenticate::AuthState};
 
 use crate::handlers::GraphQLState;
 
@@ -26,22 +27,10 @@ impl AppState {
 
 impl State for AppState {}
 
-/// Initialize the Health Route
-pub fn init_health_route() -> InitRoute<AppState> {
-    InitRoute::new(|_| Route::new("/", Router::new().route("/health", get(health_handler))))
-}
-
-/// Initialize the GraphQL Route
-pub fn init_graphql_route() -> InitRoute<AppState> {
-    InitRoute::new(|_| {
-        Route::new(
-            "/",
-            Router::new().route("/graphql", get(graphiql).post(graphql_handler)),
-        )
-    })
-}
-
-/// Initialize the Events Route
-pub fn init_events_route() -> InitRoute<AppState> {
-    InitRoute::new(|_| Route::new("/", Router::new().route("/events", get(events_handler))))
+/// Initialize the Application Router
+pub fn init_app_router(_: &inject::Inject) -> Router<AppState> {
+    Router::new()
+        .route("/health", get(health_handler))
+        .route("/graphql", get(graphiql).post(graphql_handler))
+        .route("/events", get(events_handler))
 }

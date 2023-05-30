@@ -7,5 +7,5 @@ pub mod ordering;
 /// Pagination Utils
 pub mod pagination;
 
-/// Util Providers
-pub mod providers;
+/// Authorization
+pub mod authz;

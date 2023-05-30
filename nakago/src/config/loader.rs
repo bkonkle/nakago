@@ -1,75 +1,49 @@
-use figment::{
-    providers::{Env, Format, Json, Serialized, Toml, Yaml},
-    Figment,
-};
-use serde::{Deserialize, Serialize};
-use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf, sync::Arc};
+use std::{any::Any, sync::Arc};
+
+use async_trait::async_trait;
+use figment::providers::Env;
+
+use crate::{Hook, Inject, InjectResult, Tag};
+
+/// A Tag for Config loaders
+pub const CONFIG_LOADERS: Tag<Vec<Arc<dyn Loader>>> = Tag::new("ConfigLoaders");
 
 /// A ConfigLoader uses hooks to augment the Config loaded for the application
 ///
-/// TODO: Add more hooks! 🙂
-pub trait ConfigLoader: Any + Send + Sync {
+/// TODO: Add more transformation hooks! 🙂
+pub trait Loader: Any + Send + Sync {
     /// Apply transformations to the environment variables loaded by Figment
     fn load_env(&self, env: Env) -> Env;
 }
 
-/// Config is the final loaded result
-pub trait Config:
-    Any + Clone + Debug + Default + Serialize + Send + Sync + for<'a> Deserialize<'a>
-{
+/// Add the given Config Loaders to the stack. Injects `Tag(ConfigLoaders)` if it has not been
+/// provided yet.
+///
+/// **Provides or Modifies:**
+///   - `Tag(ConfigLoaders)`
+pub struct AddLoaders {
+    loaders: Vec<Arc<dyn Loader>>,
 }
 
-/// An extensible Config loader based on Figment
-pub struct Loader<C: Config> {
-    loaders: Vec<Arc<dyn ConfigLoader>>,
-    _phantom: PhantomData<C>,
-}
-
-impl<C: Config> Loader<C> {
-    /// Create a new Config instance with the given loaders
-    pub fn new(loaders: Vec<Arc<dyn ConfigLoader>>) -> Self {
-        Self {
-            loaders,
-            _phantom: Default::default(),
-        }
+impl AddLoaders {
+    /// Create a new AddLoaders instance
+    pub fn new(loaders: Vec<Arc<dyn Loader>>) -> Self {
+        Self { loaders }
     }
+}
 
-    /// Create a new Config by merging in various sources
-    pub fn load(&self, custom_path: Option<PathBuf>) -> figment::error::Result<C> {
-        let mut config = Figment::new()
-            // Load defaults
-            .merge(Serialized::defaults(C::default()))
-            // Load local overrides
-            .merge(Toml::file("config.toml"))
-            .merge(Yaml::file("config.yml"))
-            .merge(Yaml::file("config.yaml"))
-            .merge(Json::file("config.json"));
-
-        // Load the custom config file if provided
-        if let Some(path) = custom_path {
-            if let Some(path_str) = path.to_str() {
-                if path_str.ends_with(".toml") {
-                    config = config.merge(Toml::file(path_str));
-                } else if path_str.ends_with(".yml") || path_str.ends_with(".yaml") {
-                    config = config.merge(Yaml::file(path_str));
-                } else if path_str.ends_with(".json") {
-                    config = config.merge(Json::file(path_str));
-                }
+#[async_trait]
+impl Hook for AddLoaders {
+    async fn handle(&self, i: &mut Inject) -> InjectResult<()> {
+        if let Ok(existing) = i.get_mut(&CONFIG_LOADERS) {
+            // Add the given ConfigLoaders to the stack
+            for loader in self.loaders.clone() {
+                existing.push(loader);
             }
+        } else {
+            i.inject(&CONFIG_LOADERS, self.loaders.clone())?;
         }
 
-        // Environment Variables
-        // ---------------------
-
-        let mut env = Env::raw();
-
-        for loader in &self.loaders {
-            env = loader.load_env(env);
-        }
-
-        config = config.merge(env);
-
-        // Serialize and freeze
-        config.extract()
+        Ok(())
     }
 }

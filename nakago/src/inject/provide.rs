@@ -5,7 +5,7 @@ use super::{tag::Tag, Error, Inject, Result};
 
 /// A trait for async injection Providers
 #[async_trait]
-pub trait Provider<T>
+pub trait Provide<T>
 where
     T: Any + Send + Sync,
 {
@@ -18,7 +18,7 @@ impl Inject {
     pub async fn provide_type<T, P>(&mut self, provider: P) -> Result<()>
     where
         T: Any + Sync + Send,
-        P: Provider<T>,
+        P: Provide<T>,
     {
         self.inject_type::<T>(provider.provide(self).await?)
     }
@@ -27,7 +27,7 @@ impl Inject {
     pub async fn replace_type_with<T, P>(&mut self, provider: P) -> Result<()>
     where
         T: Any + Sync + Send,
-        P: Provider<T>,
+        P: Provide<T>,
     {
         self.replace_type::<T>(provider.provide(self).await?)
     }
@@ -36,7 +36,7 @@ impl Inject {
     pub async fn provide<T, P>(&mut self, tag: &'static Tag<T>, provider: P) -> Result<()>
     where
         T: Any + Sync + Send,
-        P: Provider<T>,
+        P: Provide<T>,
     {
         self.inject::<T>(tag, provider.provide(self).await?)
     }
@@ -45,7 +45,7 @@ impl Inject {
     pub async fn replace_with<T, P>(&mut self, tag: &'static Tag<T>, provider: P) -> Result<()>
     where
         T: Any + Sync + Send,
-        P: Provider<T>,
+        P: Provide<T>,
     {
         self.replace::<T>(tag, provider.provide(self).await?)
     }
@@ -85,7 +85,7 @@ mod test {
     }
 
     #[async_trait]
-    impl Provider<TestService> for TestServiceProvider {
+    impl Provide<TestService> for TestServiceProvider {
         async fn provide(&self, _i: &Inject) -> Result<TestService> {
             Ok(TestService::new(self.id.clone()))
         }
@@ -103,14 +103,14 @@ mod test {
     }
 
     #[async_trait]
-    impl Provider<OtherService> for OtherServiceProvider {
+    impl Provide<OtherService> for OtherServiceProvider {
         async fn provide(&self, _i: &Inject) -> Result<OtherService> {
             Ok(OtherService::new(self.id.clone()))
         }
     }
 
     #[async_trait]
-    impl Provider<Arc<dyn HasId>> for OtherServiceProvider {
+    impl Provide<Arc<dyn HasId>> for OtherServiceProvider {
         async fn provide(&self, _i: &Inject) -> Result<Arc<dyn HasId>> {
             Ok(Arc::new(OtherService::new(self.id.clone())))
         }
@@ -120,7 +120,7 @@ mod test {
     pub struct TestServiceHasIdProvider {}
 
     #[async_trait]
-    impl Provider<Arc<dyn HasId>> for TestServiceHasIdProvider {
+    impl Provide<Arc<dyn HasId>> for TestServiceHasIdProvider {
         async fn provide(&self, i: &Inject) -> Result<Arc<dyn HasId>> {
             // Trigger a borrow so that the reference to `Inject` has to be held across the await
             // point below, to test issues with Inject thread safety.

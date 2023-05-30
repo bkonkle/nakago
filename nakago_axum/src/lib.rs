@@ -7,9 +7,6 @@ pub mod app;
 /// HTTP config
 pub mod config;
 
-/// Dependency injection Providers
-pub mod providers;
-
 /// Authentication
 pub mod auth;
 
@@ -20,5 +17,5 @@ pub mod routes;
 extern crate log;
 
 pub use app::AxumApplication;
-pub use providers::add_http_config_loaders;
-pub use routes::{InitRoute, Route};
+pub use auth::ConfigLoader as AuthConfigLoader;
+pub use routes::InitRouter;

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::domains::users::{
     model::User,
     mutations::UpdateUserInput,
-    service::{DefaultUsersService, UsersService},
+    service::{DefaultService, Service},
 };
 
 #[tokio::test]
@@ -22,7 +22,7 @@ async fn test_users_service_get() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultUsersService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service.get(&user.id).await?;
 
@@ -58,7 +58,7 @@ async fn test_users_service_get_by_username() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultUsersService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service.get_by_username(&user.username, &false).await?;
 
@@ -96,7 +96,7 @@ async fn test_users_service_create() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultUsersService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service.create(&user.username).await?;
 
@@ -137,7 +137,7 @@ async fn test_users_service_update() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultUsersService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .update(
@@ -194,7 +194,7 @@ async fn test_users_service_delete() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultUsersService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     service.delete(&user.id).await?;
 

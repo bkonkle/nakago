@@ -11,7 +11,7 @@ use crate::{
             model::Episode,
             mutations::{CreateEpisodeInput, UpdateEpisodeInput},
             queries::{EpisodeCondition, EpisodesOrderBy},
-            service::{DefaultEpisodesService, EpisodesService},
+            service::{DefaultService, Service},
         },
         shows::model::Show,
     },
@@ -33,7 +33,7 @@ async fn test_episodes_service_get() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service.get(&episode.id, &false).await?;
 
@@ -75,7 +75,7 @@ async fn test_episodes_service_get_with_related() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service.get(&episode.id, &true).await?;
 
@@ -121,7 +121,7 @@ async fn test_episodes_service_get_many() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .get_many(
@@ -191,7 +191,7 @@ async fn test_episodes_service_get_many_with_related() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .get_many(
@@ -280,7 +280,7 @@ async fn test_episodes_service_get_many_pagination() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .get_many(
@@ -372,7 +372,7 @@ async fn test_episodes_service_get_many_pagination_with_related() -> Result<()> 
             .into_connection(),
     );
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .get_many(
@@ -439,7 +439,7 @@ async fn test_episodes_service_create() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .create(
@@ -495,7 +495,7 @@ async fn test_episodes_service_create_with_related() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .create(
@@ -561,7 +561,7 @@ async fn test_episodes_service_update() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .update(
@@ -624,7 +624,7 @@ async fn test_episodes_service_update_with_related() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     let result = service
         .update(
@@ -685,7 +685,7 @@ async fn test_episodes_service_delete() -> Result<()> {
             .into_connection(),
     );
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = DefaultService::new(db.clone());
 
     service.delete(&episode.id).await?;
 

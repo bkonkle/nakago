@@ -5,11 +5,11 @@ use nakago::inject;
 use crate::{
     config::AppConfig,
     domains::{
-        episodes::providers::{EPISODES_SERVICE, EPISODE_LOADER},
-        profiles::providers::{PROFILES_SERVICE, PROFILE_LOADER},
-        role_grants::providers::{ROLE_GRANTS_SERVICE, ROLE_GRANT_LOADER},
-        shows::providers::{SHOWS_SERVICE, SHOW_LOADER},
-        users::providers::{USERS_SERVICE, USER_LOADER},
+        episodes::{EPISODES_SERVICE, EPISODE_LOADER},
+        profiles::{PROFILES_SERVICE, PROFILE_LOADER},
+        role_grants::{ROLE_GRANTS_SERVICE, ROLE_GRANT_LOADER},
+        shows::{SHOWS_SERVICE, SHOW_LOADER},
+        users::{USERS_SERVICE, USER_LOADER},
     },
 };
 use crate::{
@@ -19,7 +19,7 @@ use crate::{
         shows::resolver::{ShowsMutation, ShowsQuery},
         users::resolver::{UsersMutation, UsersQuery},
     },
-    utils::providers::OSO,
+    utils::authz::OSO,
 };
 
 /// The GraphQL top-level Query type

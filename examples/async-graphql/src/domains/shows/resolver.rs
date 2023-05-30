@@ -5,12 +5,12 @@ use std::sync::Arc;
 
 use crate::{
     domains::{
-        role_grants::{model::CreateRoleGrantInput, service::RoleGrantsService},
+        role_grants::{model::CreateRoleGrantInput, RoleGrantsService},
         shows::{
             model::Show,
             mutations::{CreateShowInput, MutateShowResult, UpdateShowInput},
             queries::{ShowCondition, ShowsOrderBy, ShowsPage},
-            service::ShowsService,
+            service::Service,
         },
         users::model::User,
     },
@@ -33,7 +33,7 @@ impl ShowsQuery {
         ctx: &Context<'_>,
         #[graphql(desc = "The Show id")] id: String,
     ) -> Result<Option<Show>> {
-        let shows = ctx.data_unchecked::<Arc<dyn ShowsService>>();
+        let shows = ctx.data_unchecked::<Arc<dyn Service>>();
 
         Ok(shows.get(&id).await?)
     }
@@ -47,7 +47,7 @@ impl ShowsQuery {
         page: Option<u64>,
         page_size: Option<u64>,
     ) -> Result<ShowsPage> {
-        let shows = ctx.data_unchecked::<Arc<dyn ShowsService>>();
+        let shows = ctx.data_unchecked::<Arc<dyn Service>>();
 
         let response = shows
             .get_many(r#where, order_by, page, page_size)
@@ -70,7 +70,7 @@ impl ShowsMutation {
         ctx: &Context<'_>,
         input: CreateShowInput,
     ) -> Result<MutateShowResult> {
-        let shows = ctx.data_unchecked::<Arc<dyn ShowsService>>();
+        let shows = ctx.data_unchecked::<Arc<dyn Service>>();
         let role_grants = ctx.data_unchecked::<Arc<dyn RoleGrantsService>>();
         let user = ctx.data_unchecked::<Option<User>>();
 
@@ -108,7 +108,7 @@ impl ShowsMutation {
         id: String,
         input: UpdateShowInput,
     ) -> Result<MutateShowResult> {
-        let shows = ctx.data_unchecked::<Arc<dyn ShowsService>>();
+        let shows = ctx.data_unchecked::<Arc<dyn Service>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
@@ -141,7 +141,7 @@ impl ShowsMutation {
 
     /// Remove an existing Show
     async fn delete_show(&self, ctx: &Context<'_>, id: String) -> Result<bool> {
-        let shows = ctx.data_unchecked::<Arc<dyn ShowsService>>();
+        let shows = ctx.data_unchecked::<Arc<dyn Service>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 

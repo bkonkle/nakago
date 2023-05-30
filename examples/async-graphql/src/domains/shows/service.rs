@@ -1,26 +1,47 @@
 use anyhow::Result;
-use async_graphql::{
-    dataloader::Loader,
-    FieldError,
-    MaybeUndefined::{Null, Undefined, Value},
-};
+use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
+use nakago::{Inject, InjectResult, Provide, Tag};
 use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
-use crate::domains::shows::{
-    model::{self, Show},
-    mutations::{CreateShowInput, UpdateShowInput},
-    queries::{ShowCondition, ShowsOrderBy},
-};
 use crate::utils::{ordering::Ordering, pagination::ManyResponse};
+use crate::{
+    db::provider::DATABASE_CONNECTION,
+    domains::shows::{
+        model::{self, Show},
+        mutations::{CreateShowInput, UpdateShowInput},
+        queries::{ShowCondition, ShowsOrderBy},
+    },
+};
 
-/// A ShowsService applies business logic to a dynamic ShowsRepository implementation.
+/// Tag(ShowsService)
+pub const SHOWS_SERVICE: Tag<Arc<dyn Service>> = Tag::new("ShowsService");
+
+/// Provide the Shows Service
+///
+/// **Provides:** `Arc<dyn Service>`
+///
+/// **Depends on:**
+///   - `Tag(DatabaseConnection)`
+#[derive(Default)]
+pub struct Provider {}
+
+#[async_trait]
+impl Provide<Arc<dyn Service>> for Provider {
+    async fn provide(&self, i: &Inject) -> InjectResult<Arc<dyn Service>> {
+        let db = i.get(&DATABASE_CONNECTION)?;
+
+        Ok(Arc::new(DefaultService::new(db.clone())))
+    }
+}
+
+/// A Service applies business logic to a dynamic ShowsRepository implementation.
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait ShowsService: Sync + Send {
+pub trait Service: Sync + Send {
     /// Get an individual `Show` by id
     async fn get(&self, id: &str) -> Result<Option<Show>>;
 
@@ -46,22 +67,22 @@ pub trait ShowsService: Sync + Send {
     async fn delete(&self, id: &str) -> Result<()>;
 }
 
-/// The default `ShowsService` struct.
-pub struct DefaultShowsService {
+/// The default `Service` struct.
+pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
 }
 
-/// The default `ShowsService` implementation
-impl DefaultShowsService {
-    /// Create a new `ShowsService` instance
+/// The default `Service` implementation
+impl DefaultService {
+    /// Create a new `Service` instance
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 }
 
 #[async_trait]
-impl ShowsService for DefaultShowsService {
+impl Service for DefaultService {
     async fn get(&self, id: &str) -> Result<Option<model::Model>> {
         let query = model::Entity::find_by_id(id.to_owned());
 
@@ -200,34 +221,5 @@ impl ShowsService for DefaultShowsService {
         let _result = show.delete(&*self.db).await?;
 
         Ok(())
-    }
-}
-
-/// A dataloader for `Show` instances
-pub struct ShowLoader {
-    /// The SeaOrm database connection
-    shows: Arc<dyn ShowsService>,
-}
-
-/// The default implementation for the `ShowLoader`
-impl ShowLoader {
-    /// Create a new instance
-    pub fn new(shows: Arc<dyn ShowsService>) -> Self {
-        Self { shows }
-    }
-}
-
-#[async_trait]
-impl Loader<String> for ShowLoader {
-    type Value = Show;
-    type Error = FieldError;
-
-    async fn load(&self, keys: &[String]) -> Result<HashMap<String, Self::Value>, Self::Error> {
-        let shows = self.shows.get_by_ids(keys.into()).await?;
-
-        Ok(shows
-            .into_iter()
-            .map(|show| (show.id.clone(), show))
-            .collect())
     }
 }

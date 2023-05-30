@@ -1,29 +1,23 @@
 use async_trait::async_trait;
-use nakago::inject;
-use nakago_axum::auth::{
-    providers::{AUTH_STATE, JWKS},
-    ProvideAuthState, ProvideJwks,
-};
+use nakago::{to_provider_error, Hook, Inject, InjectResult, Provide};
+use nakago_axum::auth::{jwks::JWKS, state::AUTH_STATE, ProvideAuthState, ProvideJwks};
 use oso::PolarClass;
 
 use crate::{
     config::AppConfig,
-    db::providers::{ProvideDatabaseConnection, DATABASE_CONNECTION},
+    db::provider::{DatabaseConnectionProvider, DATABASE_CONNECTION},
     domains::{
         episodes::{self, model::Episode},
         profiles::{self, model::Profile},
-        providers::init_domains,
         shows::{self, model::Show},
-        users::{self, model::User, providers::USERS_SERVICE},
+        users::{self, model::User, USERS_SERVICE},
+        StartDomains,
     },
-    events::{
-        providers::{CONNECTIONS, SOCKET_HANDLER},
-        ProvideConnections, ProvideSocket,
-    },
+    events::{ConnectionsProvider, SocketProvider, CONNECTIONS, SOCKET_HANDLER},
     graphql::{InitGraphQLSchema, GRAPHQL_SCHEMA},
     handlers::{EventsState, GraphQLState},
     routes::AppState,
-    utils::providers::{add_app_config_loaders, ProvideOso, OSO},
+    utils::authz::{ProvideOso, OSO},
 };
 
 /// Provide the AppState for Axum
@@ -35,11 +29,11 @@ use crate::{
 ///   - `Tag(UsersService)`
 ///   - `Tag(SocketHandler)`
 #[derive(Default)]
-pub struct ProvideAppState {}
+pub struct Provider {}
 
 #[async_trait]
-impl inject::Provider<AppState> for ProvideAppState {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<AppState> {
+impl Provide<AppState> for Provider {
+    async fn provide(&self, i: &Inject) -> InjectResult<AppState> {
         let auth = i.get(&AUTH_STATE)?;
         let users = i.get(&USERS_SERVICE)?;
         let handler = i.get(&SOCKET_HANDLER)?;
@@ -49,24 +43,6 @@ impl inject::Provider<AppState> for ProvideAppState {
         let graphql = GraphQLState::new(users, schema.clone());
 
         Ok(AppState::new(auth.clone(), events, graphql))
-    }
-}
-
-/// Initialize the Application
-///
-/// **Provides or Modifies:**
-///   - `Tag(ConfigLoaders)`
-#[derive(Default)]
-pub struct InitApp {}
-
-#[async_trait]
-impl inject::Hook for InitApp {
-    /// Initialize the ConfigLoaders needed for Axum integration. Injects `Tag(ConfigLoaders)` if it
-    /// has not been provided yet.
-    async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
-        add_app_config_loaders().handle(i).await?;
-
-        Ok(())
     }
 }
 
@@ -85,25 +61,27 @@ impl inject::Hook for InitApp {
 pub struct StartApp {}
 
 #[async_trait]
-impl inject::Hook for StartApp {
-    async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
+impl Hook for StartApp {
+    async fn handle(&self, i: &mut Inject) -> InjectResult<()> {
         i.provide(&JWKS, ProvideJwks::<AppConfig>::default())
             .await?;
-        i.provide(&DATABASE_CONNECTION, ProvideDatabaseConnection::default())
+        i.provide(&DATABASE_CONNECTION, DatabaseConnectionProvider::default())
             .await?;
         i.provide(&OSO, ProvideOso::default()).await?;
-        i.provide(&CONNECTIONS, ProvideConnections::default())
+        i.provide(&CONNECTIONS, ConnectionsProvider::default())
             .await?;
 
-        init_domains(i).await?;
+        i.handle(StartDomains::default()).await?;
+
         init_authz(i).await?;
 
         InitGraphQLSchema::default().handle(i).await?;
 
-        i.provide(&SOCKET_HANDLER, ProvideSocket::default()).await?;
+        i.provide(&SOCKET_HANDLER, SocketProvider::default())
+            .await?;
         i.provide(&AUTH_STATE, ProvideAuthState::default()).await?;
 
-        i.provide_type(ProvideAppState::default()).await?;
+        i.provide_type(Provider::default()).await?;
 
         Ok(())
     }
@@ -113,18 +91,18 @@ impl inject::Hook for StartApp {
 ///
 /// **Depends on (and modifies):**
 ///   - `Tag(Oso)`
-pub async fn init_authz(i: &mut inject::Inject) -> inject::Result<()> {
+pub async fn init_authz(i: &mut Inject) -> InjectResult<()> {
     // Set up authorization
     let oso = i.get_mut(&OSO)?;
 
     oso.register_class(User::get_polar_class_builder().name("User").build())
-        .map_err(inject::to_provider_error)?;
+        .map_err(to_provider_error)?;
     oso.register_class(Profile::get_polar_class_builder().name("Profile").build())
-        .map_err(inject::to_provider_error)?;
+        .map_err(to_provider_error)?;
     oso.register_class(Show::get_polar_class_builder().name("Show").build())
-        .map_err(inject::to_provider_error)?;
+        .map_err(to_provider_error)?;
     oso.register_class(Episode::get_polar_class_builder().name("Episode").build())
-        .map_err(inject::to_provider_error)?;
+        .map_err(to_provider_error)?;
 
     oso.load_str(
         &[
@@ -135,7 +113,7 @@ pub async fn init_authz(i: &mut inject::Inject) -> inject::Result<()> {
         ]
         .join("\n"),
     )
-    .map_err(inject::to_provider_error)?;
+    .map_err(to_provider_error)?;
 
     Ok(())
 }

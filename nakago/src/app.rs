@@ -1,25 +1,18 @@
-use backtrace::Backtrace;
-use crossterm::{execute, style::Print};
 use std::{
-    io,
     marker::PhantomData,
     ops::{Deref, DerefMut},
-    panic::{self, PanicInfo},
     path::PathBuf,
 };
-use tracing_subscriber::prelude::*;
 
 use crate::{
-    config::{Config, InitConfig},
-    inject::{self, Hook},
-    lifecycle::Events,
-    EventType,
+    lifecycle::Events, log::InitRustLog, panic::InitHandlePanic, Config, ConfigProvider, EventType,
+    Hook, Hooks, Inject, InjectResult,
 };
 
 /// The top-level Application struct
 pub struct Application<C: Config> {
     events: Events,
-    i: inject::Inject,
+    i: Inject,
     _phantom: PhantomData<C>,
 }
 
@@ -27,7 +20,7 @@ impl<C: Config> Default for Application<C> {
     fn default() -> Self {
         Self {
             events: Events::default(),
-            i: inject::Inject::default(),
+            i: Inject::default(),
             _phantom: PhantomData,
         }
     }
@@ -37,7 +30,7 @@ impl<C> Deref for Application<C>
 where
     C: Config,
 {
-    type Target = inject::Inject;
+    type Target = Inject;
 
     fn deref(&self) -> &Self::Target {
         &self.i
@@ -62,39 +55,35 @@ where
         self.events.on(event, hook);
     }
 
-    /// Trigger the given lifecycle event
-    pub async fn trigger(&mut self, event: &EventType) -> inject::Result<()> {
-        self.events.trigger(event, &mut self.i).await
+    /// Set a number of new lifecycle hooks that will fire on the given EventType
+    pub fn when(&mut self, event: &EventType, hooks: Hooks) {
+        self.events.when(event, hooks);
     }
 
-    /// Initialize the App
+    /// Initialize the App. This culminates in a loaded Config which is injected.
     ///
     /// **Provides:**
     ///   - `C: Config`
-    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
-        tracing_subscriber::registry()
-            .with(tracing_subscriber::EnvFilter::new(
-                std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()),
-            ))
-            .with(tracing_subscriber::fmt::layer())
-            .init();
-
-        // Process setup
-        panic::set_hook(Box::new(handle_panic));
+    pub async fn init(&mut self, config_path: Option<PathBuf>) -> InjectResult<()> {
+        // Check to see if there are any hooks for the Init event
+        if !self.events.has(&EventType::Init) {
+            // If not, add the default hooks
+            self.events.when(&EventType::Init, default_init_hooks());
+        };
 
         // Trigger the Init lifecycle event
         self.events.trigger(&EventType::Init, &mut self.i).await?;
 
         // Initialize the Config using the given path
-        InitConfig::<C>::new(config_path)
-            .handle(&mut self.i)
+        self.i
+            .provide_type(ConfigProvider::<C>::new(config_path))
             .await?;
 
         Ok(())
     }
 
     /// Run the Application by starting the listener
-    pub async fn start(&mut self) -> inject::Result<()> {
+    pub async fn start(&mut self) -> InjectResult<()> {
         // Trigger the Start lifecycle event
         self.events
             .trigger(&EventType::Startup, &mut self.i)
@@ -104,7 +93,7 @@ where
     }
 
     /// Shut down the Application by stopping the listener
-    pub async fn stop(&mut self) -> inject::Result<()> {
+    pub async fn stop(&mut self) -> InjectResult<()> {
         // Trigger the Stop lifecycle event
         self.events
             .trigger(&EventType::Shutdown, &mut self.i)
@@ -114,27 +103,10 @@ where
     }
 }
 
-fn handle_panic(info: &PanicInfo<'_>) {
-    if cfg!(debug_assertions) {
-        let location = info.location().unwrap();
-
-        let msg = match info.payload().downcast_ref::<&'static str>() {
-            Some(s) => *s,
-            None => match info.payload().downcast_ref::<String>() {
-                Some(s) => &s[..],
-                None => "Box<Any>",
-            },
-        };
-
-        let stacktrace: String = format!("{:?}", Backtrace::new()).replace('\n', "\n\r");
-
-        execute!(
-            io::stdout(),
-            Print(format!(
-                "thread '<unnamed>' panicked at '{}', {}\n\r{}",
-                msg, location, stacktrace
-            ))
-        )
-        .unwrap();
-    }
+/// The default lifecycle hooks that will be run on the Init event
+pub fn default_init_hooks() -> Hooks {
+    Hooks::from(vec![
+        Box::<InitHandlePanic>::default(),
+        Box::<InitRustLog>::default(),
+    ])
 }

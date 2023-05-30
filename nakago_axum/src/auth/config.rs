@@ -1,5 +1,5 @@
 use figment::providers::Env;
-use nakago::config::loader::ConfigLoader;
+use nakago::config::Loader;
 use serde::{Deserialize, Serialize};
 
 /// Auth config
@@ -27,9 +27,9 @@ pub struct AuthClientConfig {
 
 /// The Auth Config Loader
 #[derive(Default)]
-pub struct AuthConfigLoader {}
+pub struct ConfigLoader {}
 
-impl ConfigLoader for AuthConfigLoader {
+impl Loader for ConfigLoader {
     fn load_env(&self, env: Env) -> Env {
         // Split the Auth variables
         env.map(|key| key.as_str().replace("AUTH_CLIENT_", "AUTH.CLIENT.").into())

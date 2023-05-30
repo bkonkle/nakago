@@ -16,5 +16,7 @@ pub mod shows;
 /// Episodes
 pub mod episodes;
 
-/// Dependency injection providers
-pub mod providers;
+/// Nakago lifecycle hooks
+pub mod hooks;
+
+pub use hooks::StartDomains;

@@ -7,10 +7,6 @@ pub mod connections;
 /// Event handler
 pub mod socket;
 
-/// Denpendency Injection Providers
-pub mod providers;
-
-pub use connections::{Connection, Connections};
+pub use connections::{Connection, Connections, Provider as ConnectionsProvider, CONNECTIONS};
 pub use messages::{IncomingMessage, OutgoingMessage};
-pub use providers::{ProvideConnections, ProvideSocket};
-pub use socket::SocketHandler;
+pub use socket::{Provider as SocketProvider, SocketHandler, SOCKET_HANDLER};

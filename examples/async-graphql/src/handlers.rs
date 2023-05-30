@@ -10,7 +10,7 @@ use axum::{
 use nakago_axum::auth::Subject;
 use serde::{Deserialize, Serialize};
 
-use crate::{domains::users::service::UsersService, graphql::GraphQLSchema};
+use crate::{domains::users::UsersService, graphql::GraphQLSchema};
 
 use super::events::SocketHandler;
 

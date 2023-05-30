@@ -1,2 +1,2 @@
 /// Dependency injection providers
-pub mod providers;
+pub mod provider;

@@ -1,6 +1,6 @@
 #![allow(dead_code)] // Since each test is an independent module, this is needed
 
-use std::{default::Default, net::SocketAddr, time::Duration};
+use std::{default::Default, net::SocketAddr, sync::Arc, time::Duration};
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -14,18 +14,18 @@ use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
 use hyper::{client::HttpConnector, Body, Client, Method, Request};
 use hyper_tls::HttpsConnector;
-use nakago::{inject, EventType};
-use nakago_axum::{auth::config::AuthConfig, AxumApplication};
+use nakago::{app::default_init_hooks, AddConfigLoaders, EventType, Inject, InjectResult, Provide};
+use nakago_axum::{auth::config::AuthConfig, AxumApplication, InitRouter};
 use nakago_examples_async_graphql::{
-    config::AppConfig,
+    config::{AppConfig, DatabaseConfigLoader},
     domains::{
-        episodes::{model::Episode, mutations::CreateEpisodeInput, providers::EPISODES_SERVICE},
-        profiles::{model::Profile, mutations::CreateProfileInput, providers::PROFILES_SERVICE},
-        shows::{model::Show, mutations::CreateShowInput, providers::SHOWS_SERVICE},
-        users::{model::User, providers::USERS_SERVICE},
+        episodes::{model::Episode, mutations::CreateEpisodeInput, EPISODES_SERVICE},
+        profiles::{model::Profile, mutations::CreateProfileInput, PROFILES_SERVICE},
+        shows::{model::Show, mutations::CreateShowInput, SHOWS_SERVICE},
+        users::{model::User, USERS_SERVICE},
     },
-    providers::{InitApp, StartApp},
-    routes::{init_events_route, init_graphql_route, init_health_route, AppState},
+    providers::StartApp,
+    routes::{init_app_router, AppState},
 };
 use once_cell::sync::Lazy;
 use serde::Deserialize;
@@ -50,10 +50,16 @@ pub fn http_client() -> Client<HttpsConnector<HttpConnector>> {
 /// Run the Application Server
 pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
     let mut app = AxumApplication::<AppConfig>::default();
-    app.on(&EventType::Init, InitApp::default());
-    app.on(&EventType::Init, init_health_route());
-    app.on(&EventType::Init, init_graphql_route());
-    app.on(&EventType::Init, init_events_route());
+
+    app.when(
+        &EventType::Init,
+        default_init_hooks()
+            .and(AddConfigLoaders::new(vec![
+                Arc::<DatabaseConfigLoader>::default(),
+            ]))
+            .and(InitRouter::new(init_app_router)),
+    );
+
     app.on(&EventType::Startup, StartApp::default());
 
     let server = app.run::<AppState>(None).await?;
@@ -72,11 +78,8 @@ pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
 struct HttpClientProvider {}
 
 #[async_trait]
-impl inject::Provider<Client<HttpsConnector<HttpConnector>>> for HttpClientProvider {
-    async fn provide(
-        &self,
-        _i: &inject::Inject,
-    ) -> inject::Result<Client<HttpsConnector<HttpConnector>>> {
+impl Provide<Client<HttpsConnector<HttpConnector>>> for HttpClientProvider {
+    async fn provide(&self, _i: &Inject) -> InjectResult<Client<HttpsConnector<HttpConnector>>> {
         Ok(Client::builder().build::<_, Body>(HttpsConnector::new()))
     }
 }
