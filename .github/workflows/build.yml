@@ -58,3 +58,6 @@ jobs:
 
       - name: Dry run - Nakago Axum
         run: cargo publish --dry-run -p nakago-axum
+
+      - name: Dry run - Nakago SeaORM
+        run: cargo publish --dry-run -p nakago-sea-orm
