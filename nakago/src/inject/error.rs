@@ -21,6 +21,13 @@ pub enum Error {
         available: Vec<Key>,
     },
 
+    /// An error indicating that the Provider associated with an Injector wasn't able to downcast
+    /// because the types didn't match. This should not be thrown under normal circumstances.
+    TypeMismatch(
+        /// The Key of the entity type with a Provider that doesn't match
+        Key,
+    ),
+
     /// An error thrown from a Provider
     Provider(#[from] anyhow::Error),
 
@@ -54,6 +61,7 @@ impl Display for Error {
 
                 write!(f, "{missing} was not found\n\nAvailable:{avail_lines}")
             }
+            Self::TypeMismatch(key) => write!(f, "the type for {key} does not match"),
             Self::Provider(_) => write!(f, "provider failure"),
             Self::CannotConsume(key) => write!(f, "{key} was not able to be consumed"),
         }

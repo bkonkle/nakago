@@ -48,16 +48,6 @@ impl Inject {
         self.get_key_mut(Key::from_tag::<T>(tag.tag))
     }
 
-    /// Retrieve a reference to a tagged dependency if it exists in the map
-    pub fn get_opt<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Option<&T> {
-        self.get_key_opt(Key::from_tag::<T>(tag.tag))
-    }
-
-    /// Retrieve a mutable reference to a tagged dependency if it exists in the map
-    pub fn get_mut_opt<T: Any + Send + Sync>(&mut self, tag: &'static Tag<T>) -> Option<&mut T> {
-        self.get_key_mut_opt(Key::from_tag::<T>(tag.tag))
-    }
-
     /// Provide a tagged dependency directly
     pub fn inject<T: Any + Sync + Send>(&mut self, tag: &'static Tag<T>, dep: T) -> Result<()> {
         self.inject_key(Key::from_tag::<T>(tag.tag), dep)
@@ -130,32 +120,6 @@ pub(crate) mod test {
     }
 
     #[test]
-    fn test_get_tag_opt_success() -> Result<()> {
-        let mut i = Inject::default();
-
-        let expected: String = fake::uuid::UUIDv4.fake();
-
-        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))?;
-
-        let result = i.get_opt(&SERVICE_TAG).unwrap();
-
-        assert_eq!(expected, result.id);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_tag_opt_not_found() -> Result<()> {
-        let i = Inject::default();
-
-        let result = i.get_opt(&SERVICE_TAG);
-
-        assert!(result.is_none());
-
-        Ok(())
-    }
-
-    #[test]
     fn test_get_tag_success() -> Result<()> {
         let mut i = Inject::default();
 
@@ -199,32 +163,6 @@ pub(crate) mod test {
         } else {
             panic!("did not return Err as expected")
         }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_tag_mut_opt_success() -> Result<()> {
-        let mut i = Inject::default();
-
-        let expected: String = fake::uuid::UUIDv4.fake();
-
-        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))?;
-
-        let result = i.get_mut_opt(&SERVICE_TAG).unwrap();
-
-        assert_eq!(expected, result.id);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_tag_mut_opt_not_found() -> Result<()> {
-        let mut i = Inject::default();
-
-        let result = i.get_mut_opt(&SERVICE_TAG);
-
-        assert!(result.is_none());
 
         Ok(())
     }

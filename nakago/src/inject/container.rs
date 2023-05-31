@@ -1,4 +1,4 @@
-use std::{any::Any, collections::HashMap, fmt::Debug};
+use std::{any::Any, collections::HashMap};
 
 use super::{Error, Key, Result};
 
@@ -6,17 +6,22 @@ use super::{Error, Key, Result};
 pub(crate) type TypeMap = HashMap<Key, Box<dyn Any + Send + Sync>>;
 
 /// The injection Container
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct Inject(pub(crate) TypeMap);
 
 // The base methods powering both the Tag and TypeId modes
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
     pub(crate) fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<&T> {
-        self.get_key_opt::<T>(key.clone())
+        self.0
+            .get(&key)
             .ok_or_else(|| Error::NotFound {
-                missing: key,
+                missing: key.clone(),
                 available: self.available_type_names(),
+            })
+            .and_then(|d| {
+                d.downcast_ref::<T>()
+                    .ok_or_else(|| Error::TypeMismatch(key))
             })
     }
 
@@ -29,21 +34,16 @@ impl Inject {
         // avoid it.
         let available = self.available_type_names();
 
-        self.get_key_mut_opt::<T>(key.clone())
+        self.0
+            .get_mut(&key)
             .ok_or(Error::NotFound {
-                missing: key,
+                missing: key.clone(),
                 available,
             })
-    }
-
-    /// Retrieve a reference to a dependency if it exists in the map
-    pub(crate) fn get_key_opt<T: Any + Send + Sync>(&self, key: Key) -> Option<&T> {
-        self.0.get(&key).and_then(|d| d.downcast_ref::<T>())
-    }
-
-    /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub(crate) fn get_key_mut_opt<T: Any + Send + Sync>(&mut self, key: Key) -> Option<&mut T> {
-        self.0.get_mut(&key).and_then(|d| d.downcast_mut::<T>())
+            .and_then(|d| {
+                d.downcast_mut::<T>()
+                    .ok_or_else(|| Error::TypeMismatch(key))
+            })
     }
 
     /// Provide a dependency directly

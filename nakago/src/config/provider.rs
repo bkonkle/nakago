@@ -1,4 +1,4 @@
-use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf, sync::Arc};
+use std::{any::Any, marker::PhantomData, path::PathBuf, sync::Arc};
 
 use async_trait::async_trait;
 use figment::{
@@ -13,7 +13,7 @@ use super::{Loader, CONFIG_LOADERS};
 
 /// Config is the final initialized result
 pub trait Config:
-    Any + Clone + Debug + Default + Serialize + Send + Sync + for<'a> Deserialize<'a>
+    Any + Clone + Default + Serialize + Send + Sync + for<'a> Deserialize<'a>
 {
 }
 
@@ -51,7 +51,7 @@ impl<C: Config> Provider<C> {
 #[async_trait]
 impl<C: Config> Provide<C> for Provider<C> {
     async fn provide(&self, i: &Inject) -> inject::Result<C> {
-        let loaders = i.get_opt(&CONFIG_LOADERS);
+        let loaders = i.get(&CONFIG_LOADERS).ok();
 
         let config = load::<C>(loaders, self.custom_path.clone())
             .map_err(|e| inject::Error::Provider(e.into()))?;
