@@ -1,9 +1,17 @@
-use std::{any::Any, collections::HashMap};
+use std::{any::Any, collections::HashMap, future::Future, pin::Pin};
 
 use super::{Error, Key, Result};
 
 /// A type map for dependency injection
-pub(crate) type TypeMap = HashMap<Key, Box<dyn Any + Send + Sync>>;
+pub(crate) type TypeMap = HashMap<Key, Injector<dyn Any + Send + Sync>>;
+
+pub struct Injector<T>
+where
+    T: Any + Send + Sync + ?Sized,
+{
+    instance: Option<Box<T>>,
+    provider: Option<Box<dyn FnOnce(&Inject) -> Pin<Box<dyn Future<Output = Result<Box<T>>>>>>>,
+}
 
 /// The injection Container
 #[derive(Default)]
@@ -12,38 +20,56 @@ pub struct Inject(pub(crate) TypeMap);
 // The base methods powering both the Tag and TypeId modes
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub(crate) fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<&T> {
-        self.0
-            .get(&key)
-            .ok_or_else(|| Error::NotFound {
-                missing: key.clone(),
-                available: self.available_type_names(),
-            })
-            .and_then(|d| {
-                d.downcast_ref::<T>()
-                    .ok_or_else(|| Error::TypeMismatch(key))
-            })
+    pub(crate) async fn get_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<&T> {
+        let available = self.available_type_names();
+
+        if let Some(injector) = self.0.get_mut(&key) {
+            if let Some(instance) = &injector.instance {
+                return Ok(instance
+                    .downcast_ref::<T>()
+                    .ok_or_else(|| Error::TypeMismatch(key))?);
+            }
+
+            if let Some(provider) = injector.provider.take() {
+                let instance = provider(self).await?;
+
+                injector.instance = Some(instance);
+
+                return injector
+                    .instance
+                    .as_ref()
+                    .ok_or_else(|| Error::NotFound {
+                        missing: key.clone(),
+                        available,
+                    })
+                    .and_then(|instance| {
+                        instance
+                            .downcast_ref::<T>()
+                            .ok_or_else(|| Error::TypeMismatch(key))
+                    });
+            }
+        }
+
+        Err(Error::NotFound {
+            missing: key.clone(),
+            available,
+        })
     }
 
     /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
     pub(crate) fn get_key_mut<T: Any + Send + Sync>(&mut self, key: Key) -> Result<&mut T> {
-        // TODO: Since `self` is borrowed as a mutable ref for `self.get_mut_opt()`, it cannot be
-        // used for self.available_type_names() within the `.ok_or_else()` call below. Because of
-        // this, the `available` property is pre-loaded here in case there is an error. It must
-        // iterate over the keys of the map to do this - which is minor, but I'd still like to
-        // avoid it.
-        let available = self.available_type_names();
+        if let Some(injector) = self.0.get_mut(&key) {
+            if let Some(instance) = &mut injector.instance {
+                return instance
+                    .downcast_mut::<T>()
+                    .ok_or_else(|| Error::TypeMismatch(key));
+            }
+        };
 
-        self.0
-            .get_mut(&key)
-            .ok_or(Error::NotFound {
-                missing: key.clone(),
-                available,
-            })
-            .and_then(|d| {
-                d.downcast_mut::<T>()
-                    .ok_or_else(|| Error::TypeMismatch(key))
-            })
+        Err(Error::NotFound {
+            missing: key.clone(),
+            available: self.available_type_names(),
+        })
     }
 
     /// Provide a dependency directly
@@ -52,7 +78,13 @@ impl Inject {
             return Err(Error::Occupied(key));
         }
 
-        let _ = self.0.insert(key, Box::new(dep));
+        let _ = self.0.insert(
+            key,
+            Injector {
+                instance: Some(Box::new(dep)),
+                provider: None,
+            },
+        );
 
         Ok(())
     }
@@ -66,7 +98,13 @@ impl Inject {
             });
         }
 
-        self.0.insert(key, Box::new(dep));
+        self.0.insert(
+            key,
+            Injector {
+                instance: Some(Box::new(dep)),
+                provider: None,
+            },
+        );
 
         Ok(())
     }
@@ -75,6 +113,7 @@ impl Inject {
     pub(crate) fn consume_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<T> {
         self.0
             .remove(&key)
+            .and_then(|opt| opt.instance)
             .ok_or_else(|| Error::NotFound {
                 missing: key.clone(),
                 available: self.available_type_names(),
