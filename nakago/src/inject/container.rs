@@ -118,6 +118,10 @@ impl Inject {
     where
         P: FnOnce(&Inject) -> Pin<Box<Pending>>,
     {
+        if self.0.contains_key(&key) {
+            return Err(Error::Occupied(key));
+        }
+
         self.0.insert(
             key,
             Mutex::new(Injector::Provider(Some(Box::new(provider)))),
@@ -149,6 +153,17 @@ impl Inject {
 
 #[cfg(test)]
 pub(crate) mod test {
+    use fake::Fake;
+    use std::{any::type_name, sync::Arc};
+    use tokio::time::{sleep, Duration};
+
+    use crate::inject::{
+        tag::test::{DYN_TAG, OTHER_TAG, SERVICE_TAG},
+        Key,
+    };
+
+    use super::*;
+
     pub trait HasId: Send + Sync {
         fn get_id(&self) -> String;
     }
@@ -182,6 +197,35 @@ pub(crate) mod test {
     impl HasId for OtherService {
         fn get_id(&self) -> String {
             self.other_id.clone()
+        }
+    }
+
+    fn provide_test_service(
+        id: String,
+    ) -> impl FnOnce(&Inject) -> Pin<Box<dyn Future<Output = Result<Arc<TestService>>>>> {
+        move |i| Box::pin(async move { Ok(Arc::new(TestService::new(id))) })
+    }
+
+    fn provide_other_service(
+        id: String,
+    ) -> impl FnOnce(&Inject) -> Pin<Box<dyn Future<Output = Result<Arc<OtherService>>>>> {
+        move |i| Box::pin(async move { Ok(Arc::new(OtherService::new(id))) })
+    }
+
+    fn provide_dyn_has_id<'a>(
+    ) -> impl FnOnce(&Inject) -> Pin<Box<dyn Future<Output = Result<Arc<dyn HasId>>> + 'a>> {
+        move |i| {
+            Box::pin(async move {
+                // Trigger a borrow so that the reference to `Inject` has to be held across the await
+                // point below, to test issues with Inject thread safety.
+                let _ = i.get_type::<String>();
+
+                sleep(Duration::from_millis(1)).await;
+
+                let arc: Arc<dyn HasId> = Arc::new(OtherService::new("test-service".to_string()));
+
+                Ok(arc)
+            })
         }
     }
 }
