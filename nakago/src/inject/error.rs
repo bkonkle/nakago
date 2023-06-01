@@ -1,10 +1,13 @@
-use std::fmt::{self, Debug, Display};
+use std::{
+    fmt::{self, Debug, Display},
+    sync::Arc,
+};
 use thiserror::Error;
 
 use super::Key;
 
 /// Injection Errors
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum Error {
     /// Type ID already occupied
     Occupied(
@@ -29,7 +32,7 @@ pub enum Error {
     ),
 
     /// An error thrown from a Provider
-    Provider(#[from] anyhow::Error),
+    Provider(#[from] Arc<anyhow::Error>),
 
     /// The given Key was unable to be removed from the Inject container
     CannotConsume(

@@ -1,75 +1,83 @@
-use std::{any::Any, collections::HashMap, future::Future, pin::Pin};
+use std::{
+    any::Any,
+    collections::HashMap,
+    future::{ready, Future},
+    mem,
+    pin::Pin,
+    sync::Arc,
+};
+
+use futures::{future::Shared, FutureExt};
+use tokio::sync::Mutex;
 
 use super::{Error, Key, Result};
 
-/// A type map for dependency injection
-pub(crate) type TypeMap = HashMap<Key, Injector<dyn Any + Send + Sync>>;
+pub type Dependency = dyn Any + Send + Sync;
+pub type Pending = dyn Future<Output = Result<Arc<Dependency>>>;
+pub type Provider = dyn FnOnce(&Inject) -> Pin<Box<Pending>>;
 
-pub struct Injector<T>
-where
-    T: Any + Send + Sync + ?Sized,
-{
-    instance: Option<Box<T>>,
-    provider: Option<Box<dyn FnOnce(&Inject) -> Pin<Box<dyn Future<Output = Result<Box<T>>>>>>>,
+enum Injector {
+    Pending(Shared<Pin<Box<Pending>>>),
+    Provider(Option<Box<Provider>>),
 }
 
 /// The injection Container
 #[derive(Default)]
-pub struct Inject(pub(crate) TypeMap);
+pub struct Inject(pub(crate) HashMap<Key, Mutex<Injector>>);
 
 // The base methods powering both the Tag and TypeId modes
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub(crate) async fn get_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<&T> {
-        let available = self.available_type_names();
+    pub(crate) async fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<Arc<T>> {
+        if let Some(injector) = self.0.get(&key) {
+            let injector = &mut *injector.lock().await;
 
-        if let Some(injector) = self.0.get_mut(&key) {
-            if let Some(instance) = &injector.instance {
-                return Ok(instance
-                    .downcast_ref::<T>()
-                    .ok_or_else(|| Error::TypeMismatch(key))?);
-            }
+            let transformed = match injector {
+                Injector::Pending(pending) => Injector::Pending(pending.clone()),
+                Injector::Provider(provider) => {
+                    Injector::Pending((provider.take().unwrap())(self).shared())
+                }
+            };
+            mem::replace(injector, transformed);
 
-            if let Some(provider) = injector.provider.take() {
-                let instance = provider(self).await?;
+            let pending = match injector {
+                Injector::Pending(pending) => pending,
+                Injector::Provider(_) => unreachable!(),
+            };
 
-                injector.instance = Some(instance);
-
-                return injector
-                    .instance
-                    .as_ref()
-                    .ok_or_else(|| Error::NotFound {
-                        missing: key.clone(),
-                        available,
-                    })
-                    .and_then(|instance| {
-                        instance
-                            .downcast_ref::<T>()
-                            .ok_or_else(|| Error::TypeMismatch(key))
-                    });
-            }
+            return pending
+                .await
+                .and_then(|value| value.downcast::<T>().map_err(|_| Error::TypeMismatch(key)));
         }
-
-        Err(Error::NotFound {
-            missing: key.clone(),
-            available,
-        })
-    }
-
-    /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub(crate) fn get_key_mut<T: Any + Send + Sync>(&mut self, key: Key) -> Result<&mut T> {
-        if let Some(injector) = self.0.get_mut(&key) {
-            if let Some(instance) = &mut injector.instance {
-                return instance
-                    .downcast_mut::<T>()
-                    .ok_or_else(|| Error::TypeMismatch(key));
-            }
-        };
 
         Err(Error::NotFound {
             missing: key.clone(),
             available: self.available_type_names(),
         })
+    }
+
+    /// Remove a dependency from the map and return it for use
+    pub(crate) async fn consume_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<T> {
+        let injector = self
+            .0
+            .remove(&key)
+            .ok_or_else(|| Error::NotFound {
+                missing: key.clone(),
+                available: self.available_type_names(),
+            })?
+            .into_inner();
+
+        match injector {
+            Injector::Pending(pending) => {
+                let value = pending.await?;
+                let arc = value
+                    .downcast::<T>()
+                    .map_err(|_| Error::TypeMismatch(key.clone()))?;
+
+                return Arc::try_unwrap(arc).map_err(|_| Error::TypeMismatch(key));
+            }
+            Injector::Provider(_) => unreachable!(),
+        }
     }
 
     /// Provide a dependency directly
@@ -78,13 +86,11 @@ impl Inject {
             return Err(Error::Occupied(key));
         }
 
-        let _ = self.0.insert(
-            key,
-            Injector {
-                instance: Some(Box::new(dep)),
-                provider: None,
-            },
-        );
+        let pending: Pin<Box<Pending>> =
+            Box::pin(ready::<Result<Arc<Dependency>>>(Ok(Arc::new(dep))));
+
+        self.0
+            .insert(key, Mutex::new(Injector::Pending(pending.shared())));
 
         Ok(())
     }
@@ -98,28 +104,41 @@ impl Inject {
             });
         }
 
+        let pending: Pin<Box<Pending>> =
+            Box::pin(ready::<Result<Arc<Dependency>>>(Ok(Arc::new(dep))));
+
+        self.0
+            .insert(key, Mutex::new(Injector::Pending(pending.shared())));
+
+        Ok(())
+    }
+
+    /// Use a Provider function to inject a dependency.
+    pub fn provide_key<P>(&mut self, key: Key, provider: P) -> Result<()>
+    where
+        P: FnOnce(&Inject) -> Pin<Box<Pending>>,
+    {
         self.0.insert(
             key,
-            Injector {
-                instance: Some(Box::new(dep)),
-                provider: None,
-            },
+            Mutex::new(Injector::Provider(Some(Box::new(provider)))),
         );
 
         Ok(())
     }
 
-    /// Remove a dependency from the map and return it for use
-    pub(crate) fn consume_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<T> {
-        self.0
-            .remove(&key)
-            .and_then(|opt| opt.instance)
-            .ok_or_else(|| Error::NotFound {
-                missing: key.clone(),
+    /// Use a Provider function to replace an existing dependency.
+    pub async fn replace_key_with<P>(&mut self, key: Key, provider: P) -> Result<()>
+    where
+        P: FnOnce(&Inject) -> Pin<Box<Pending>>,
+    {
+        if !self.0.contains_key(&key) {
+            return Err(Error::NotFound {
+                missing: key,
                 available: self.available_type_names(),
-            })
-            .and_then(|d| d.downcast().map_err(|_err| Error::CannotConsume(key)))
-            .map(|d| *d)
+            });
+        }
+
+        return self.provide_key(key, provider);
     }
 
     /// Return a list of all available type names in the map

@@ -1,9 +1,6 @@
 /// The dependency injection container
 pub mod container;
 
-/// Providers
-pub mod provide;
-
 /// Errors
 pub mod error;
 
@@ -19,9 +16,8 @@ pub mod type_id;
 /// Hooks
 pub mod hooks;
 
-pub use container::Inject;
+pub use container::{Inject, Provider};
 pub use error::{Error, Result};
 pub use hooks::{Hook, Hooks};
 pub use key::{Id, Key};
-pub use provide::{to_provider_error, Provide};
 pub use tag::Tag;

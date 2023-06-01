@@ -7,7 +7,7 @@ use figment::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{inject, Inject, Provide};
+use crate::{inject, Inject};
 
 use super::{Loader, CONFIG_LOADERS};
 
@@ -17,48 +17,48 @@ pub trait Config:
 {
 }
 
-/// A Config Provider
-///
-/// **Provides:**
-///   - `C: Config`
-///
-/// **Depends on:**
-///   - `Tag(ConfigLoaders)`
-#[derive(Default)]
-pub struct Provider<C: Config> {
-    custom_path: Option<PathBuf>,
-    _phantom: PhantomData<C>,
-}
+// /// A Config Provider
+// ///
+// /// **Provides:**
+// ///   - `C: Config`
+// ///
+// /// **Depends on:**
+// ///   - `Tag(ConfigLoaders)`
+// #[derive(Default)]
+// pub struct Provider<C: Config> {
+//     custom_path: Option<PathBuf>,
+//     _phantom: PhantomData<C>,
+// }
 
-impl<C: Config> Provider<C> {
-    /// Create a new Config Initializer
-    pub fn new(custom_path: Option<PathBuf>) -> Self {
-        Self {
-            custom_path,
-            _phantom: PhantomData,
-        }
-    }
+// impl<C: Config> Provider<C> {
+//     /// Create a new Config Initializer
+//     pub fn new(custom_path: Option<PathBuf>) -> Self {
+//         Self {
+//             custom_path,
+//             _phantom: PhantomData,
+//         }
+//     }
 
-    /// Create a new Config Initializer with a custom path
-    pub fn with_path(custom_path: PathBuf) -> Self {
-        Self {
-            custom_path: Some(custom_path),
-            _phantom: PhantomData,
-        }
-    }
-}
+//     /// Create a new Config Initializer with a custom path
+//     pub fn with_path(custom_path: PathBuf) -> Self {
+//         Self {
+//             custom_path: Some(custom_path),
+//             _phantom: PhantomData,
+//         }
+//     }
+// }
 
-#[async_trait]
-impl<C: Config> Provide<C> for Provider<C> {
-    async fn provide(&self, i: &Inject) -> inject::Result<C> {
-        let loaders = i.get(&CONFIG_LOADERS).ok();
+// #[async_trait]
+// impl<C: Config> inject::Provider<C> for Provider<C> {
+//     async fn provide(&self, i: &Inject) -> inject::Result<C> {
+//         let loaders = i.get(&CONFIG_LOADERS).ok();
 
-        let config = load::<C>(loaders, self.custom_path.clone())
-            .map_err(|e| inject::Error::Provider(e.into()))?;
+//         let config = load::<C>(loaders, self.custom_path.clone())
+//             .map_err(|e| inject::Error::Provider(e.into()))?;
 
-        Ok(config)
-    }
-}
+//         Ok(config)
+//     }
+// }
 
 fn load<C: Config>(
     loaders: Option<&Vec<Arc<dyn Loader>>>,
