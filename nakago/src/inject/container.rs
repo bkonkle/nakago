@@ -2,7 +2,6 @@ use std::{
     any::Any,
     collections::HashMap,
     future::{ready, Future},
-    mem,
     pin::Pin,
     sync::Arc,
 };
@@ -16,36 +15,61 @@ pub type Dependency = dyn Any + Send + Sync;
 pub type Pending = dyn Future<Output = Result<Arc<Dependency>>>;
 pub type Provider = dyn FnOnce(&Inject) -> Pin<Box<Pending>>;
 
-enum Injector {
+enum Value {
     Pending(Shared<Pin<Box<Pending>>>),
-    Provider(Option<Box<Provider>>),
+    Provider(Box<Provider>),
+}
+
+struct Injector {
+    value: Value,
+}
+
+impl Injector {
+    fn from_pending(pending: Shared<Pin<Box<Pending>>>) -> Mutex<Self> {
+        Mutex::new(Self {
+            value: Value::Pending(pending),
+        })
+    }
+
+    fn from_provider(provider: Box<Provider>) -> Mutex<Self> {
+        Mutex::new(Self {
+            value: Value::Provider(provider),
+        })
+    }
+
+    fn request(&mut self, inject: &Inject) -> Shared<Pin<Box<Pending>>> {
+        let pending = match self.value {
+            // If this is a Dependency that has already been requested, it will already be in a
+            // Pending state. In that cose, clone the inner Shared Promise (which clones the
+            // inner Arc around the Dependency at the time it's resolved).
+            Value::Pending(pending) => pending,
+            // If this Dependency hasn't been requested yet, kick off the inner Shared Promise,
+            // which is a Provider that will resolve the Promise with the Dependency inside
+            // an Arc.
+            Value::Provider(provider) => provider(inject).shared(),
+        };
+
+        self.value = Value::Pending(pending.clone());
+
+        pending
+    }
 }
 
 /// The injection Container
 #[derive(Default)]
-pub struct Inject(pub(crate) HashMap<Key, Mutex<Injector>>);
+pub struct Inject {
+    pub(crate) container: HashMap<Key, Mutex<Injector>>,
+}
 
 // The base methods powering both the Tag and TypeId modes
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
     pub(crate) async fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<Arc<T>> {
-        if let Some(injector) = self.0.get(&key) {
+        if let Some(injector) = self.container.get(&key) {
             let injector = &mut *injector.lock().await;
 
-            let transformed = match injector {
-                Injector::Pending(pending) => Injector::Pending(pending.clone()),
-                Injector::Provider(provider) => {
-                    Injector::Pending((provider.take().unwrap())(self).shared())
-                }
-            };
-            mem::replace(injector, transformed);
-
-            let pending = match injector {
-                Injector::Pending(pending) => pending,
-                Injector::Provider(_) => unreachable!(),
-            };
-
-            return pending
+            return injector
+                .request(self)
                 .await
                 .and_then(|value| value.downcast::<T>().map_err(|_| Error::TypeMismatch(key)));
         }
@@ -58,8 +82,8 @@ impl Inject {
 
     /// Remove a dependency from the map and return it for use
     pub(crate) async fn consume_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<T> {
-        let injector = self
-            .0
+        let mut injector = self
+            .container
             .remove(&key)
             .ok_or_else(|| Error::NotFound {
                 missing: key.clone(),
@@ -67,37 +91,32 @@ impl Inject {
             })?
             .into_inner();
 
-        match injector {
-            Injector::Pending(pending) => {
-                let value = pending.await?;
-                let arc = value
-                    .downcast::<T>()
-                    .map_err(|_| Error::TypeMismatch(key.clone()))?;
+        let value = injector.request(self).await?;
+        let arc = value
+            .downcast::<T>()
+            .map_err(|_| Error::TypeMismatch(key.clone()))?;
 
-                return Arc::try_unwrap(arc).map_err(|_| Error::TypeMismatch(key));
-            }
-            Injector::Provider(_) => unreachable!(),
-        }
+        return Arc::try_unwrap(arc).map_err(|_| Error::TypeMismatch(key));
     }
 
     /// Provide a dependency directly
     pub(crate) fn inject_key<T: Any + Send + Sync>(&mut self, key: Key, dep: T) -> Result<()> {
-        if self.0.contains_key(&key) {
+        if self.container.contains_key(&key) {
             return Err(Error::Occupied(key));
         }
 
         let pending: Pin<Box<Pending>> =
             Box::pin(ready::<Result<Arc<Dependency>>>(Ok(Arc::new(dep))));
 
-        self.0
-            .insert(key, Mutex::new(Injector::Pending(pending.shared())));
+        self.container
+            .insert(key, Injector::from_pending(pending.shared()));
 
         Ok(())
     }
 
     /// Replace an existing dependency directly
     pub(crate) fn replace_key<T: Any + Send + Sync>(&mut self, key: Key, dep: T) -> Result<()> {
-        if !self.0.contains_key(&key) {
+        if !self.container.contains_key(&key) {
             return Err(Error::NotFound {
                 missing: key,
                 available: self.available_type_names(),
@@ -107,8 +126,8 @@ impl Inject {
         let pending: Pin<Box<Pending>> =
             Box::pin(ready::<Result<Arc<Dependency>>>(Ok(Arc::new(dep))));
 
-        self.0
-            .insert(key, Mutex::new(Injector::Pending(pending.shared())));
+        self.container
+            .insert(key, Injector::from_pending(pending.shared()));
 
         Ok(())
     }
@@ -118,14 +137,12 @@ impl Inject {
     where
         P: FnOnce(&Inject) -> Pin<Box<Pending>>,
     {
-        if self.0.contains_key(&key) {
+        if self.container.contains_key(&key) {
             return Err(Error::Occupied(key));
         }
 
-        self.0.insert(
-            key,
-            Mutex::new(Injector::Provider(Some(Box::new(provider)))),
-        );
+        self.container
+            .insert(key, Injector::from_provider(Box::new(provider)));
 
         Ok(())
     }
@@ -135,7 +152,7 @@ impl Inject {
     where
         P: FnOnce(&Inject) -> Pin<Box<Pending>>,
     {
-        if !self.0.contains_key(&key) {
+        if !self.container.contains_key(&key) {
             return Err(Error::NotFound {
                 missing: key,
                 available: self.available_type_names(),
@@ -147,20 +164,14 @@ impl Inject {
 
     /// Return a list of all available type names in the map
     pub(crate) fn available_type_names(&self) -> Vec<Key> {
-        self.0.keys().cloned().collect()
+        self.container.keys().cloned().collect()
     }
 }
 
 #[cfg(test)]
 pub(crate) mod test {
-    use fake::Fake;
-    use std::{any::type_name, sync::Arc};
+    use std::sync::Arc;
     use tokio::time::{sleep, Duration};
-
-    use crate::inject::{
-        tag::test::{DYN_TAG, OTHER_TAG, SERVICE_TAG},
-        Key,
-    };
 
     use super::*;
 
@@ -213,7 +224,7 @@ pub(crate) mod test {
     }
 
     fn provide_dyn_has_id<'a>(
-    ) -> impl FnOnce(&Inject) -> Pin<Box<dyn Future<Output = Result<Arc<dyn HasId>>> + 'a>> {
+    ) -> impl FnOnce(&'a Inject) -> Pin<Box<dyn Future<Output = Result<Arc<dyn HasId>>> + 'a>> {
         move |i| {
             Box::pin(async move {
                 // Trigger a borrow so that the reference to `Inject` has to be held across the await

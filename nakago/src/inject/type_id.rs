@@ -1,17 +1,17 @@
-use std::any::Any;
+use std::{any::Any, sync::Arc};
 
 use super::{Key, Result};
 use crate::Inject;
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub fn get_type<T: Any + Send + Sync>(&self) -> Result<&T> {
-        self.get_key(Key::from_type_id::<T>())
+    pub async fn get_type<T: Any + Send + Sync>(&self) -> Result<Arc<T>> {
+        self.get_key(Key::from_type_id::<T>()).await
     }
 
-    /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub fn get_type_mut<T: Any + Send + Sync>(&mut self) -> Result<&mut T> {
-        self.get_key_mut(Key::from_type_id::<T>())
+    /// Consume a dependency, removing it from the container and moving it to the caller
+    pub async fn consume_type<T: Any + Send + Sync>(&mut self) -> Result<T> {
+        self.consume_key(Key::from_type_id::<T>()).await
     }
 
     /// Provide a dependency directly
@@ -22,11 +22,6 @@ impl Inject {
     /// Replace an existing dependency directly
     pub fn replace_type<T: Any + Send + Sync>(&mut self, dep: T) -> Result<()> {
         self.replace_key(Key::from_type_id::<T>(), dep)
-    }
-
-    /// Consume a dependency, removing it from the container and moving it to the caller
-    pub fn consume_type<T: Any + Send + Sync>(&mut self) -> Result<T> {
-        self.consume_key(Key::from_type_id::<T>())
     }
 }
 
@@ -48,7 +43,8 @@ pub(crate) mod test {
         i.inject_type(service)?;
 
         assert!(
-            i.0.contains_key(&Key::from_type_id::<TestService>()),
+            i.container
+                .contains_key(&Key::from_type_id::<TestService>()),
             "key does not exist in injection container"
         );
 
@@ -76,41 +72,41 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_get_success() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
         i.inject_type(TestService::new(expected.clone()))?;
 
-        let result = i.get_type::<TestService>()?;
+        let result = i.get_type::<TestService>().await?;
 
         assert_eq!(expected, result.id);
 
         Ok(())
     }
 
-    #[test]
-    fn test_dyn_get_success() -> Result<()> {
+    #[tokio::test]
+    async fn test_dyn_get_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
         i.inject_type::<Box<dyn HasId>>(Box::new(TestService::new(expected.clone())))?;
 
-        let repo = i.get_type::<Box<dyn HasId>>()?;
+        let repo = i.get_type::<Box<dyn HasId>>().await?;
 
         assert_eq!(expected, repo.get_id());
 
         Ok(())
     }
 
-    #[test]
-    fn test_get_not_found() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.get_type::<TestService>();
+        let result = i.get_type::<TestService>().await;
 
         if let Err(err) = result {
             assert_eq!(
@@ -127,47 +123,8 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_get_mut_success() -> Result<()> {
-        let mut i = Inject::default();
-
-        let expected: String = fake::uuid::UUIDv4.fake();
-
-        i.inject_type(vec![TestService::new(fake::uuid::UUIDv4.fake())])?;
-
-        let services = i.get_type_mut::<Vec<TestService>>()?;
-        services.push(TestService::new(expected.clone()));
-
-        let result = i.get_type::<Vec<TestService>>()?;
-
-        assert_eq!(expected, result[1].id);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_mut_not_found() -> Result<()> {
-        let mut i = Inject::default();
-
-        let result = i.get_type_mut::<TestService>();
-
-        if let Err(err) = result {
-            assert_eq!(
-                format!(
-                    "{} was not found\n\nAvailable: (empty)",
-                    type_name::<TestService>(),
-                ),
-                err.to_string()
-            );
-        } else {
-            panic!("did not return Err as expected")
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_replace_success() -> Result<()> {
+    #[tokio::test]
+    async fn test_replace_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
@@ -179,7 +136,7 @@ pub(crate) mod test {
             id: expected.clone(),
         })?;
 
-        let result = i.get_type::<TestService>()?;
+        let result = i.get_type::<TestService>().await?;
 
         assert_eq!(expected, result.id);
 

@@ -35,14 +35,24 @@ impl AddLoaders {
 #[async_trait]
 impl Hook for AddLoaders {
     async fn handle(&self, i: &mut Inject) -> InjectResult<()> {
-        if let Ok(existing) = i.get_mut(&CONFIG_LOADERS) {
-            // Add the given ConfigLoaders to the stack
-            for loader in self.loaders.clone() {
-                existing.push(loader);
-            }
-        } else {
-            i.inject(&CONFIG_LOADERS, self.loaders.clone())?;
-        }
+        let loaders = match i.consume(&CONFIG_LOADERS).await {
+            Ok(existing) => existing,
+            Err(_) => Vec::new(),
+        };
+
+        // Add the given ConfigLoaders to the stack
+        // for loader in self.loaders.clone() {
+        //     loaders.push(loader);
+        // }
+
+        // if let Ok(existing) = i.get(&CONFIG_LOADERS).await? {
+        //     // Add the given ConfigLoaders to the stack
+        //     for loader in self.loaders.clone() {
+        //         existing.push(loader);
+        //     }
+        // } else {
+        //     i.inject(&CONFIG_LOADERS, self.loaders.clone())?;
+        // }
 
         Ok(())
     }

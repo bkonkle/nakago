@@ -1,15 +1,12 @@
-use std::{any::Any, marker::PhantomData, path::PathBuf, sync::Arc};
+use std::{any::Any, path::PathBuf, sync::Arc};
 
-use async_trait::async_trait;
 use figment::{
     providers::{Env, Format, Json, Serialized, Toml, Yaml},
     Figment,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{inject, Inject};
-
-use super::{Loader, CONFIG_LOADERS};
+use super::Loader;
 
 /// Config is the final initialized result
 pub trait Config:
@@ -17,50 +14,8 @@ pub trait Config:
 {
 }
 
-// /// A Config Provider
-// ///
-// /// **Provides:**
-// ///   - `C: Config`
-// ///
-// /// **Depends on:**
-// ///   - `Tag(ConfigLoaders)`
-// #[derive(Default)]
-// pub struct Provider<C: Config> {
-//     custom_path: Option<PathBuf>,
-//     _phantom: PhantomData<C>,
-// }
-
-// impl<C: Config> Provider<C> {
-//     /// Create a new Config Initializer
-//     pub fn new(custom_path: Option<PathBuf>) -> Self {
-//         Self {
-//             custom_path,
-//             _phantom: PhantomData,
-//         }
-//     }
-
-//     /// Create a new Config Initializer with a custom path
-//     pub fn with_path(custom_path: PathBuf) -> Self {
-//         Self {
-//             custom_path: Some(custom_path),
-//             _phantom: PhantomData,
-//         }
-//     }
-// }
-
-// #[async_trait]
-// impl<C: Config> inject::Provider<C> for Provider<C> {
-//     async fn provide(&self, i: &Inject) -> inject::Result<C> {
-//         let loaders = i.get(&CONFIG_LOADERS).ok();
-
-//         let config = load::<C>(loaders, self.custom_path.clone())
-//             .map_err(|e| inject::Error::Provider(e.into()))?;
-
-//         Ok(config)
-//     }
-// }
-
-fn load<C: Config>(
+/// Load a Config with the given loaders, with an optional custom path
+pub fn load<C: Config>(
     loaders: Option<&Vec<Arc<dyn Loader>>>,
     custom_path: Option<PathBuf>,
 ) -> figment::error::Result<C> {
