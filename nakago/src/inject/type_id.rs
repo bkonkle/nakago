@@ -1,7 +1,8 @@
-use std::{any::Any, sync::Arc};
+use std::{any::Any, pin::Pin, sync::Arc};
 
-use super::{Key, Result};
-use crate::Inject;
+use futures::Future;
+
+use super::{container::Dependency, Error, Inject, Key, Pending, Result};
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
@@ -22,6 +23,29 @@ impl Inject {
     /// Replace an existing dependency directly
     pub fn replace_type<T: Any + Send + Sync>(&mut self, dep: T) -> Result<()> {
         self.replace_key(Key::from_type_id::<T>(), dep)
+    }
+
+    /// Use a Provider function to inject a dependency.
+    pub fn provide_type<T: Any + Send + Sync, P>(&mut self, provider: P) -> Result<()>
+    where
+        P: FnOnce(&Inject) -> Pin<Box<dyn Future<Output = Result<Arc<Dependency>>>>>,
+    {
+        self.provide_key::<P>(Key::from_type_id::<T>(), provider)
+    }
+
+    /// Use a Provider function to replace an existing dependency.
+    pub async fn replace_type_with<P>(&mut self, key: Key, provider: P) -> Result<()>
+    where
+        P: FnOnce(&Inject) -> Pin<Box<Pending>>,
+    {
+        if !self.container.contains_key(&key) {
+            return Err(Error::NotFound {
+                missing: key,
+                available: self.available_type_names(),
+            });
+        }
+
+        return self.provide_key(key, provider);
     }
 }
 

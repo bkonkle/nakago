@@ -20,10 +20,8 @@ pub mod log;
 pub mod panic;
 
 pub use app::Application;
-pub use config::{
-    AddLoaders as AddConfigLoaders, Config, Loader as ConfigLoader, Provider as ConfigProvider,
-};
+pub use config::{Config, Loader as ConfigLoader};
 pub use inject::{
-    Error as InjectError, Hook, Hooks, Inject, Provider, Result as InjectResult, Tag,
+    Error as InjectError, Hook, Hooks, Inject, Pending, Provider, Result as InjectResult, Tag,
 };
 pub use lifecycle::EventType;

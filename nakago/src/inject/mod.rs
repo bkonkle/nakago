@@ -16,7 +16,7 @@ pub mod type_id;
 /// Hooks
 pub mod hooks;
 
-pub use container::{Inject, Provider};
+pub use container::{Inject, Pending, Provider};
 pub use error::{Error, Result};
 pub use hooks::{Hook, Hooks};
 pub use key::{Id, Key};

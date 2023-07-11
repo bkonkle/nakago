@@ -1,26 +1,24 @@
 use std::{
     io,
     panic::{self, PanicInfo},
+    pin::Pin,
 };
 
-use async_trait::async_trait;
 use backtrace::Backtrace;
 use crossterm::{execute, style::Print};
+use futures::Future;
 
-use crate::{Hook, InjectResult};
+use crate::inject;
 
-/// An Init Hook for handling panics
-#[derive(Default)]
-pub struct InitHandlePanic {}
-
-#[async_trait]
-impl Hook for InitHandlePanic {
-    async fn handle(&self, _i: &mut crate::Inject) -> InjectResult<()> {
+pub fn init_handle_panic<'a>(
+    i: &'a mut inject::Inject,
+) -> Pin<Box<dyn Future<Output = inject::Result<()>> + 'a>> {
+    Box::pin(async move {
         // Process setup
         panic::set_hook(Box::new(handle_panic));
 
         Ok(())
-    }
+    })
 }
 
 fn handle_panic(info: &PanicInfo<'_>) {

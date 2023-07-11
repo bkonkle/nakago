@@ -2,17 +2,20 @@ use std::{
     marker::PhantomData,
     ops::{Deref, DerefMut},
     path::PathBuf,
+    pin::Pin,
 };
 
+use futures::Future;
+
 use crate::{
-    lifecycle::Events, log::InitRustLog, panic::InitHandlePanic, Config, ConfigProvider, EventType,
-    Hook, Hooks, Inject, InjectResult,
+    config::loader::provide_config, inject, lifecycle::Events, log::init_rust_log,
+    panic::init_handle_panic, Config, EventType, Hooks,
 };
 
 /// The top-level Application struct
 pub struct Application<C: Config> {
     events: Events,
-    i: Inject,
+    i: inject::Inject,
     _phantom: PhantomData<C>,
 }
 
@@ -20,7 +23,7 @@ impl<C: Config> Default for Application<C> {
     fn default() -> Self {
         Self {
             events: Events::default(),
-            i: Inject::default(),
+            i: inject::Inject::default(),
             _phantom: PhantomData,
         }
     }
@@ -30,7 +33,7 @@ impl<C> Deref for Application<C>
 where
     C: Config,
 {
-    type Target = Inject;
+    type Target = inject::Inject;
 
     fn deref(&self) -> &Self::Target {
         &self.i
@@ -51,7 +54,10 @@ where
     C: Config,
 {
     /// Set a new lifecycle hook that will fire on the given EventType
-    pub fn on(&mut self, event: &EventType, hook: impl Hook) {
+    pub fn on<F>(&mut self, event: &EventType, hook: F)
+    where
+        F: FnOnce(&mut inject::Inject) -> Pin<Box<dyn Future<Output = inject::Result<()>>>>,
+    {
         self.events.on(event, hook);
     }
 
@@ -64,7 +70,7 @@ where
     ///
     /// **Provides:**
     ///   - `C: Config`
-    pub async fn init(&mut self, config_path: Option<PathBuf>) -> InjectResult<()> {
+    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
         // Check to see if there are any hooks for the Init event
         if !self.events.has(&EventType::Init) {
             // If not, add the default hooks
@@ -75,15 +81,13 @@ where
         self.events.trigger(&EventType::Init, &mut self.i).await?;
 
         // Initialize the Config using the given path
-        self.i
-            .provide_type(ConfigProvider::<C>::new(config_path))
-            .await?;
+        self.i.provide_type(provide_config::<C>(config_path))?;
 
         Ok(())
     }
 
     /// Run the Application by starting the listener
-    pub async fn start(&mut self) -> InjectResult<()> {
+    pub async fn start(&mut self) -> inject::Result<()> {
         // Trigger the Start lifecycle event
         self.events
             .trigger(&EventType::Startup, &mut self.i)
@@ -93,7 +97,7 @@ where
     }
 
     /// Shut down the Application by stopping the listener
-    pub async fn stop(&mut self) -> InjectResult<()> {
+    pub async fn stop(&mut self) -> inject::Result<()> {
         // Trigger the Stop lifecycle event
         self.events
             .trigger(&EventType::Shutdown, &mut self.i)
@@ -105,8 +109,5 @@ where
 
 /// The default lifecycle hooks that will be run on the Init event
 pub fn default_init_hooks() -> Hooks {
-    Hooks::from(vec![
-        Box::<InitHandlePanic>::default(),
-        Box::<InitRustLog>::default(),
-    ])
+    Hooks::from(vec![Box::new(init_handle_panic), Box::new(init_rust_log)])
 }

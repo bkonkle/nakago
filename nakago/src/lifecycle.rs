@@ -1,6 +1,9 @@
-use fnv::FnvHashMap;
+use std::pin::Pin;
 
-use crate::inject::{self, hooks::Hooks, Hook};
+use fnv::FnvHashMap;
+use futures::Future;
+
+use crate::inject::{self, hooks::Hooks};
 
 /// Lifecycle Event Types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -23,7 +26,10 @@ pub struct Events {
 
 impl Events {
     /// Set a new lifecycle hook that will fire on the given EventType
-    pub fn on(&mut self, event: &EventType, hook: impl Hook) {
+    pub fn on<F>(&mut self, event: &EventType, hook: F)
+    where
+        F: FnOnce(&mut inject::Inject) -> Pin<Box<dyn Future<Output = inject::Result<()>>>>,
+    {
         if let Some(hooks) = self.events.get_mut(event) {
             hooks.push(hook);
         } else {
@@ -51,9 +57,9 @@ impl Events {
         event: &EventType,
         i: &mut inject::Inject,
     ) -> inject::Result<()> {
-        if let Some(hooks) = self.events.get(event) {
-            for hook in hooks.iter() {
-                hook.handle(i).await?;
+        if let Some(hooks) = self.events.remove(event) {
+            for hook in hooks {
+                hook(i).await?;
             }
         }
 

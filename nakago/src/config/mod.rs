@@ -1,8 +1,7 @@
-/// Extensible Config provider
-pub mod provider;
-
 /// Config Loaders
 pub mod loader;
 
-pub use loader::{AddLoaders, Loader, CONFIG_LOADERS};
-pub use provider::{load, Config};
+pub mod hooks;
+
+pub use hooks::add_loaders;
+pub use loader::{Config, Loader, CONFIG_LOADERS};

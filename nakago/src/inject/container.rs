@@ -7,7 +7,6 @@ use std::{
 };
 
 use futures::{future::Shared, FutureExt};
-use tokio::sync::Mutex;
 
 use super::{Error, Key, Result};
 
@@ -20,24 +19,29 @@ enum Value {
     Provider(Box<Provider>),
 }
 
-struct Injector {
+// An Injector is a wrapper around a Dependency that can be in one of two states:
+//   - Pending: The Dependency has been requested, and is wrapped in a Shared Promise that will
+//     resolve to the Dependency when it is ready.
+//   - Provider: The Dependency has not been requested yet, and a Provider function is available
+//     to create the Dependency when it is requested.
+pub(crate) struct Injector {
     value: Value,
 }
 
 impl Injector {
-    fn from_pending(pending: Shared<Pin<Box<Pending>>>) -> Mutex<Self> {
-        Mutex::new(Self {
+    fn from_pending(pending: Shared<Pin<Box<Pending>>>) -> Self {
+        Self {
             value: Value::Pending(pending),
-        })
+        }
     }
 
-    fn from_provider(provider: Box<Provider>) -> Mutex<Self> {
-        Mutex::new(Self {
+    pub(crate) fn from_provider(provider: Box<Provider>) -> Self {
+        Self {
             value: Value::Provider(provider),
-        })
+        }
     }
 
-    fn request(&mut self, inject: &Inject) -> Shared<Pin<Box<Pending>>> {
+    fn request(&self, inject: &Inject) -> Shared<Pin<Box<Pending>>> {
         let pending = match self.value {
             // If this is a Dependency that has already been requested, it will already be in a
             // Pending state. In that cose, clone the inner Shared Promise (which clones the
@@ -58,7 +62,7 @@ impl Injector {
 /// The injection Container
 #[derive(Default)]
 pub struct Inject {
-    pub(crate) container: HashMap<Key, Mutex<Injector>>,
+    pub(crate) container: HashMap<Key, Injector>,
 }
 
 // The base methods powering both the Tag and TypeId modes
@@ -66,8 +70,6 @@ impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
     pub(crate) async fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<Arc<T>> {
         if let Some(injector) = self.container.get(&key) {
-            let injector = &mut *injector.lock().await;
-
             return injector
                 .request(self)
                 .await
@@ -82,14 +84,10 @@ impl Inject {
 
     /// Remove a dependency from the map and return it for use
     pub(crate) async fn consume_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<T> {
-        let mut injector = self
-            .container
-            .remove(&key)
-            .ok_or_else(|| Error::NotFound {
-                missing: key.clone(),
-                available: self.available_type_names(),
-            })?
-            .into_inner();
+        let injector = self.container.remove(&key).ok_or_else(|| Error::NotFound {
+            missing: key.clone(),
+            available: self.available_type_names(),
+        })?;
 
         let value = injector.request(self).await?;
         let arc = value
