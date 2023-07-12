@@ -1,8 +1,6 @@
 use std::{any::Any, pin::Pin, sync::Arc};
 
-use futures::Future;
-
-use super::{container::Dependency, Error, Inject, Key, Pending, Result};
+use super::{Error, Inject, Key, Pending, Result};
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
@@ -26,11 +24,11 @@ impl Inject {
     }
 
     /// Use a Provider function to inject a dependency.
-    pub fn provide_type<T: Any + Send + Sync, P>(&mut self, provider: P) -> Result<()>
-    where
-        P: FnOnce(&Inject) -> Pin<Box<dyn Future<Output = Result<Arc<Dependency>>>>>,
-    {
-        self.provide_key::<P>(Key::from_type_id::<T>(), provider)
+    pub fn provide_type<T: Any + Send + Sync>(
+        &mut self,
+        provider: impl FnOnce(&Inject) -> Pin<Box<Pending>>,
+    ) -> Result<()> {
+        self.provide_key(Key::from_type_id::<T>(), provider)
     }
 
     /// Use a Provider function to replace an existing dependency.

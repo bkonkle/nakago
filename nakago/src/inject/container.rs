@@ -1,68 +1,11 @@
-use std::{
-    any::Any,
-    collections::HashMap,
-    future::{ready, Future},
-    pin::Pin,
-    sync::Arc,
-};
+use std::{any::Any, collections::HashMap, future::ready, pin::Pin, sync::Arc};
 
-use futures::{future::Shared, FutureExt};
-
-use super::{Error, Key, Result};
-
-pub type Dependency = dyn Any + Send + Sync;
-pub type Pending = dyn Future<Output = Result<Arc<Dependency>>>;
-pub type Provider = dyn FnOnce(&Inject) -> Pin<Box<Pending>>;
-
-enum Value {
-    Pending(Shared<Pin<Box<Pending>>>),
-    Provider(Box<Provider>),
-}
-
-// An Injector is a wrapper around a Dependency that can be in one of two states:
-//   - Pending: The Dependency has been requested, and is wrapped in a Shared Promise that will
-//     resolve to the Dependency when it is ready.
-//   - Provider: The Dependency has not been requested yet, and a Provider function is available
-//     to create the Dependency when it is requested.
-pub(crate) struct Injector {
-    value: Value,
-}
-
-impl Injector {
-    fn from_pending(pending: Shared<Pin<Box<Pending>>>) -> Self {
-        Self {
-            value: Value::Pending(pending),
-        }
-    }
-
-    pub(crate) fn from_provider(provider: Box<Provider>) -> Self {
-        Self {
-            value: Value::Provider(provider),
-        }
-    }
-
-    fn request(&self, inject: &Inject) -> Shared<Pin<Box<Pending>>> {
-        let pending = match self.value {
-            // If this is a Dependency that has already been requested, it will already be in a
-            // Pending state. In that cose, clone the inner Shared Promise (which clones the
-            // inner Arc around the Dependency at the time it's resolved).
-            Value::Pending(pending) => pending,
-            // If this Dependency hasn't been requested yet, kick off the inner Shared Promise,
-            // which is a Provider that will resolve the Promise with the Dependency inside
-            // an Arc.
-            Value::Provider(provider) => provider(inject).shared(),
-        };
-
-        self.value = Value::Pending(pending.clone());
-
-        pending
-    }
-}
+use super::{providers::Injector, Error, Key, Result};
 
 /// The injection Container
 #[derive(Default)]
 pub struct Inject {
-    pub(crate) container: HashMap<Key, Injector>,
+    pub(crate) container: HashMap<Key, Injector<dyn Any + Send + Sync>>,
 }
 
 // The base methods powering both the Tag and TypeId modes
@@ -103,8 +46,9 @@ impl Inject {
             return Err(Error::Occupied(key));
         }
 
-        let pending: Pin<Box<Pending>> =
-            Box::pin(ready::<Result<Arc<Dependency>>>(Ok(Arc::new(dep))));
+        let pending: Pin<Box<Pending>> = Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(
+            Arc::new(dep),
+        )));
 
         self.container
             .insert(key, Injector::from_pending(pending.shared()));
@@ -121,8 +65,9 @@ impl Inject {
             });
         }
 
-        let pending: Pin<Box<Pending>> =
-            Box::pin(ready::<Result<Arc<Dependency>>>(Ok(Arc::new(dep))));
+        let pending: Pin<Box<Pending>> = Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(
+            Arc::new(dep),
+        )));
 
         self.container
             .insert(key, Injector::from_pending(pending.shared()));
@@ -168,6 +113,7 @@ impl Inject {
 
 #[cfg(test)]
 pub(crate) mod test {
+    use futures::Future;
     use std::sync::Arc;
     use tokio::time::{sleep, Duration};
 

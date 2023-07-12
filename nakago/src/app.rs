@@ -81,7 +81,7 @@ where
         self.events.trigger(&EventType::Init, &mut self.i).await?;
 
         // Initialize the Config using the given path
-        self.i.provide_type(provide_config::<C>(config_path))?;
+        self.i.provide_type::<C>(provide_config::<C>(config_path))?;
 
         Ok(())
     }
