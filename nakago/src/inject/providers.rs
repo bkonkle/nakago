@@ -11,7 +11,7 @@ pub trait Provider<T> {
     async fn provide(&self, i: &Inject) -> Result<Arc<T>>;
 }
 
-enum Value<T> {
+enum Value<T: ?Sized> {
     Provider(Box<dyn Provider<T>>),
     Pending(Shared<Pin<Box<dyn Future<Output = Result<Arc<T>>> + Send>>>),
 }
@@ -21,7 +21,7 @@ enum Value<T> {
 //     resolve to the Dependency when it is ready.
 //   - Provider: The Dependency has not been requested yet, and a Provider function is available
 //     to create the Dependency when it is requested.
-pub(crate) struct Injector<T> {
+pub(crate) struct Injector<T: ?Sized> {
     value: Value<T>,
 }
 
