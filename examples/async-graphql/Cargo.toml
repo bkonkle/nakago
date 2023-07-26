@@ -55,5 +55,5 @@ hyper-tls = "0.5"
 maplit = { version = "1" }
 mockall = "0.11"
 pretty_assertions = "1.2"
-tokio-tungstenite = "0.19"
+tokio-tungstenite = "0.20"
 url = "2.0.0"
