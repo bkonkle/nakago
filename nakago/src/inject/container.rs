@@ -22,11 +22,6 @@ impl Inject {
 
     /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
     pub(crate) fn get_key_mut<T: Any + Send + Sync>(&mut self, key: Key) -> Result<&mut T> {
-        // TODO: Since `self` is borrowed as a mutable ref for `self.get_mut_opt()`, it cannot be
-        // used for self.available_type_names() within the `.ok_or_else()` call below. Because of
-        // this, the `available` property is pre-loaded here in case there is an error. It must
-        // iterate over the keys of the map to do this - which is minor, but I'd still like to
-        // avoid it.
         let available = self.available_type_names();
 
         self.get_key_mut_opt::<T>(key.clone())
