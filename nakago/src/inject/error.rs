@@ -24,6 +24,15 @@ pub enum Error {
     /// An error thrown from a Provider
     Provider(#[from] anyhow::Error),
 
+    /// An error thrown when an Any type cannot be downcast to the given concrete type
+    TypeMismatch {
+        /// The Key of the entity that was not found
+        key: Key,
+
+        /// The expected type name
+        type_name: String,
+    },
+
     /// The given Key was unable to be removed from the Inject container
     CannotConsume(
         /// The Key of the type that consumption was attempted for
@@ -55,6 +64,9 @@ impl Display for Error {
                 write!(f, "{missing} was not found\n\nAvailable:{avail_lines}")
             }
             Self::Provider(_) => write!(f, "provider failure"),
+            Self::TypeMismatch { key, type_name } => {
+                write!(f, "{key} was not able to be downcast to {type_name}")
+            }
             Self::CannotConsume(key) => write!(f, "{key} was not able to be consumed"),
         }
     }

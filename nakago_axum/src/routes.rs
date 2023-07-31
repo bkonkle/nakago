@@ -45,7 +45,7 @@ impl<S: State> inject::Hook for InitRoute<S> {
     async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
         let route = (self.get_route)(i);
 
-        if let Some(routes) = i.get_type_mut_opt::<Vec<Route<S>>>() {
+        if let Some(routes) = i.get_type_mut_opt::<Vec<Route<S>>>()? {
             routes.push(route);
         } else {
             i.inject_type(vec![route])?;

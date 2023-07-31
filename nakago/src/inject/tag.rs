@@ -49,12 +49,15 @@ impl Inject {
     }
 
     /// Retrieve a reference to a tagged dependency if it exists in the map
-    pub fn get_opt<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Option<&T> {
+    pub fn get_opt<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<Option<&T>> {
         self.get_key_opt(Key::from_tag::<T>(tag.tag))
     }
 
     /// Retrieve a mutable reference to a tagged dependency if it exists in the map
-    pub fn get_mut_opt<T: Any + Send + Sync>(&mut self, tag: &'static Tag<T>) -> Option<&mut T> {
+    pub fn get_mut_opt<T: Any + Send + Sync>(
+        &mut self,
+        tag: &'static Tag<T>,
+    ) -> Result<Option<&mut T>> {
         self.get_key_mut_opt(Key::from_tag::<T>(tag.tag))
     }
 
@@ -137,7 +140,7 @@ pub(crate) mod test {
 
         i.inject(&SERVICE_TAG, TestService::new(expected.clone()))?;
 
-        let result = i.get_opt(&SERVICE_TAG).unwrap();
+        let result = i.get_opt(&SERVICE_TAG)?.unwrap();
 
         assert_eq!(expected, result.id);
 
@@ -148,7 +151,7 @@ pub(crate) mod test {
     fn test_get_tag_opt_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.get_opt(&SERVICE_TAG);
+        let result = i.get_opt(&SERVICE_TAG)?;
 
         assert!(result.is_none());
 
@@ -211,7 +214,7 @@ pub(crate) mod test {
 
         i.inject(&SERVICE_TAG, TestService::new(expected.clone()))?;
 
-        let result = i.get_mut_opt(&SERVICE_TAG).unwrap();
+        let result = i.get_mut_opt(&SERVICE_TAG)?.unwrap();
 
         assert_eq!(expected, result.id);
 
@@ -222,7 +225,7 @@ pub(crate) mod test {
     fn test_get_tag_mut_opt_not_found() -> Result<()> {
         let mut i = Inject::default();
 
-        let result = i.get_mut_opt(&SERVICE_TAG);
+        let result = i.get_mut_opt(&SERVICE_TAG)?;
 
         assert!(result.is_none());
 

@@ -544,8 +544,6 @@ async fn test_show_delete_simple() -> Result<()> {
 
     let json: Value = serde_json::from_slice(&body)?;
 
-    println!(">- json -> {:?}", json);
-
     assert_eq!(status, 200);
     assert!(json["data"]["deleteShow"].as_bool().unwrap());
 
