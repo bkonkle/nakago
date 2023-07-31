@@ -13,7 +13,7 @@ pub struct Inject(pub(crate) TypeMap);
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
     pub(crate) fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<&T> {
-        self.get_key_opt::<T>(key.clone())
+        self.get_key_opt::<T>(key.clone())?
             .ok_or_else(|| Error::NotFound {
                 missing: key,
                 available: self.available_type_names(),
@@ -24,7 +24,7 @@ impl Inject {
     pub(crate) fn get_key_mut<T: Any + Send + Sync>(&mut self, key: Key) -> Result<&mut T> {
         let available = self.available_type_names();
 
-        self.get_key_mut_opt::<T>(key.clone())
+        self.get_key_mut_opt::<T>(key.clone())?
             .ok_or(Error::NotFound {
                 missing: key,
                 available,
@@ -32,13 +32,38 @@ impl Inject {
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
-    pub(crate) fn get_key_opt<T: Any + Send + Sync>(&self, key: Key) -> Option<&T> {
-        self.0.get(&key).and_then(|d| d.downcast_ref::<T>())
+    pub(crate) fn get_key_opt<T: Any + Send + Sync>(&self, key: Key) -> Result<Option<&T>> {
+        if let Some(d) = self.0.get(&key) {
+            if let Some(dep) = d.downcast_ref::<T>() {
+                Ok(Some(dep))
+            } else {
+                Err(Error::TypeMismatch {
+                    key,
+                    type_name: std::any::type_name::<T>().to_string(),
+                })
+            }
+        } else {
+            Ok(None)
+        }
     }
 
     /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub(crate) fn get_key_mut_opt<T: Any + Send + Sync>(&mut self, key: Key) -> Option<&mut T> {
-        self.0.get_mut(&key).and_then(|d| d.downcast_mut::<T>())
+    pub(crate) fn get_key_mut_opt<T: Any + Send + Sync>(
+        &mut self,
+        key: Key,
+    ) -> Result<Option<&mut T>> {
+        if let Some(d) = self.0.get_mut(&key) {
+            if let Some(dep) = d.downcast_mut::<T>() {
+                Ok(Some(dep))
+            } else {
+                Err(Error::TypeMismatch {
+                    key,
+                    type_name: std::any::type_name::<T>().to_string(),
+                })
+            }
+        } else {
+            Ok(None)
+        }
     }
 
     /// Provide a dependency directly

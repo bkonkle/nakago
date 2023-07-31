@@ -15,12 +15,12 @@ impl Inject {
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
-    pub fn get_type_opt<T: Any + Send + Sync>(&self) -> Option<&T> {
+    pub fn get_type_opt<T: Any + Send + Sync>(&self) -> Result<Option<&T>> {
         self.get_key_opt(Key::from_type_id::<T>())
     }
 
     /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub fn get_type_mut_opt<T: Any + Send + Sync>(&mut self) -> Option<&mut T> {
+    pub fn get_type_mut_opt<T: Any + Send + Sync>(&mut self) -> Result<Option<&mut T>> {
         self.get_key_mut_opt(Key::from_type_id::<T>())
     }
 
@@ -94,7 +94,7 @@ pub(crate) mod test {
 
         i.inject_type(TestService::new(expected.clone()))?;
 
-        let result = i.get_type_opt::<TestService>().unwrap();
+        let result = i.get_type_opt::<TestService>()?.unwrap();
 
         assert_eq!(expected, result.id);
 
@@ -109,7 +109,7 @@ pub(crate) mod test {
 
         i.inject_type(vec![TestService::new(expected.clone())])?;
 
-        let result = i.get_type_opt::<Vec<TestService>>().unwrap();
+        let result = i.get_type_opt::<Vec<TestService>>()?.unwrap();
 
         assert_eq!(expected, result[0].id);
 
@@ -120,7 +120,7 @@ pub(crate) mod test {
     fn test_get_opt_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.get_type_opt::<TestService>();
+        let result = i.get_type_opt::<TestService>()?;
 
         assert!(result.is_none());
 
@@ -186,7 +186,7 @@ pub(crate) mod test {
 
         i.inject_type(TestService::new(expected.clone()))?;
 
-        let result = i.get_type_mut_opt::<TestService>().unwrap();
+        let result = i.get_type_mut_opt::<TestService>()?.unwrap();
 
         assert_eq!(expected, result.id);
 
@@ -197,7 +197,7 @@ pub(crate) mod test {
     fn test_get_mut_opt_not_found() -> Result<()> {
         let mut i = Inject::default();
 
-        let result = i.get_type_mut_opt::<TestService>();
+        let result = i.get_type_mut_opt::<TestService>()?;
 
         assert!(result.is_none());
 
