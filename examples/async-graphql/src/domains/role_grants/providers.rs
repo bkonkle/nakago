@@ -30,7 +30,7 @@ impl inject::Provider<Arc<dyn RoleGrantsService>> for ProvideRoleGrantsService {
 }
 
 /// Tag(RoleGrantLoader)
-pub const ROLE_GRANT_LOADER: inject::Tag<DataLoader<RoleGrantLoader>> =
+pub const ROLE_GRANT_LOADER: inject::Tag<Arc<DataLoader<RoleGrantLoader>>> =
     inject::Tag::new("RoleGrantLoader");
 
 /// Provide the RoleGrantLoader
@@ -43,13 +43,16 @@ pub const ROLE_GRANT_LOADER: inject::Tag<DataLoader<RoleGrantLoader>> =
 pub struct ProvideRoleGrantLoader {}
 
 #[async_trait]
-impl inject::Provider<DataLoader<RoleGrantLoader>> for ProvideRoleGrantLoader {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<DataLoader<RoleGrantLoader>> {
+impl inject::Provider<Arc<DataLoader<RoleGrantLoader>>> for ProvideRoleGrantLoader {
+    async fn provide(
+        &self,
+        i: &inject::Inject,
+    ) -> inject::Result<Arc<DataLoader<RoleGrantLoader>>> {
         let role_grants_service = i.get(&ROLE_GRANTS_SERVICE)?;
 
-        Ok(DataLoader::new(
+        Ok(Arc::new(DataLoader::new(
             RoleGrantLoader::new(role_grants_service.clone()),
             tokio::spawn,
-        ))
+        )))
     }
 }

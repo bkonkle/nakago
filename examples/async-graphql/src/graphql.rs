@@ -64,11 +64,11 @@ pub struct InitGraphQLSchema {}
 #[async_trait]
 impl inject::Hook for InitGraphQLSchema {
     async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
-        let user_loader = i.consume(&USER_LOADER)?;
-        let profile_loader = i.consume(&PROFILE_LOADER)?;
-        let role_grant_loader = i.consume(&ROLE_GRANT_LOADER)?;
-        let show_loader = i.consume(&SHOW_LOADER)?;
-        let episode_loader = i.consume(&EPISODE_LOADER)?;
+        let user_loader = i.get(&USER_LOADER)?;
+        let profile_loader = i.get(&PROFILE_LOADER)?;
+        let role_grant_loader = i.get(&ROLE_GRANT_LOADER)?;
+        let show_loader = i.get(&SHOW_LOADER)?;
+        let episode_loader = i.get(&EPISODE_LOADER)?;
         let config = i.get_type::<AppConfig>()?;
         let oso = i.get(&OSO)?;
         let users = i.get(&USERS_SERVICE)?;
@@ -84,15 +84,15 @@ impl inject::Hook for InitGraphQLSchema {
                 .data(config.clone())
                 .data(oso.clone())
                 .data(users.clone())
-                .data(user_loader)
-                .data(profile_loader)
-                .data(role_grant_loader)
+                .data(user_loader.clone())
+                .data(profile_loader.clone())
+                .data(role_grant_loader.clone())
                 .data(profiles.clone())
                 .data(role_grants.clone())
                 .data(shows.clone())
                 .data(episodes.clone())
-                .data(show_loader)
-                .data(episode_loader)
+                .data(show_loader.clone())
+                .data(episode_loader.clone())
                 .finish(),
         )?;
 

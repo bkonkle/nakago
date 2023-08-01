@@ -1,12 +1,13 @@
 use std::{marker::PhantomData, path::PathBuf, sync::Arc};
 
 use async_trait::async_trait;
+use tokio::sync::Mutex;
 
 use super::loader::{Config, ConfigLoader, Loader};
 use crate::inject;
 
 /// A Tag for Config loaders
-pub const CONFIG_LOADERS: inject::Tag<Vec<Arc<dyn ConfigLoader>>> =
+pub const CONFIG_LOADERS: inject::Tag<Mutex<Vec<Arc<dyn ConfigLoader>>>> =
     inject::Tag::new("ConfigLoaders");
 
 /// A Config Initializer
@@ -43,14 +44,15 @@ impl<C: Config> InitConfig<C> {
 #[async_trait]
 impl<C: Config> inject::Hook for InitConfig<C> {
     async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
-        let loaders = i.consume(&CONFIG_LOADERS).unwrap_or_default();
-        let loader = Loader::<C>::new(loaders);
+        if let Ok(loaders) = i.get(&CONFIG_LOADERS) {
+            let loader = Loader::<C>::new(loaders.lock().await.clone());
 
-        let config = loader
-            .load(self.custom_path.clone())
-            .map_err(|e| inject::Error::Provider(e.into()))?;
+            let config = loader
+                .load(self.custom_path.clone())
+                .map_err(|e| inject::Error::Provider(e.into()))?;
 
-        i.inject_type(config)?;
+            i.inject_type(config)?;
+        }
 
         Ok(())
     }
@@ -75,13 +77,15 @@ impl AddConfigLoaders {
 #[async_trait]
 impl inject::Hook for AddConfigLoaders {
     async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
-        if let Ok(existing) = i.get_mut(&CONFIG_LOADERS) {
+        if let Ok(existing) = i.get(&CONFIG_LOADERS) {
+            let mut existing = existing.lock().await;
+
             // Add the given ConfigLoaders to the stack
             for loader in self.loaders.iter() {
                 existing.push(loader.clone());
             }
         } else {
-            i.inject(&CONFIG_LOADERS, self.loaders.clone())?;
+            i.inject(&CONFIG_LOADERS, Mutex::new(self.loaders.clone()))?;
         }
 
         Ok(())

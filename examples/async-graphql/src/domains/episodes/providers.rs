@@ -30,7 +30,7 @@ impl inject::Provider<Arc<dyn EpisodesService>> for ProvideEpisodesService {
 }
 
 /// Tag(EpisodeLoader)
-pub const EPISODE_LOADER: inject::Tag<DataLoader<EpisodeLoader>> =
+pub const EPISODE_LOADER: inject::Tag<Arc<DataLoader<EpisodeLoader>>> =
     inject::Tag::new("EpisodeLoader");
 
 /// Provide the EpisodeLoader
@@ -43,13 +43,13 @@ pub const EPISODE_LOADER: inject::Tag<DataLoader<EpisodeLoader>> =
 pub struct ProvideEpisodeLoader {}
 
 #[async_trait]
-impl inject::Provider<DataLoader<EpisodeLoader>> for ProvideEpisodeLoader {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<DataLoader<EpisodeLoader>> {
+impl inject::Provider<Arc<DataLoader<EpisodeLoader>>> for ProvideEpisodeLoader {
+    async fn provide(&self, i: &inject::Inject) -> inject::Result<Arc<DataLoader<EpisodeLoader>>> {
         let episodes_service = i.get(&EPISODES_SERVICE)?;
 
-        Ok(DataLoader::new(
+        Ok(Arc::new(DataLoader::new(
             EpisodeLoader::new(episodes_service.clone()),
             tokio::spawn,
-        ))
+        )))
     }
 }

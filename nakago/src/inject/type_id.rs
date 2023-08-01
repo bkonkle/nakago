@@ -9,19 +9,9 @@ impl Inject {
         self.get_key(Key::from_type_id::<T>())
     }
 
-    /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub fn get_type_mut<T: Any + Send + Sync>(&mut self) -> Result<&mut T> {
-        self.get_key_mut(Key::from_type_id::<T>())
-    }
-
     /// Retrieve a reference to a dependency if it exists in the map
     pub fn get_type_opt<T: Any + Send + Sync>(&self) -> Result<Option<&T>> {
         self.get_key_opt(Key::from_type_id::<T>())
-    }
-
-    /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub fn get_type_mut_opt<T: Any + Send + Sync>(&mut self) -> Result<Option<&mut T>> {
-        self.get_key_mut_opt(Key::from_type_id::<T>())
     }
 
     /// Provide a dependency directly
@@ -32,11 +22,6 @@ impl Inject {
     /// Replace an existing dependency directly
     pub fn replace_type<T: Any + Send + Sync>(&mut self, dep: T) -> Result<()> {
         self.replace_key(Key::from_type_id::<T>(), dep)
-    }
-
-    /// Consume a dependency, removing it from the container and moving it to the caller
-    pub fn consume_type<T: Any + Send + Sync>(&mut self) -> Result<T> {
-        self.consume_key(Key::from_type_id::<T>())
     }
 }
 
@@ -162,71 +147,6 @@ pub(crate) mod test {
         let i = Inject::default();
 
         let result = i.get_type::<TestService>();
-
-        if let Err(err) = result {
-            assert_eq!(
-                format!(
-                    "{} was not found\n\nAvailable: (empty)",
-                    type_name::<TestService>(),
-                ),
-                err.to_string()
-            );
-        } else {
-            panic!("did not return Err as expected")
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_mut_opt_success() -> Result<()> {
-        let mut i = Inject::default();
-
-        let expected: String = fake::uuid::UUIDv4.fake();
-
-        i.inject_type(TestService::new(expected.clone()))?;
-
-        let result = i.get_type_mut_opt::<TestService>()?.unwrap();
-
-        assert_eq!(expected, result.id);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_mut_opt_not_found() -> Result<()> {
-        let mut i = Inject::default();
-
-        let result = i.get_type_mut_opt::<TestService>()?;
-
-        assert!(result.is_none());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_mut_success() -> Result<()> {
-        let mut i = Inject::default();
-
-        let expected: String = fake::uuid::UUIDv4.fake();
-
-        i.inject_type(vec![TestService::new(fake::uuid::UUIDv4.fake())])?;
-
-        let services = i.get_type_mut::<Vec<TestService>>()?;
-        services.push(TestService::new(expected.clone()));
-
-        let result = i.get_type::<Vec<TestService>>()?;
-
-        assert_eq!(expected, result[1].id);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_mut_not_found() -> Result<()> {
-        let mut i = Inject::default();
-
-        let result = i.get_type_mut::<TestService>();
 
         if let Err(err) = result {
             assert_eq!(

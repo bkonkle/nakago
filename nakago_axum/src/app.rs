@@ -7,6 +7,7 @@ use std::{
     ops::{Deref, DerefMut},
     path::PathBuf,
 };
+use tokio::sync::Mutex;
 use tower_http::trace;
 
 use crate::{add_http_config_loaders, config::HttpConfig, Route};
@@ -75,10 +76,12 @@ where
 
         let mut router = Router::<S>::new();
 
-        let routes = self.app.consume_type::<Vec<Route<S>>>()?;
-        for route in routes {
-            router = router.nest(&route.path, route.router.into_inner());
-        }
+        if let Some(routes) = self.app.get_type_opt::<Mutex<Vec<Route<S>>>>()? {
+            let routes: Vec<Route<S>> = routes.lock().await.drain(..).collect();
+            for route in routes {
+                router = router.nest(&route.path, route.router.into_inner());
+            }
+        };
 
         let state = self.app.get_type::<S>()?.clone();
 

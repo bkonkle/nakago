@@ -115,7 +115,7 @@ impl inject::Hook for StartApp {
 ///   - `Tag(Oso)`
 pub async fn init_authz(i: &mut inject::Inject) -> inject::Result<()> {
     // Set up authorization
-    let oso = i.get_mut(&OSO)?;
+    let mut oso = i.get(&OSO)?.clone();
 
     oso.register_class(User::get_polar_class_builder().name("User").build())
         .map_err(inject::to_provider_error)?;
@@ -136,6 +136,8 @@ pub async fn init_authz(i: &mut inject::Inject) -> inject::Result<()> {
         .join("\n"),
     )
     .map_err(inject::to_provider_error)?;
+
+    i.replace(&OSO, oso)?;
 
     Ok(())
 }

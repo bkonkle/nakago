@@ -20,40 +20,10 @@ impl Inject {
             })
     }
 
-    /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub(crate) fn get_key_mut<T: Any + Send + Sync>(&mut self, key: Key) -> Result<&mut T> {
-        let available = self.available_type_names();
-
-        self.get_key_mut_opt::<T>(key.clone())?
-            .ok_or(Error::NotFound {
-                missing: key,
-                available,
-            })
-    }
-
     /// Retrieve a reference to a dependency if it exists in the map
     pub(crate) fn get_key_opt<T: Any + Send + Sync>(&self, key: Key) -> Result<Option<&T>> {
         if let Some(d) = self.0.get(&key) {
             if let Some(dep) = d.downcast_ref::<T>() {
-                Ok(Some(dep))
-            } else {
-                Err(Error::TypeMismatch {
-                    key,
-                    type_name: std::any::type_name::<T>().to_string(),
-                })
-            }
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub(crate) fn get_key_mut_opt<T: Any + Send + Sync>(
-        &mut self,
-        key: Key,
-    ) -> Result<Option<&mut T>> {
-        if let Some(d) = self.0.get_mut(&key) {
-            if let Some(dep) = d.downcast_mut::<T>() {
                 Ok(Some(dep))
             } else {
                 Err(Error::TypeMismatch {
@@ -89,18 +59,6 @@ impl Inject {
         self.0.insert(key, Box::new(dep));
 
         Ok(())
-    }
-
-    /// Remove a dependency from the map and return it for use
-    pub(crate) fn consume_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<T> {
-        self.0
-            .remove(&key)
-            .ok_or_else(|| Error::NotFound {
-                missing: key.clone(),
-                available: self.available_type_names(),
-            })
-            .and_then(|d| d.downcast().map_err(|_err| Error::CannotConsume(key)))
-            .map(|d| *d)
     }
 
     /// Return a list of all available type names in the map

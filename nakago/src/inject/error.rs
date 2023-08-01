@@ -32,12 +32,6 @@ pub enum Error {
         /// The expected type name
         type_name: String,
     },
-
-    /// The given Key was unable to be removed from the Inject container
-    CannotConsume(
-        /// The Key of the type that consumption was attempted for
-        Key,
-    ),
 }
 
 /// A Dependency Injection Result
@@ -67,7 +61,6 @@ impl Display for Error {
             Self::TypeMismatch { key, type_name } => {
                 write!(f, "{key} was not able to be downcast to {type_name}")
             }
-            Self::CannotConsume(key) => write!(f, "{key} was not able to be consumed"),
         }
     }
 }
