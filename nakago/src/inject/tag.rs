@@ -58,21 +58,21 @@ impl Inject {
     }
 
     /// Register a Provider for a tagged dependency
-    pub fn inject_provider<T: Any + Sync + Send>(
+    pub fn provide<T: Any + Sync + Send>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: impl Provider<Box<T>> + Provider<Box<(dyn Any + Send + Sync)>>,
+        provider: Box<dyn Provider<Box<dyn Any + Send + Sync>>>,
     ) -> Result<()> {
-        self.inject_key_provider::<T>(Key::from_tag::<T>(tag.tag), provider)
+        self.provide_key(Key::from_tag::<T>(tag.tag), provider)
     }
 
     /// Replace an existing Provider for a tagged dependency
     pub fn replace_provider<T: Any + Sync + Send>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: impl Provider<Box<T>> + Provider<Box<(dyn Any + Send + Sync)>>,
+        provider: Box<dyn Provider<Box<dyn Any + Send + Sync>>>,
     ) -> Result<()> {
-        self.replace_key_provider::<T>(Key::from_tag::<T>(tag.tag), provider)
+        self.replace_key_provider(Key::from_tag::<T>(tag.tag), provider)
     }
 }
 

@@ -20,11 +20,9 @@ pub(crate) struct Injector {
 }
 
 impl Injector {
-    fn new<T: Any + Send + Sync>(
-        provider: impl Provider<Box<T>> + Provider<Box<(dyn Any + Send + Sync)>>,
-    ) -> Self {
+    fn new(provider: Box<dyn Provider<Box<dyn Any + Send + Sync>>>) -> Self {
         Self {
-            provider: Some(Box::new(provider)),
+            provider: Some(provider),
             value: None,
         }
     }
@@ -66,19 +64,17 @@ impl Inject {
         if let Some(injector) = self.0.get(&key) {
             if let Some(value) = &injector.value {
                 if let Some(dep) = value.downcast_ref::<T>() {
-                    Ok(Some(dep))
+                    return Ok(Some(dep));
                 } else {
-                    Err(Error::TypeMismatch {
+                    return Err(Error::TypeMismatch {
                         key,
                         type_name: std::any::type_name::<T>().to_string(),
-                    })
+                    });
                 }
-            } else {
-                Ok(None)
             }
-        } else {
-            Ok(None)
         }
+
+        Ok(None)
     }
 
     /// Provide a dependency directly
@@ -87,21 +83,6 @@ impl Inject {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
                 let _ = entry.insert(Injector::from_value(dep));
-
-                Ok(())
-            }
-        }
-    }
-
-    pub(crate) fn inject_key_provider<T: Any + Send + Sync>(
-        &mut self,
-        key: Key,
-        provider: impl Provider<Box<T>> + Provider<Box<(dyn Any + Send + Sync)>>,
-    ) -> Result<()> {
-        match self.0.entry(key.clone()) {
-            Entry::Occupied(_) => Err(Error::Occupied(key)),
-            Entry::Vacant(entry) => {
-                let _ = entry.insert(Injector::new::<T>(provider));
 
                 Ok(())
             }
@@ -123,14 +104,60 @@ impl Inject {
         }
     }
 
-    pub(crate) fn replace_key_provider<T: Any + Send + Sync>(
+    pub(crate) async fn invoke_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<&T> {
+        let available = self.available_type_names();
+
+        if let Entry::Occupied(mut entry) = self.0.entry(key.clone()) {
+            if let Some(value) = &entry.get().value {
+                if let Some(dep) = value.downcast_ref::<T>() {
+                    return Ok(dep);
+                } else {
+                    return Err(Error::TypeMismatch {
+                        key,
+                        type_name: std::any::type_name::<T>().to_string(),
+                    });
+                }
+            } else if let Some(provider) = &entry.get().provider {
+                if let Ok(dep) = provider.provide(self).await?.downcast::<T>() {
+                    entry.insert(Injector::from_value(*dep));
+                } else {
+                    return Err(Error::TypeMismatch {
+                        key,
+                        type_name: std::any::type_name::<T>().to_string(),
+                    });
+                };
+            }
+        }
+
+        return Err(Error::NotFound {
+            missing: key,
+            available,
+        });
+    }
+
+    pub(crate) fn provide_key(
         &mut self,
         key: Key,
-        provider: impl Provider<Box<T>> + Provider<Box<(dyn Any + Send + Sync)>>,
+        provider: Box<dyn Provider<Box<dyn Any + Send + Sync>>>,
+    ) -> Result<()> {
+        match self.0.entry(key.clone()) {
+            Entry::Occupied(_) => Err(Error::Occupied(key)),
+            Entry::Vacant(entry) => {
+                let _ = entry.insert(Injector::new(provider));
+
+                Ok(())
+            }
+        }
+    }
+
+    pub(crate) fn replace_key_provider(
+        &mut self,
+        key: Key,
+        provider: Box<dyn Provider<Box<dyn Any + Send + Sync>>>,
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                let _ = entry.insert(Injector::new::<T>(provider));
+                let _ = entry.insert(Injector::new(provider));
 
                 Ok(())
             }
@@ -157,7 +184,7 @@ where
 
 #[cfg(test)]
 pub(crate) mod test {
-    // use fake::Fake;
+    use fake::Fake;
     use std::sync::Arc;
     use tokio::time::{sleep, Duration};
 
@@ -217,9 +244,9 @@ pub(crate) mod test {
     }
 
     #[async_trait]
-    impl Provider<TestService> for TestServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<TestService> {
-            Ok(TestService::new(self.id.clone()))
+    impl Provider<Box<dyn Any + Send + Sync>> for TestServiceProvider {
+        async fn provide(&self, _i: &Inject) -> Result<Box<dyn Any + Send + Sync>> {
+            Ok(Box::new(TestService::new(self.id.clone())))
         }
     }
 
@@ -266,20 +293,23 @@ pub(crate) mod test {
 
     // TODO: Re-implement these tests
 
-    // #[tokio::test]
-    // async fn test_provide_success() -> Result<()> {
-    //     let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_provide_success() -> Result<()> {
+        let mut i = Inject::default();
 
-    //     i.provide_type_old(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
-    //         .await?;
+        i.provide_type::<Box<TestService>>(Box::new(TestServiceProvider::new(
+            fake::uuid::UUIDv4.fake(),
+        )))?;
 
-    //     assert!(
-    //         i.0.contains_key(&Key::from_type_id::<TestService>()),
-    //         "key does not exist in injection container"
-    //     );
+        assert!(
+            i.0.contains_key(&Key::from_type_id::<Box<TestService>>()),
+            "key does not exist in injection container"
+        );
 
-    //     Ok(())
-    // }
+        let _ = i.get_type::<Box<TestService>>()?;
+
+        Ok(())
+    }
 
     // #[tokio::test]
     // async fn test_provide_dyn_success() -> Result<()> {
