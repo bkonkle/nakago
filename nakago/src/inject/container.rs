@@ -32,7 +32,7 @@ impl Injector {
         }
     }
 
-    fn from_pending<T: Any + Send + Sync>(
+    fn from_pending(
         pending: Shared<Pin<Box<dyn Future<Output = Result<Arc<dyn Any + Send + Sync>>> + Send>>>,
     ) -> Self {
         Self {
@@ -52,42 +52,61 @@ where
     async fn provide(&self, i: &Inject) -> Result<T>;
 }
 
+impl<T> Clone for Box<dyn Provider<T>> {
+    fn clone(&self) -> Self {
+        todo!();
+    }
+}
+
 // The base methods powering both the Tag and TypeId modes
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub(crate) async fn get_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<Arc<T>> {
+    pub(crate) async fn get_key<T: Any + Send + Sync>(
+        &'static mut self,
+        key: Key,
+    ) -> Result<Arc<T>> {
+        let available = self.available_type_names();
+
         if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
             Ok(dep)
         } else {
             Err(Error::NotFound {
                 missing: key,
-                available: self.available_type_names(),
+                available,
             })
         }
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
     pub(crate) async fn get_key_opt<T: Any + Send + Sync>(
-        &mut self,
+        &'static mut self,
         key: Key,
     ) -> Result<Option<Arc<T>>> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                if let Some(pending) = entry.get().pending.clone() {
-                    if let Ok(dep) = pending.await?.clone().downcast::<T>() {
+                let injector = entry.get();
+
+                if let Some(pending) = &injector.pending {
+                    if let Ok(dep) = pending.clone().await?.clone().downcast::<T>() {
                         return Ok(Some(dep));
-                    } else {
-                        return Err(Error::TypeMismatch {
-                            key,
-                            type_name: std::any::type_name::<T>().to_string(),
-                        });
-                    }
-                } else if let Some(provider) = &entry.get().provider {
+                    };
+                };
+
+                if let Some(provider) = &injector.provider {
+                    let provider = provider.clone();
                     let pending = provider.provide(self).shared();
+                    let injector = Injector::from_pending(pending.clone());
 
-                    let _ = entry.insert(Injector::from_pending::<T>(pending.clone()));
+                    let _ = entry.insert(injector);
 
-                    let temp = pending.await?;
+                    if let Ok(dep) = pending.await?.downcast::<T>() {
+                        return Ok(Some(dep));
+                    };
+
+                    return Err(Error::TypeMismatch {
+                        key,
+                        type_name: std::any::type_name::<T>().to_string(),
+                    });
                 }
 
                 Ok(None)
@@ -107,7 +126,7 @@ impl Inject {
                     dep,
                 ))));
 
-                let _ = entry.insert(Injector::from_pending::<T>(pending.shared()));
+                let _ = entry.insert(Injector::from_pending(pending.shared()));
 
                 Ok(())
             }
@@ -124,7 +143,7 @@ impl Inject {
                     dep,
                 ))));
 
-                let _ = entry.insert(Injector::from_pending::<T>(pending.shared()));
+                let _ = entry.insert(Injector::from_pending(pending.shared()));
 
                 Ok(())
             }
