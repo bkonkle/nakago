@@ -1,5 +1,5 @@
 use async_graphql::{InputObject, MaybeUndefined, SimpleObject};
-use fake::{Dummy, Fake, Faker};
+use fake::{Dummy, Faker};
 use rand::Rng;
 
 use super::model::Show;
