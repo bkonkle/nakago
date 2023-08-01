@@ -1,4 +1,8 @@
-use std::{any::Any, collections::HashMap, fmt::Debug};
+use std::{
+    any::Any,
+    collections::{hash_map::Entry, HashMap},
+    fmt::Debug,
+};
 
 use super::{Error, Key, Result};
 
@@ -13,11 +17,14 @@ pub struct Inject(pub(crate) TypeMap);
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
     pub(crate) fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<&T> {
-        self.get_key_opt::<T>(key.clone())?
-            .ok_or_else(|| Error::NotFound {
+        if let Some(d) = self.get_key_opt::<T>(key.clone())? {
+            Ok(d)
+        } else {
+            Err(Error::NotFound {
                 missing: key,
                 available: self.available_type_names(),
             })
+        }
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
@@ -38,27 +45,29 @@ impl Inject {
 
     /// Provide a dependency directly
     pub(crate) fn inject_key<T: Any + Send + Sync>(&mut self, key: Key, dep: T) -> Result<()> {
-        if self.0.contains_key(&key) {
-            return Err(Error::Occupied(key));
+        match self.0.entry(key.clone()) {
+            Entry::Occupied(_) => Err(Error::Occupied(key)),
+            Entry::Vacant(entry) => {
+                let _ = entry.insert(Box::new(dep));
+
+                Ok(())
+            }
         }
-
-        let _ = self.0.insert(key, Box::new(dep));
-
-        Ok(())
     }
 
     /// Replace an existing dependency directly
     pub(crate) fn replace_key<T: Any + Send + Sync>(&mut self, key: Key, dep: T) -> Result<()> {
-        if !self.0.contains_key(&key) {
-            return Err(Error::NotFound {
+        match self.0.entry(key.clone()) {
+            Entry::Occupied(mut entry) => {
+                let _ = entry.insert(Box::new(dep));
+
+                Ok(())
+            }
+            Entry::Vacant(_) => Err(Error::NotFound {
                 missing: key,
                 available: self.available_type_names(),
-            });
+            }),
         }
-
-        self.0.insert(key, Box::new(dep));
-
-        Ok(())
     }
 
     /// Return a list of all available type names in the map
