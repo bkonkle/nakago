@@ -1,5 +1,5 @@
 use axum::extract::ws::Message;
-use fake::{Dummy, Fake};
+use fake::Dummy;
 use serde::{Deserialize, Serialize};
 
 /// Incoming `WebSocket` messages from clients
