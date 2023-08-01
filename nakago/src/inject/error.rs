@@ -1,10 +1,13 @@
-use std::fmt::{self, Debug, Display};
+use std::{
+    fmt::{self, Debug, Display},
+    sync::Arc,
+};
 use thiserror::Error;
 
 use super::Key;
 
 /// Injection Errors
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum Error {
     /// Type ID already occupied
     Occupied(
@@ -22,7 +25,7 @@ pub enum Error {
     },
 
     /// An error thrown from a Provider
-    Provider(#[from] anyhow::Error),
+    Provider(#[from] Arc<anyhow::Error>),
 
     /// An error thrown when an Any type cannot be downcast to the given concrete type
     TypeMismatch {

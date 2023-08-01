@@ -1,16 +1,16 @@
-use std::any::Any;
+use std::{any::Any, sync::Arc};
 
 use super::{Inject, Key, Provider, Result};
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub fn get_type<T: Any + Send + Sync>(&self) -> Result<&T> {
-        self.get_key(Key::from_type_id::<T>())
+    pub async fn get_type<T: Any + Send + Sync>(&mut self) -> Result<Arc<T>> {
+        self.get_key(Key::from_type_id::<T>()).await
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
-    pub fn get_type_opt<T: Any + Send + Sync>(&self) -> Result<Option<&T>> {
-        self.get_key_opt(Key::from_type_id::<T>())
+    pub async fn get_type_opt<T: Any + Send + Sync>(&mut self) -> Result<Option<Arc<T>>> {
+        self.get_key_opt(Key::from_type_id::<T>()).await
     }
 
     /// Provide a dependency directly
@@ -26,7 +26,7 @@ impl Inject {
     /// Register a Provider for a type-id dependency
     pub fn provide_type<T: Any + Send + Sync>(
         &mut self,
-        provider: Box<dyn Provider<Box<dyn Any + Send + Sync>>>,
+        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
     ) -> Result<()> {
         self.provide_key(Key::from_type_id::<T>(), provider)
     }
@@ -34,7 +34,7 @@ impl Inject {
     /// Replace an existing Provider for a type-id dependency
     pub fn replace_type_provider<T: Any + Send + Sync>(
         &mut self,
-        provider: Box<dyn Provider<Box<dyn Any + Send + Sync>>>,
+        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
     ) -> Result<()> {
         self.replace_key_provider(Key::from_type_id::<T>(), provider)
     }
@@ -86,82 +86,82 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_get_opt_success() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_opt_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
         i.inject_type(TestService::new(expected.clone()))?;
 
-        let result = i.get_type_opt::<TestService>()?.unwrap();
+        let result = i.get_type_opt::<TestService>().await?.unwrap();
 
         assert_eq!(expected, result.id);
 
         Ok(())
     }
 
-    #[test]
-    fn test_get_opt_vec_success() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_opt_vec_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
         i.inject_type(vec![TestService::new(expected.clone())])?;
 
-        let result = i.get_type_opt::<Vec<TestService>>()?.unwrap();
+        let result = i.get_type_opt::<Vec<TestService>>().await?.unwrap();
 
         assert_eq!(expected, result[0].id);
 
         Ok(())
     }
 
-    #[test]
-    fn test_get_opt_not_found() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_opt_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.get_type_opt::<TestService>()?;
+        let result = i.get_type_opt::<TestService>().await?;
 
         assert!(result.is_none());
 
         Ok(())
     }
 
-    #[test]
-    fn test_get_success() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
         i.inject_type(TestService::new(expected.clone()))?;
 
-        let result = i.get_type::<TestService>()?;
+        let result = i.get_type::<TestService>().await?;
 
         assert_eq!(expected, result.id);
 
         Ok(())
     }
 
-    #[test]
-    fn test_dyn_get_success() -> Result<()> {
+    #[tokio::test]
+    async fn test_dyn_get_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
         i.inject_type::<Box<dyn HasId>>(Box::new(TestService::new(expected.clone())))?;
 
-        let repo = i.get_type::<Box<dyn HasId>>()?;
+        let repo = i.get_type::<Box<dyn HasId>>().await?;
 
         assert_eq!(expected, repo.get_id());
 
         Ok(())
     }
 
-    #[test]
-    fn test_get_not_found() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.get_type::<TestService>();
+        let result = i.get_type::<TestService>().await;
 
         if let Err(err) = result {
             assert_eq!(
@@ -178,8 +178,8 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_replace_success() -> Result<()> {
+    #[tokio::test]
+    async fn test_replace_success() -> Result<()> {
         let mut i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
@@ -191,7 +191,7 @@ pub(crate) mod test {
             id: expected.clone(),
         })?;
 
-        let result = i.get_type::<TestService>()?;
+        let result = i.get_type::<TestService>().await?;
 
         assert_eq!(expected, result.id);
 

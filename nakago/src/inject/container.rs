@@ -1,9 +1,13 @@
 use std::{
     any::Any,
     collections::{hash_map::Entry, HashMap},
+    future::ready,
+    pin::Pin,
+    sync::Arc,
 };
 
 use async_trait::async_trait;
+use futures::{future::Shared, Future, FutureExt};
 
 use super::{Error, Key, Result};
 
@@ -15,22 +19,25 @@ pub(crate) type TypeMap = HashMap<Key, Injector>;
 pub struct Inject(pub(crate) TypeMap);
 
 pub(crate) struct Injector {
-    pub(crate) provider: Option<Box<dyn Provider<Box<dyn Any + Send + Sync>>>>,
-    pub(crate) value: Option<Box<dyn Any + Send + Sync>>,
+    pub(crate) provider: Option<Box<dyn Provider<Arc<dyn Any + Send + Sync>>>>,
+    pub(crate) pending:
+        Option<Shared<Pin<Box<dyn Future<Output = Result<Arc<dyn Any + Send + Sync>>> + Send>>>>,
 }
 
 impl Injector {
-    fn new(provider: Box<dyn Provider<Box<dyn Any + Send + Sync>>>) -> Self {
+    fn new(provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>) -> Self {
         Self {
             provider: Some(provider),
-            value: None,
+            pending: None,
         }
     }
 
-    fn from_value<T: Any + Send + Sync>(value: T) -> Self {
+    fn from_pending<T: Any + Send + Sync>(
+        pending: Shared<Pin<Box<dyn Future<Output = Result<Arc<dyn Any + Send + Sync>>> + Send>>>,
+    ) -> Self {
         Self {
             provider: None,
-            value: Some(Box::new(value)),
+            pending: Some(pending),
         }
     }
 }
@@ -48,9 +55,9 @@ where
 // The base methods powering both the Tag and TypeId modes
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub(crate) fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<&T> {
-        if let Some(d) = self.get_key_opt::<T>(key.clone())? {
-            Ok(d)
+    pub(crate) async fn get_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<Arc<T>> {
+        if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
+            Ok(dep)
         } else {
             Err(Error::NotFound {
                 missing: key,
@@ -60,21 +67,33 @@ impl Inject {
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
-    pub(crate) fn get_key_opt<T: Any + Send + Sync>(&self, key: Key) -> Result<Option<&T>> {
-        if let Some(injector) = self.0.get(&key) {
-            if let Some(value) = &injector.value {
-                if let Some(dep) = value.downcast_ref::<T>() {
-                    return Ok(Some(dep));
-                } else {
-                    return Err(Error::TypeMismatch {
-                        key,
-                        type_name: std::any::type_name::<T>().to_string(),
-                    });
-                }
-            }
-        }
+    pub(crate) async fn get_key_opt<T: Any + Send + Sync>(
+        &mut self,
+        key: Key,
+    ) -> Result<Option<Arc<T>>> {
+        match self.0.entry(key.clone()) {
+            Entry::Occupied(mut entry) => {
+                if let Some(pending) = entry.get().pending.clone() {
+                    if let Ok(dep) = pending.await?.clone().downcast::<T>() {
+                        return Ok(Some(dep));
+                    } else {
+                        return Err(Error::TypeMismatch {
+                            key,
+                            type_name: std::any::type_name::<T>().to_string(),
+                        });
+                    }
+                } else if let Some(provider) = &entry.get().provider {
+                    let pending = provider.provide(self).shared();
 
-        Ok(None)
+                    let _ = entry.insert(Injector::from_pending::<T>(pending.clone()));
+
+                    let temp = pending.await?;
+                }
+
+                Ok(None)
+            }
+            Entry::Vacant(_) => Ok(None),
+        }
     }
 
     /// Provide a dependency directly
@@ -82,7 +101,13 @@ impl Inject {
         match self.0.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
-                let _ = entry.insert(Injector::from_value(dep));
+                let pending: Pin<
+                    Box<dyn Future<Output = Result<Arc<dyn Any + Send + Sync>>> + Send>,
+                > = Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
+                    dep,
+                ))));
+
+                let _ = entry.insert(Injector::from_pending::<T>(pending.shared()));
 
                 Ok(())
             }
@@ -93,7 +118,13 @@ impl Inject {
     pub(crate) fn replace_key<T: Any + Send + Sync>(&mut self, key: Key, dep: T) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                let _ = entry.insert(Injector::from_value(dep));
+                let pending: Pin<
+                    Box<dyn Future<Output = Result<Arc<dyn Any + Send + Sync>>> + Send>,
+                > = Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
+                    dep,
+                ))));
+
+                let _ = entry.insert(Injector::from_pending::<T>(pending.shared()));
 
                 Ok(())
             }
@@ -104,41 +135,10 @@ impl Inject {
         }
     }
 
-    pub(crate) async fn invoke_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<&T> {
-        let available = self.available_type_names();
-
-        if let Entry::Occupied(mut entry) = self.0.entry(key.clone()) {
-            if let Some(value) = &entry.get().value {
-                if let Some(dep) = value.downcast_ref::<T>() {
-                    return Ok(dep);
-                } else {
-                    return Err(Error::TypeMismatch {
-                        key,
-                        type_name: std::any::type_name::<T>().to_string(),
-                    });
-                }
-            } else if let Some(provider) = &entry.get().provider {
-                if let Ok(dep) = provider.provide(self).await?.downcast::<T>() {
-                    entry.insert(Injector::from_value(*dep));
-                } else {
-                    return Err(Error::TypeMismatch {
-                        key,
-                        type_name: std::any::type_name::<T>().to_string(),
-                    });
-                };
-            }
-        }
-
-        return Err(Error::NotFound {
-            missing: key,
-            available,
-        });
-    }
-
     pub(crate) fn provide_key(
         &mut self,
         key: Key,
-        provider: Box<dyn Provider<Box<dyn Any + Send + Sync>>>,
+        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
@@ -153,7 +153,7 @@ impl Inject {
     pub(crate) fn replace_key_provider(
         &mut self,
         key: Key,
-        provider: Box<dyn Provider<Box<dyn Any + Send + Sync>>>,
+        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
@@ -179,7 +179,7 @@ pub fn to_provider_error<E>(e: E) -> Error
 where
     anyhow::Error: From<E>,
 {
-    Error::Provider(e.into())
+    Error::Provider(Arc::new(e.into()))
 }
 
 #[cfg(test)]
@@ -244,9 +244,9 @@ pub(crate) mod test {
     }
 
     #[async_trait]
-    impl Provider<Box<dyn Any + Send + Sync>> for TestServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<Box<dyn Any + Send + Sync>> {
-            Ok(Box::new(TestService::new(self.id.clone())))
+    impl Provider<Arc<dyn Any + Send + Sync>> for TestServiceProvider {
+        async fn provide(&self, _i: &Inject) -> Result<Arc<dyn Any + Send + Sync>> {
+            Ok(Arc::new(TestService::new(self.id.clone())))
         }
     }
 
@@ -297,16 +297,16 @@ pub(crate) mod test {
     async fn test_provide_success() -> Result<()> {
         let mut i = Inject::default();
 
-        i.provide_type::<Box<TestService>>(Box::new(TestServiceProvider::new(
+        i.provide_type::<Arc<TestService>>(Box::new(TestServiceProvider::new(
             fake::uuid::UUIDv4.fake(),
         )))?;
 
         assert!(
-            i.0.contains_key(&Key::from_type_id::<Box<TestService>>()),
+            i.0.contains_key(&Key::from_type_id::<Arc<TestService>>()),
             "key does not exist in injection container"
         );
 
-        let _ = i.get_type::<Box<TestService>>()?;
+        let _ = i.get_type::<Box<TestService>>().await?;
 
         Ok(())
     }
