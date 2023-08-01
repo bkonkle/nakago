@@ -1,7 +1,6 @@
 use std::any::Any;
 
-use super::{Key, Result};
-use crate::Inject;
+use super::{Inject, Key, Provider, Result};
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
@@ -22,6 +21,22 @@ impl Inject {
     /// Replace an existing dependency directly
     pub fn replace_type<T: Any + Send + Sync>(&mut self, dep: T) -> Result<()> {
         self.replace_key(Key::from_type_id::<T>(), dep)
+    }
+
+    /// Register a Provider for a type-id dependency
+    pub fn inject_type_provider<T: Any + Send + Sync>(
+        &mut self,
+        provider: impl Provider<Box<T>> + Provider<Box<(dyn Any + Send + Sync)>>,
+    ) -> Result<()> {
+        self.inject_key_provider::<T>(Key::from_type_id::<T>(), provider)
+    }
+
+    /// Replace an existing Provider for a type-id dependency
+    pub fn replace_type_provider<T: Any + Send + Sync>(
+        &mut self,
+        provider: impl Provider<Box<T>> + Provider<Box<(dyn Any + Send + Sync)>>,
+    ) -> Result<()> {
+        self.replace_key_provider::<T>(Key::from_type_id::<T>(), provider)
     }
 }
 
