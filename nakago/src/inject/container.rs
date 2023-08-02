@@ -242,7 +242,7 @@ pub(crate) mod test {
 
     fn provide_dyn_has_id() -> impl for<'a> FnOnce(&'a Inject<'a>) -> Pending<'a> {
         move |i| {
-            async move {
+            Box::pin(async move {
                 // Trigger a borrow so that the reference to `Inject` has to be held across the await
                 // point below, to test issues with Inject thread safety.
                 let _ = i.get_type::<String>().await?;
@@ -252,8 +252,7 @@ pub(crate) mod test {
                 let arc: Arc<Dependency> = Arc::new(OtherService::new("test-service".to_string()));
 
                 Ok(arc)
-            }
-            .boxed()
+            })
         }
     }
 
