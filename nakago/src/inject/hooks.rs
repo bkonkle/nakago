@@ -7,14 +7,16 @@ use futures::Future;
 
 use super::{Inject, Result};
 
+pub type PendingHook<'a> = Pin<Box<dyn Future<Output = Result<()>> + 'a>>;
+
 /// A hook that can be run at various points in the lifecycle of an application
-pub type Hook<'a> = dyn FnOnce(&'a mut Inject<'a>) -> Pin<Box<dyn Future<Output = Result<()>>>>;
+pub type Hook<'a> = dyn FnOnce(&'a mut Inject<'a>) -> PendingHook<'a>;
 
 impl<'a> Inject<'a> {
     /// Handle a hook by running it against the Inject container
     pub async fn handle<F>(&'a mut self, hook: F) -> Result<()>
     where
-        F: FnOnce(&'a mut Inject<'a>) -> Pin<Box<dyn Future<Output = Result<()>>>>,
+        F: FnOnce(&'a mut Inject<'a>) -> PendingHook<'a>,
     {
         hook(self).await
     }
@@ -28,7 +30,7 @@ impl<'a> Hooks<'a> {
     /// Create a new collection of Hooks starting with the given Hook
     pub fn new<F>(hook: F) -> Self
     where
-        F: FnOnce(&mut Inject<'a>) -> Pin<Box<dyn Future<Output = Result<()>>>>,
+        F: FnOnce(&'a mut Inject<'a>) -> PendingHook<'a>,
     {
         Self(vec![Box::new(hook)])
     }
@@ -41,7 +43,7 @@ impl<'a> Hooks<'a> {
     /// Add a new hook to the collection
     pub fn push<F>(&mut self, hook: F)
     where
-        F: FnOnce(&'a mut Inject<'a>) -> Pin<Box<dyn Future<Output = Result<()>>>>,
+        F: FnOnce(&'a mut Inject<'a>) -> PendingHook<'a>,
     {
         self.0.push(Box::new(hook));
     }
@@ -52,19 +54,16 @@ impl<'a> Hooks<'a> {
     }
 
     /// Convenienve method to add a new hook to the collection, intended for chaining
-    pub fn and(
-        mut self,
-        hook: impl FnOnce(&'a mut Inject<'a>) -> Pin<Box<dyn Future<Output = Result<()>>>>,
-    ) -> Self {
+    pub fn and(mut self, hook: impl FnOnce(&'a mut Inject<'a>) -> PendingHook<'a>) -> Self {
         self.push(hook);
 
         self
     }
 
     /// Handle all hooks in the collection
-    pub async fn handle(self, i: &'a mut Inject<'a>) -> Result<()> {
-        for hook in self.0 {
-            let temp = hook(i).await?;
+    pub async fn handle(&mut self, i: &'a mut Inject<'a>) -> Result<()> {
+        for hook in self.0.drain(..) {
+            hook(i).await?;
         }
 
         Ok(())

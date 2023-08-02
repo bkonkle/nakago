@@ -82,7 +82,9 @@ impl<'a> Inject<'a> {
         &'a self,
         key: Key,
     ) -> Result<Option<Arc<T>>> {
-        if let Some(injector) = self.container.get(&key) {
+        let injector = self.container.get(&key);
+
+        if let Some(injector) = injector {
             let value = injector.request(self).await?;
 
             return value
@@ -113,7 +115,7 @@ impl<'a> Inject<'a> {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
                 let pending: Pending<'a> =
-                    Box::pin(ready::<Result<Arc<Dependency>>>(Ok(Arc::new(dep))));
+                    ready::<Result<Arc<Dependency>>>(Ok(Arc::new(dep))).boxed();
 
                 let _ = entry.insert(Injector::from_pending(pending.shared()));
 
@@ -126,7 +128,7 @@ impl<'a> Inject<'a> {
         match self.container.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
                 let pending: Pending<'a> =
-                    Box::pin(ready::<Result<Arc<Dependency>>>(Ok(Arc::new(dep))));
+                    ready::<Result<Arc<Dependency>>>(Ok(Arc::new(dep))).boxed();
 
                 let _ = entry.insert(Injector::from_pending(pending.shared()));
 
@@ -218,27 +220,29 @@ pub(crate) mod test {
 
     fn provide_test_service(id: String) -> impl for<'a> FnOnce(&'a Inject<'a>) -> Pending<'a> {
         move |i| {
-            Box::pin(async move {
+            async move {
                 let dependency: Arc<Dependency> = Arc::new(TestService::new(id));
 
                 Ok(dependency)
-            })
+            }
+            .boxed()
         }
     }
 
     fn provide_other_service(id: String) -> impl for<'a> FnOnce(&'a Inject<'a>) -> Pending<'a> {
         move |i| {
-            Box::pin(async move {
+            async move {
                 let dependency: Arc<Dependency> = Arc::new(OtherService::new(id));
 
                 Ok(dependency)
-            })
+            }
+            .boxed()
         }
     }
 
     fn provide_dyn_has_id() -> impl for<'a> FnOnce(&'a Inject<'a>) -> Pending<'a> {
         move |i| {
-            Box::pin(async move {
+            async move {
                 // Trigger a borrow so that the reference to `Inject` has to be held across the await
                 // point below, to test issues with Inject thread safety.
                 let _ = i.get_type::<String>().await?;
@@ -248,7 +252,8 @@ pub(crate) mod test {
                 let arc: Arc<Dependency> = Arc::new(OtherService::new("test-service".to_string()));
 
                 Ok(arc)
-            })
+            }
+            .boxed()
         }
     }
 

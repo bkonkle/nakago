@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{Inject, Pending};
+use crate::{inject::hooks::PendingHook, Inject};
 
 use super::{Loader, CONFIG_LOADERS};
 
@@ -11,7 +11,7 @@ use super::{Loader, CONFIG_LOADERS};
 ///   - `Tag(ConfigLoaders)`
 pub async fn add_loaders(
     loaders: Vec<Arc<dyn Loader>>,
-) -> impl for<'a> FnOnce(&'a mut Inject<'a>) -> Pending<'a> {
+) -> impl for<'a> FnOnce(&'a mut Inject<'a>) -> PendingHook<'a> {
     |i| {
         Box::pin(async move {
             let mut loaders = match i.consume(&CONFIG_LOADERS).await {
