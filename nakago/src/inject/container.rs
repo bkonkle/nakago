@@ -92,8 +92,7 @@ impl Inject {
                     };
                 };
 
-                if let Some(provider) = &injector.provider {
-                    let provider = provider.clone();
+                if let Some(provider) = injector.provider.clone() {
                     let pending = provider.provide(self).shared();
                     let injector = Injector::from_pending(pending.clone());
 
