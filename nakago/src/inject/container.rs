@@ -21,11 +21,6 @@ pub type Dependency = dyn Any + Send + Sync;
 pub type Pending = Pin<Box<dyn Future<Output = Result<Arc<Dependency>>>>>;
 pub type Provider = dyn FnOnce(&Inject) -> Pending;
 
-enum Value {
-    Pending(Shared<Pending>),
-    Provider(Box<Provider>),
-}
-
 // An Injector is a wrapper around a Dependency that can be in one of two states:
 //   - Pending: The Dependency has been requested, and is wrapped in a Shared Promise that will
 //     resolve to the Dependency when it is ready.
@@ -33,6 +28,11 @@ enum Value {
 //     to create the Dependency when it is requested.
 pub(crate) struct Injector {
     value: Value,
+}
+
+enum Value {
+    Pending(Shared<Pending>),
+    Provider(Box<Provider>),
 }
 
 impl Injector {

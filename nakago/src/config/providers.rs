@@ -76,8 +76,8 @@ impl AddConfigLoaders {
 
 #[async_trait]
 impl inject::Hook for AddConfigLoaders {
-    async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
-        if let Ok(existing) = i.get(&CONFIG_LOADERS).await {
+    async fn handle<'a>(&self, i: &'a mut inject::Inject) -> inject::Result<()> {
+        if let Ok(existing) = i.get(&CONFIG_LOADERS) {
             let mut existing = existing.lock().await;
 
             // Add the given ConfigLoaders to the stack
