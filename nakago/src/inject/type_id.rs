@@ -1,51 +1,42 @@
-use std::{any::Any, pin::Pin, sync::Arc};
+use std::{any::Any, sync::Arc};
 
-use futures::Future;
+use super::{Inject, Key, Pending, Result};
 
-use super::{container::Dependency, Error, Inject, Key, Pending, Result};
-
-impl Inject {
+impl<'a> Inject<'a> {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub async fn get_type<T: Any + Send + Sync>(&self) -> Result<Arc<T>> {
+    pub async fn get_type<T: Any + Send + Sync>(&'a self) -> Result<Arc<T>> {
         self.get_key(Key::from_type_id::<T>()).await
     }
 
     /// Consume a dependency, removing it from the container and moving it to the caller
-    pub async fn consume_type<T: Any + Send + Sync>(&mut self) -> Result<T> {
+    pub async fn consume_type<T: Any + Send + Sync>(&'a mut self) -> Result<T> {
         self.consume_key(Key::from_type_id::<T>()).await
     }
 
     /// Provide a dependency directly
-    pub fn inject_type<T: Any + Send + Sync>(&mut self, dep: T) -> Result<()> {
+    pub fn inject_type<T: Any + Send + Sync>(&'a mut self, dep: T) -> Result<()> {
         self.inject_key(Key::from_type_id::<T>(), dep)
     }
 
     /// Replace an existing dependency directly
-    pub fn replace_type<T: Any + Send + Sync>(&mut self, dep: T) -> Result<()> {
+    pub fn replace_type<T: Any + Send + Sync>(&'a mut self, dep: T) -> Result<()> {
         self.replace_key(Key::from_type_id::<T>(), dep)
     }
 
     /// Use a Provider function to inject a dependency.
-    pub fn provide_type<T: Any + Send + Sync, P>(&mut self, provider: P) -> Result<()>
+    pub fn provide_type<T: Any + Send + Sync, P>(&'a mut self, provider: P) -> Result<()>
     where
-        P: FnOnce(&Inject) -> Pin<Box<dyn Future<Output = Result<Arc<Dependency>>>>>,
+        P: FnOnce(&'a Inject<'a>) -> Pending<'a>,
     {
         self.provide_key::<P>(Key::from_type_id::<T>(), provider)
     }
 
     /// Use a Provider function to replace an existing dependency.
-    pub async fn replace_type_with<P>(&mut self, key: Key, provider: P) -> Result<()>
+    pub fn replace_type_with<T: Any + Send + Sync, P>(&mut self, provider: P) -> Result<()>
     where
-        P: FnOnce(&Inject) -> Pin<Box<Pending>>,
+        P: FnOnce(&'a Inject<'a>) -> Pending<'a>,
     {
-        if !self.container.contains_key(&key) {
-            return Err(Error::NotFound {
-                missing: key,
-                available: self.available_type_names(),
-            });
-        }
-
-        return self.provide_key(key, provider);
+        self.replace_key_with(Key::from_type_id::<T>(), provider)
     }
 }
 

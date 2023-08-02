@@ -1,13 +1,12 @@
-use std::{any::Any, path::PathBuf, pin::Pin, sync::Arc};
+use std::{any::Any, path::PathBuf, sync::Arc};
 
 use figment::{
     providers::{Env, Format, Json, Serialized, Toml, Yaml},
     Figment,
 };
-use futures::Future;
 use serde::{Deserialize, Serialize};
 
-use crate::{inject::container::Dependency, Inject, InjectError, InjectResult, Tag};
+use crate::{inject::container::Dependency, Inject, InjectError, Pending, Tag};
 
 /// A Tag for Config loaders
 pub const CONFIG_LOADERS: Tag<Vec<Arc<dyn Loader>>> = Tag::new("ConfigLoaders");
@@ -26,9 +25,9 @@ pub trait Loader: Any + Send + Sync {
     fn load_env(&self, env: Env) -> Env;
 }
 
-pub fn provide_config<'a, C: Config>(
+pub fn provide_config<C: Config>(
     custom_path: Option<PathBuf>,
-) -> impl FnOnce(&'a Inject) -> Pin<Box<dyn Future<Output = InjectResult<Arc<Dependency>>> + 'a>> {
+) -> impl for<'a> FnOnce(&'a Inject<'a>) -> Pending<'a> {
     |i| {
         Box::pin(async move {
             let loaders = i.get(&CONFIG_LOADERS).await?;

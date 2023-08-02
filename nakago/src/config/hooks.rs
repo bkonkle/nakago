@@ -1,8 +1,6 @@
-use std::{pin::Pin, sync::Arc};
+use std::sync::Arc;
 
-use futures::Future;
-
-use crate::{Inject, InjectResult};
+use crate::{Inject, Pending};
 
 use super::{Loader, CONFIG_LOADERS};
 
@@ -11,9 +9,9 @@ use super::{Loader, CONFIG_LOADERS};
 ///
 /// **Provides or Modifies:**
 ///   - `Tag(ConfigLoaders)`
-pub async fn add_loaders<'a>(
+pub async fn add_loaders(
     loaders: Vec<Arc<dyn Loader>>,
-) -> impl FnOnce(&'a mut Inject) -> Pin<Box<dyn Future<Output = InjectResult<()>> + 'a>> {
+) -> impl for<'a> FnOnce(&'a mut Inject<'a>) -> Pending<'a> {
     |i| {
         Box::pin(async move {
             let mut loaders = match i.consume(&CONFIG_LOADERS).await {

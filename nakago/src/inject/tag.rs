@@ -1,7 +1,7 @@
 use std::{any::Any, fmt::Display, marker::PhantomData, ops::Deref, sync::Arc};
 
 use super::{Key, Result};
-use crate::Inject;
+use crate::{Inject, Pending};
 
 /// A dependency injection Tag representing a specific type
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -37,25 +37,49 @@ impl<T> Deref for Tag<T> {
     }
 }
 
-impl Inject {
+impl<'a> Inject<'a> {
     /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
-    pub async fn get<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<Arc<T>> {
+    pub async fn get<T: Any + Send + Sync>(&'a self, tag: &'static Tag<T>) -> Result<Arc<T>> {
         self.get_key(Key::from_tag::<T>(tag.tag)).await
     }
 
     /// Consume a tagged dependency, removing it from the container and moving it to the caller
-    pub async fn consume<T: Any + Sync + Send>(&mut self, tag: &'static Tag<T>) -> Result<T> {
+    pub async fn consume<T: Any + Sync + Send>(&'a mut self, tag: &'static Tag<T>) -> Result<T> {
         self.consume_key(Key::from_tag::<T>(tag.tag)).await
     }
 
     /// Provide a tagged dependency directly
-    pub fn inject<T: Any + Sync + Send>(&mut self, tag: &'static Tag<T>, dep: T) -> Result<()> {
+    pub fn inject<T: Any + Sync + Send>(&'a mut self, tag: &'static Tag<T>, dep: T) -> Result<()> {
         self.inject_key(Key::from_tag::<T>(tag.tag), dep)
     }
 
     /// Replace an existing tagged dependency directly
-    pub fn replace<T: Any + Sync + Send>(&mut self, tag: &'static Tag<T>, dep: T) -> Result<()> {
+    pub fn replace<T: Any + Sync + Send>(&'a mut self, tag: &'static Tag<T>, dep: T) -> Result<()> {
         self.replace_key(Key::from_tag::<T>(tag.tag), dep)
+    }
+
+    /// Use a Provider function to inject a tagged dependency.
+    pub fn provide<T: Any + Send + Sync, P>(
+        &'a mut self,
+        tag: &'static Tag<T>,
+        provider: P,
+    ) -> Result<()>
+    where
+        P: FnOnce(&'a Inject<'a>) -> Pending<'a>,
+    {
+        self.provide_key::<P>(Key::from_tag::<T>(tag.tag), provider)
+    }
+
+    /// Use a Provider function to replace an existing tagged dependency.
+    pub fn replace_with<T: Any + Send + Sync, P>(
+        &mut self,
+        tag: &'static Tag<T>,
+        provider: P,
+    ) -> Result<()>
+    where
+        P: FnOnce(&'a Inject<'a>) -> Pending<'a>,
+    {
+        self.replace_key_with(Key::from_tag::<T>(tag.tag), provider)
     }
 }
 

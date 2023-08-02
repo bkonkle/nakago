@@ -20,15 +20,15 @@ pub enum EventType {
 
 /// Events is a collection of lifecycle hooks that can be added to or triggered
 #[derive(Default)]
-pub struct Events {
-    events: FnvHashMap<EventType, Hooks>,
+pub struct Events<'a> {
+    events: FnvHashMap<EventType, Hooks<'a>>,
 }
 
-impl Events {
+impl<'a> Events<'a> {
     /// Set a new lifecycle hook that will fire on the given EventType
     pub fn on<F>(&mut self, event: &EventType, hook: F)
     where
-        F: FnOnce(&mut inject::Inject) -> Pin<Box<dyn Future<Output = inject::Result<()>>>>,
+        F: FnOnce(&'a mut inject::Inject<'a>) -> Pin<Box<dyn Future<Output = inject::Result<()>>>>,
     {
         if let Some(hooks) = self.events.get_mut(event) {
             hooks.push(hook);
@@ -38,7 +38,7 @@ impl Events {
     }
 
     /// Set a number of new lifecycle hooks that will fire on the given EventType
-    pub fn when(&mut self, event: &EventType, hooks: Hooks) {
+    pub fn when(&mut self, event: &EventType, hooks: Hooks<'a>) {
         if let Some(existing) = self.events.get_mut(event) {
             existing.extend(hooks);
         } else {
@@ -55,7 +55,7 @@ impl Events {
     pub async fn trigger(
         &mut self,
         event: &EventType,
-        i: &mut inject::Inject,
+        i: &'a mut inject::Inject<'a>,
     ) -> inject::Result<()> {
         if let Some(hooks) = self.events.remove(event) {
             for hook in hooks {

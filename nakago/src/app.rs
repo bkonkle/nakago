@@ -3,6 +3,7 @@ use std::{
     ops::{Deref, DerefMut},
     path::PathBuf,
     pin::Pin,
+    sync::Arc,
 };
 
 use futures::Future;
@@ -56,13 +57,15 @@ where
     /// Set a new lifecycle hook that will fire on the given EventType
     pub fn on<F>(&mut self, event: &EventType, hook: F)
     where
-        F: FnOnce(&mut inject::Inject) -> Pin<Box<dyn Future<Output = inject::Result<()>>>>,
+        F: for<'a> FnOnce(
+            &mut inject::Inject<'a>,
+        ) -> Pin<Box<dyn Future<Output = inject::Result<()>>>>,
     {
         self.events.on(event, hook);
     }
 
     /// Set a number of new lifecycle hooks that will fire on the given EventType
-    pub fn when(&mut self, event: &EventType, hooks: Hooks) {
+    pub fn when(&mut self, event: &EventType, hooks: Hooks<'_>) {
         self.events.when(event, hooks);
     }
 
@@ -81,7 +84,8 @@ where
         self.events.trigger(&EventType::Init, &mut self.i).await?;
 
         // Initialize the Config using the given path
-        self.i.provide_type(provide_config::<C>(config_path))?;
+        self.i
+            .provide_type::<Arc<C>, _>(provide_config::<C>(config_path))?;
 
         Ok(())
     }
@@ -108,6 +112,6 @@ where
 }
 
 /// The default lifecycle hooks that will be run on the Init event
-pub fn default_init_hooks() -> Hooks {
+pub fn default_init_hooks<'a>() -> Hooks<'a> {
     Hooks::from(vec![Box::new(init_handle_panic), Box::new(init_rust_log)])
 }
