@@ -1,6 +1,6 @@
 use std::{any::Any, fmt::Display, marker::PhantomData, ops::Deref, sync::Arc};
 
-use super::{Inject, Key, Provider, Result};
+use super::{container::Pending, Inject, Key, Result};
 
 /// A dependency injection Tag representing a specific type
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -38,13 +38,13 @@ impl<T> Deref for Tag<T> {
 
 impl Inject {
     /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
-    pub async fn get<T: Any + Send + Sync>(&mut self, tag: &'static Tag<T>) -> Result<Arc<T>> {
+    pub async fn get<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<Arc<T>> {
         self.get_key(Key::from_tag::<T>(tag.tag)).await
     }
 
     /// Retrieve a reference to a tagged dependency if it exists in the map
     pub async fn get_opt<T: Any + Send + Sync>(
-        &mut self,
+        &self,
         tag: &'static Tag<T>,
     ) -> Result<Option<Arc<T>>> {
         self.get_key_opt(Key::from_tag::<T>(tag.tag)).await
@@ -61,19 +61,19 @@ impl Inject {
     }
 
     /// Register a Provider for a tagged dependency
-    pub fn provide<T: Any + Sync + Send>(
+    pub fn provide<T: Any + Sync + Send, P: FnOnce(&Inject) -> Pending>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
+        provider: P,
     ) -> Result<()> {
         self.provide_key(Key::from_tag::<T>(tag.tag), provider)
     }
 
     /// Replace an existing Provider for a tagged dependency
-    pub fn replace_provider<T: Any + Sync + Send>(
+    pub fn replace_provider<T: Any + Sync + Send, P: FnOnce(&Inject) -> Pending>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
+        provider: P,
     ) -> Result<()> {
         self.replace_key_provider(Key::from_tag::<T>(tag.tag), provider)
     }
