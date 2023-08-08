@@ -44,12 +44,12 @@ impl<C: Config> InitConfig<C> {
 #[async_trait]
 impl<C: Config> inject::Hook for InitConfig<C> {
     async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
-        if let Ok(loaders) = i.get(&CONFIG_LOADERS) {
+        if let Ok(loaders) = i.get(&CONFIG_LOADERS).await {
             let loader = Loader::<C>::new(loaders.lock().await.clone());
 
             let config = loader
                 .load(self.custom_path.clone())
-                .map_err(|e| inject::Error::Provider(e.into()))?;
+                .map_err(|e| inject::Error::Provider(Arc::new(e.into())))?;
 
             i.inject_type(config)?;
         }
@@ -77,7 +77,7 @@ impl AddConfigLoaders {
 #[async_trait]
 impl inject::Hook for AddConfigLoaders {
     async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
-        if let Ok(existing) = i.get(&CONFIG_LOADERS) {
+        if let Ok(existing) = i.get(&CONFIG_LOADERS).await {
             let mut existing = existing.lock().await;
 
             // Add the given ConfigLoaders to the stack

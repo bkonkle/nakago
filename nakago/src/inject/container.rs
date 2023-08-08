@@ -21,7 +21,7 @@ pub struct Inject(pub(crate) HashMap<Key, Injector>);
 //   - Pending: The Dependency has been requested, and is wrapped in a Shared Promise that will
 //     resolve to the Dependency when it is ready.
 pub(crate) struct Injector {
-    value: Arc<Value>,
+    value: Value,
 }
 
 enum Value {
@@ -50,18 +50,18 @@ impl<T: Any + Send + Sync> Provider<dyn Any + Send + Sync> for T {
 impl Injector {
     fn from_pending(pending: Shared<Pending>) -> Self {
         Self {
-            value: Arc::new(Value::Pending(pending)),
+            value: Value::Pending(pending),
         }
     }
 
     pub(crate) fn from_provider(provider: Box<dyn Provider<Dependency>>) -> Self {
         Self {
-            value: Arc::new(Value::Provider(provider)),
+            value: Value::Provider(provider),
         }
     }
 
-    fn request(&self, inject: &Inject) -> Shared<Pending> {
-        let pending = match *self.value {
+    fn request(&mut self, inject: &Inject) -> Shared<Pending> {
+        self.value = Value::Pending(match self.value {
             // If this is a Dependency that has already been requested, it will already be in a
             // Pending state. In that cose, clone the inner Shared Promise (which clones the
             // inner Arc around the Dependency at the time it's resolved).
@@ -70,11 +70,13 @@ impl Injector {
             // which is a Provider that will resolve the Promise with the Dependency inside
             // an Arc.
             Value::Provider(provider) => provider.provide(inject).shared(),
-        };
+        });
 
-        self.value = Arc::new(Value::Pending(pending.clone()));
-
-        pending
+        if let Value::Pending(pending) = &self.value {
+            return pending.clone();
+        } else {
+            unreachable!()
+        }
     }
 }
 
@@ -99,7 +101,7 @@ impl Inject {
         &mut self,
         key: Key,
     ) -> Result<Option<Arc<T>>> {
-        let injector = self.0.get(&key);
+        let injector = self.0.get_mut(&key);
 
         if let Some(injector) = injector {
             let value = injector.request(self).await?;
@@ -302,7 +304,7 @@ pub(crate) mod test {
         async fn provide(&self, i: &Inject) -> Result<Arc<dyn HasId>> {
             // Trigger a borrow so that the reference to `Inject` has to be held across the await
             // point below, to test issues with Inject thread safety.
-            let _ = i.get_type::<String>();
+            let _ = i.get_type::<String>().await;
 
             sleep(Duration::from_millis(1)).await;
 
