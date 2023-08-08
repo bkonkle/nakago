@@ -8,12 +8,13 @@ use std::{
 
 use async_trait::async_trait;
 use futures::{future::Shared, Future, FutureExt};
+use tokio::sync::{Mutex, MutexGuard};
 
 use super::{Error, Key, Result};
 
 /// The injection Container
 #[derive(Default)]
-pub struct Inject<'a>(pub(crate) HashMap<Key, Injector<'a>>);
+pub struct Inject<'a>(pub(crate) HashMap<Key, Mutex<Injector<'a>>>);
 
 // An Injector is a wrapper around a Dependency that can be in one of two states:
 //   - Provider: The Dependency has not been requested yet, and a Provider function is available
@@ -26,7 +27,7 @@ pub(crate) struct Injector<'a> {
 
 #[derive(Clone)]
 enum Value<'a> {
-    Provider(Arc<dyn Provider<Dependency>>),
+    Provider(Arc<dyn Provider<'a, Dependency>>),
     Pending(Shared<Pending<'a>>),
 }
 
@@ -38,15 +39,15 @@ pub type Pending<'a> = Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Se
 
 /// A trait for async injection Providers
 #[async_trait]
-pub trait Provider<T: Any + Send + Sync + ?Sized>: Send + Sync {
+pub trait Provider<'a, T: Any + Send + Sync + ?Sized>: Send + Sync {
     /// Provide a dependency for the container
-    async fn provide(&self, i: &Inject<'_>) -> Result<Arc<T>>;
+    async fn provide(&'a self, i: &'a Inject<'a>) -> Result<Arc<T>>;
 }
 
 #[async_trait]
-impl<T: Any + Send + Sync> Provider<dyn Any + Send + Sync> for T {
+impl<'a, T: Any + Send + Sync> Provider<'a, dyn Any + Send + Sync> for T {
     /// Provide a dependency for the container
-    async fn provide(&self, i: &Inject<'_>) -> Result<Arc<dyn Any + Send + Sync>> {
+    async fn provide(&'a self, i: &'a Inject<'a>) -> Result<Arc<dyn Any + Send + Sync>> {
         self.provide(i).await
     }
 }
@@ -58,13 +59,13 @@ impl<'a> Injector<'a> {
         }
     }
 
-    pub(crate) fn from_provider(provider: Arc<dyn Provider<Dependency>>) -> Self {
+    pub(crate) fn from_provider(provider: Arc<dyn Provider<'a, Dependency>>) -> Self {
         Self {
             value: Value::Provider(provider),
         }
     }
 
-    fn request(&'a self, inject: &'a Inject<'a>) -> Shared<Pending<'a>> {
+    fn request(&'a mut self, inject: &'a Inject<'a>) -> Shared<Pending<'a>> {
         self.value = Value::Pending(match &self.value {
             // If this is a Dependency that has already been requested, it will already be in a
             // Pending state. In that cose, clone the inner Shared Promise (which clones the
@@ -105,12 +106,12 @@ impl<'a> Inject<'a> {
         &'a self,
         key: Key,
     ) -> Result<Option<Arc<T>>> {
-        let injector = self.0.get(&key);
+        if let Some(injector) = self.0.get(&key) {
+            let mut value: MutexGuard<'a, Injector<'a>> = injector.lock().await;
+            let temp = value.request(self);
 
-        if let Some(injector) = injector {
-            let value = injector.request(self).await?;
-
-            return value
+            return temp
+                .await?
                 .downcast::<T>()
                 .map(Some)
                 .map_err(|_err| Error::TypeMismatch {
@@ -132,7 +133,7 @@ impl<'a> Inject<'a> {
                         dep,
                     ))));
 
-                let _ = entry.insert(Injector::from_pending(pending.shared()));
+                let _ = entry.insert(Mutex::new(Injector::from_pending(pending.shared())));
 
                 Ok(())
             }
@@ -148,7 +149,7 @@ impl<'a> Inject<'a> {
                         dep,
                     ))));
 
-                let _ = entry.insert(Injector::from_pending(pending.shared()));
+                let _ = entry.insert(Mutex::new(Injector::from_pending(pending.shared())));
 
                 Ok(())
             }
@@ -162,12 +163,12 @@ impl<'a> Inject<'a> {
     pub(crate) fn provide_key(
         &mut self,
         key: Key,
-        provider: Arc<dyn Provider<Dependency>>,
+        provider: Arc<dyn Provider<'a, Dependency>>,
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
-                let _ = entry.insert(Injector::from_provider(provider));
+                let _ = entry.insert(Mutex::new(Injector::from_provider(provider)));
 
                 Ok(())
             }
@@ -177,11 +178,11 @@ impl<'a> Inject<'a> {
     pub(crate) fn replace_key_with(
         &mut self,
         key: Key,
-        provider: Arc<dyn Provider<Dependency>>,
+        provider: Arc<dyn Provider<'a, Dependency>>,
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                let _ = entry.insert(Injector::from_provider(provider));
+                let _ = entry.insert(Mutex::new(Injector::from_provider(provider)));
 
                 Ok(())
             }
@@ -268,8 +269,8 @@ pub(crate) mod test {
     }
 
     #[async_trait]
-    impl Provider<TestService> for TestServiceProvider {
-        async fn provide(&self, _i: &Inject<'_>) -> Result<Arc<TestService>> {
+    impl<'a> Provider<'a, TestService> for TestServiceProvider {
+        async fn provide(&'a self, _i: &'a Inject<'a>) -> Result<Arc<TestService>> {
             Ok(Arc::new(TestService::new(self.id.clone())))
         }
     }
@@ -286,15 +287,15 @@ pub(crate) mod test {
     }
 
     #[async_trait]
-    impl Provider<OtherService> for OtherServiceProvider {
-        async fn provide(&self, _i: &Inject<'_>) -> Result<Arc<OtherService>> {
+    impl<'a> Provider<'a, OtherService> for OtherServiceProvider {
+        async fn provide(&'a self, _i: &'a Inject<'a>) -> Result<Arc<OtherService>> {
             Ok(Arc::new(OtherService::new(self.id.clone())))
         }
     }
 
     #[async_trait]
-    impl Provider<dyn HasId> for OtherServiceProvider {
-        async fn provide(&self, _i: &Inject<'_>) -> Result<Arc<dyn HasId>> {
+    impl<'a> Provider<'a, dyn HasId> for OtherServiceProvider {
+        async fn provide(&'a self, _i: &'a Inject<'a>) -> Result<Arc<dyn HasId>> {
             Ok(Arc::new(OtherService::new(self.id.clone())))
         }
     }
@@ -303,8 +304,8 @@ pub(crate) mod test {
     pub struct TestServiceHasIdProvider {}
 
     #[async_trait]
-    impl Provider<dyn HasId> for TestServiceHasIdProvider {
-        async fn provide(&self, i: &Inject<'_>) -> Result<Arc<dyn HasId>> {
+    impl<'a> Provider<'a, dyn HasId> for TestServiceHasIdProvider {
+        async fn provide(&'a self, i: &'a Inject<'a>) -> Result<Arc<dyn HasId>> {
             // Trigger a borrow so that the reference to `Inject` has to be held across the await
             // point below, to test issues with Inject thread safety.
             let _ = i.get_type::<String>().await;
