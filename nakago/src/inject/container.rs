@@ -33,12 +33,12 @@ pub type Pending<T> = Pin<Box<dyn Future<Output = Result<Arc<T>>> + Send>>;
 
 /// A trait for async injection Providers
 #[async_trait]
-pub trait Provider<T: Any + Send + Sync>: Any + Send + Sync {
+pub trait Provider<T: Any + Send + Sync + ?Sized>: Any + Send + Sync {
     /// Provide a dependency for the container
     async fn provide(&self, i: &Inject) -> Result<Arc<T>>;
 }
 
-impl<T: Any + Send + Sync> Injector<T> {
+impl<T: Any + Send + Sync + ?Sized> Injector<T> {
     fn from_pending(pending: Shared<Pending<T>>) -> Self {
         Self {
             value: Value::Pending(pending),
