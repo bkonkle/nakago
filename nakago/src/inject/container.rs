@@ -21,7 +21,7 @@ pub struct Inject(pub(crate) HashMap<Key, Injector<dyn Any + Send + Sync>>);
 //   - Pending: The Dependency has been requested, and is wrapped in a Shared Promise that will
 //     resolve to the Dependency when it is ready.
 pub(crate) struct Injector<T: ?Sized> {
-    value: Value<T>,
+    value: Arc<Value<T>>,
 }
 
 enum Value<T: ?Sized> {
@@ -41,18 +41,18 @@ pub trait Provider<T: Any + Send + Sync + ?Sized>: Any + Send + Sync {
 impl<T: Any + Send + Sync + ?Sized> Injector<T> {
     fn from_pending(pending: Shared<Pending<T>>) -> Self {
         Self {
-            value: Value::Pending(pending),
+            value: Arc::new(Value::Pending(pending)),
         }
     }
 
     pub(crate) fn from_provider(provider: Box<dyn Provider<T>>) -> Self {
         Self {
-            value: Value::Provider(provider),
+            value: Arc::new(Value::Provider(provider)),
         }
     }
 
     fn request(&self, inject: &Inject) -> Shared<Pending<T>> {
-        let pending = match self.value {
+        let pending = match *self.value {
             // If this is a Dependency that has already been requested, it will already be in a
             // Pending state. In that cose, clone the inner Shared Promise (which clones the
             // inner Arc around the Dependency at the time it's resolved).
@@ -63,7 +63,7 @@ impl<T: Any + Send + Sync + ?Sized> Injector<T> {
             Value::Provider(provider) => provider.provide(inject).shared(),
         };
 
-        self.value = Value::Pending(pending.clone());
+        self.value = Arc::new(Value::Pending(pending.clone()));
 
         pending
     }
@@ -93,36 +93,20 @@ impl Inject {
         &'static mut self,
         key: Key,
     ) -> Result<Option<Arc<T>>> {
-        match self.0.entry(key.clone()) {
-            Entry::Occupied(mut entry) => {
-                let injector = entry.get();
+        let injector = self.0.get(&key);
 
-                if let Value::Pending(pending) = &injector.value {
-                    if let Ok(dep) = pending.clone().await?.clone().downcast::<T>() {
-                        return Ok(Some(dep));
-                    };
-                };
+        if let Some(injector) = injector {
+            let value = injector.request(self).await?;
 
-                if let Value::Provider(provider) = injector.value {
-                    let pending = provider.provide(self).shared();
-                    let injector = Injector::from_pending(pending.clone());
-
-                    let _ = entry.insert(injector);
-
-                    if let Ok(dep) = pending.await?.downcast::<T>() {
-                        return Ok(Some(dep));
-                    };
-
-                    return Err(Error::TypeMismatch {
-                        key,
-                        type_name: std::any::type_name::<T>().to_string(),
-                    });
+            return value.downcast::<T>().map(|value| Some(value)).map_err(|_| {
+                Error::TypeMismatch {
+                    key,
+                    type_name: std::any::type_name::<T>().to_string(),
                 }
-
-                Ok(None)
-            }
-            Entry::Vacant(_) => Ok(None),
+            });
         }
+
+        Ok(None)
     }
 
     /// Provide a dependency directly
@@ -164,29 +148,29 @@ impl Inject {
         }
     }
 
-    pub(crate) fn provide_key(
+    pub(crate) fn provide_key<T: Any + Send + Sync>(
         &mut self,
         key: Key,
-        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
+        provider: Box<dyn Provider<T>>,
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
-                let _ = entry.insert(Injector::new(provider));
+                let _ = entry.insert(Injector::from_provider(provider));
 
                 Ok(())
             }
         }
     }
 
-    pub(crate) fn replace_key_provider(
+    pub(crate) fn replace_key_with<T: Any + Send + Sync>(
         &mut self,
         key: Key,
-        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
+        provider: Box<dyn Provider<T>>,
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                let _ = entry.insert(Injector::new(provider));
+                let _ = entry.insert(Injector::from_provider(provider));
 
                 Ok(())
             }
@@ -273,8 +257,8 @@ pub(crate) mod test {
     }
 
     #[async_trait]
-    impl Provider<Arc<dyn Any + Send + Sync>> for TestServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<Arc<dyn Any + Send + Sync>> {
+    impl Provider<TestService> for TestServiceProvider {
+        async fn provide(&self, _i: &Inject) -> Result<Arc<TestService>> {
             Ok(Arc::new(TestService::new(self.id.clone())))
         }
     }
@@ -292,13 +276,13 @@ pub(crate) mod test {
 
     #[async_trait]
     impl Provider<OtherService> for OtherServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<OtherService> {
-            Ok(OtherService::new(self.id.clone()))
+        async fn provide(&self, _i: &Inject) -> Result<Arc<OtherService>> {
+            Ok(Arc::new(OtherService::new(self.id.clone())))
         }
     }
 
     #[async_trait]
-    impl Provider<Arc<dyn HasId>> for OtherServiceProvider {
+    impl Provider<dyn HasId> for OtherServiceProvider {
         async fn provide(&self, _i: &Inject) -> Result<Arc<dyn HasId>> {
             Ok(Arc::new(OtherService::new(self.id.clone())))
         }
@@ -308,7 +292,7 @@ pub(crate) mod test {
     pub struct TestServiceHasIdProvider {}
 
     #[async_trait]
-    impl Provider<Arc<dyn HasId>> for TestServiceHasIdProvider {
+    impl Provider<dyn HasId> for TestServiceHasIdProvider {
         async fn provide(&self, i: &Inject) -> Result<Arc<dyn HasId>> {
             // Trigger a borrow so that the reference to `Inject` has to be held across the await
             // point below, to test issues with Inject thread safety.
@@ -326,7 +310,7 @@ pub(crate) mod test {
     async fn test_provide_success() -> Result<()> {
         let mut i = Inject::default();
 
-        i.provide_type::<Arc<TestService>>(Box::new(TestServiceProvider::new(
+        i.provide_type::<TestService>(Box::new(TestServiceProvider::new(
             fake::uuid::UUIDv4.fake(),
         )))?;
 

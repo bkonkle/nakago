@@ -64,18 +64,18 @@ impl Inject {
     pub fn provide<T: Any + Sync + Send>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
+        provider: Box<dyn Provider<T>>,
     ) -> Result<()> {
         self.provide_key(Key::from_tag::<T>(tag.tag), provider)
     }
 
     /// Replace an existing Provider for a tagged dependency
-    pub fn replace_provider<T: Any + Sync + Send>(
+    pub fn replace_with<T: Any + Sync + Send>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
+        provider: Box<dyn Provider<T>>,
     ) -> Result<()> {
-        self.replace_key_provider(Key::from_tag::<T>(tag.tag), provider)
+        self.replace_key_with(Key::from_tag::<T>(tag.tag), provider)
     }
 }
 

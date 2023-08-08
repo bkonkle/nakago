@@ -26,17 +26,17 @@ impl Inject {
     /// Register a Provider for a type-id dependency
     pub fn provide_type<T: Any + Send + Sync>(
         &mut self,
-        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
+        provider: Box<dyn Provider<T>>,
     ) -> Result<()> {
         self.provide_key(Key::from_type_id::<T>(), provider)
     }
 
     /// Replace an existing Provider for a type-id dependency
-    pub fn replace_type_provider<T: Any + Send + Sync>(
+    pub fn replace_type_with<T: Any + Send + Sync>(
         &mut self,
-        provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>,
+        provider: Box<dyn Provider<T>>,
     ) -> Result<()> {
-        self.replace_key_provider(Key::from_type_id::<T>(), provider)
+        self.replace_key_with(Key::from_type_id::<T>(), provider)
     }
 }
 
