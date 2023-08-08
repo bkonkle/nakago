@@ -11,50 +11,61 @@ use futures::{future::Shared, Future, FutureExt};
 
 use super::{Error, Key, Result};
 
-/// A type map for dependency injection
-pub(crate) type TypeMap = HashMap<Key, Injector>;
-
 /// The injection Container
 #[derive(Default)]
-pub struct Inject(pub(crate) TypeMap);
+pub struct Inject(pub(crate) HashMap<Key, Injector<dyn Any + Send + Sync>>);
 
-pub(crate) struct Injector {
-    pub(crate) provider: Option<Box<dyn Provider<Arc<dyn Any + Send + Sync>>>>,
-    pub(crate) pending:
-        Option<Shared<Pin<Box<dyn Future<Output = Result<Arc<dyn Any + Send + Sync>>> + Send>>>>,
+// An Injector is a wrapper around a Dependency that can be in one of two states:
+//   - Provider: The Dependency has not been requested yet, and a Provider function is available
+//     to create the Dependency when it is requested.
+//   - Pending: The Dependency has been requested, and is wrapped in a Shared Promise that will
+//     resolve to the Dependency when it is ready.
+pub(crate) struct Injector<T: ?Sized> {
+    value: Value<T>,
 }
 
-impl Injector {
-    fn new(provider: Box<dyn Provider<Arc<dyn Any + Send + Sync>>>) -> Self {
-        Self {
-            provider: Some(provider),
-            pending: None,
-        }
-    }
-
-    fn from_pending(
-        pending: Shared<Pin<Box<dyn Future<Output = Result<Arc<dyn Any + Send + Sync>>> + Send>>>,
-    ) -> Self {
-        Self {
-            provider: None,
-            pending: Some(pending),
-        }
-    }
+enum Value<T: ?Sized> {
+    Provider(Box<dyn Provider<T>>),
+    Pending(Shared<Pending<T>>),
 }
+
+pub type Pending<T> = Pin<Box<dyn Future<Output = Result<Arc<T>>> + Send>>;
 
 /// A trait for async injection Providers
 #[async_trait]
-pub trait Provider<T>: Any + Send + Sync
-where
-    T: Any + Send + Sync,
-{
+pub trait Provider<T: Any + Send + Sync>: Any + Send + Sync {
     /// Provide a dependency for the container
-    async fn provide(&self, i: &Inject) -> Result<T>;
+    async fn provide(&self, i: &Inject) -> Result<Arc<T>>;
 }
 
-impl<T> Clone for Box<dyn Provider<T>> {
-    fn clone(&self) -> Self {
-        todo!();
+impl<T: Any + Send + Sync> Injector<T> {
+    fn from_pending(pending: Shared<Pending<T>>) -> Self {
+        Self {
+            value: Value::Pending(pending),
+        }
+    }
+
+    pub(crate) fn from_provider(provider: Box<dyn Provider<T>>) -> Self {
+        Self {
+            value: Value::Provider(provider),
+        }
+    }
+
+    fn request(&self, inject: &Inject) -> Shared<Pending<T>> {
+        let pending = match self.value {
+            // If this is a Dependency that has already been requested, it will already be in a
+            // Pending state. In that cose, clone the inner Shared Promise (which clones the
+            // inner Arc around the Dependency at the time it's resolved).
+            Value::Pending(pending) => pending,
+            // If this Dependency hasn't been requested yet, kick off the inner Shared Promise,
+            // which is a Provider that will resolve the Promise with the Dependency inside
+            // an Arc.
+            Value::Provider(provider) => provider.provide(inject).shared(),
+        };
+
+        self.value = Value::Pending(pending.clone());
+
+        pending
     }
 }
 
@@ -86,13 +97,13 @@ impl Inject {
             Entry::Occupied(mut entry) => {
                 let injector = entry.get();
 
-                if let Some(pending) = &injector.pending {
+                if let Value::Pending(pending) = &injector.value {
                     if let Ok(dep) = pending.clone().await?.clone().downcast::<T>() {
                         return Ok(Some(dep));
                     };
                 };
 
-                if let Some(provider) = injector.provider.clone() {
+                if let Value::Provider(provider) = injector.value {
                     let pending = provider.provide(self).shared();
                     let injector = Injector::from_pending(pending.clone());
 
