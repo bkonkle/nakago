@@ -13,57 +13,58 @@ use super::{Error, Key, Result};
 
 /// The injection Container
 #[derive(Default)]
-pub struct Inject(pub(crate) HashMap<Key, Injector>);
+pub struct Inject<'a>(pub(crate) HashMap<Key, Injector<'a>>);
 
 // An Injector is a wrapper around a Dependency that can be in one of two states:
 //   - Provider: The Dependency has not been requested yet, and a Provider function is available
 //     to create the Dependency when it is requested.
 //   - Pending: The Dependency has been requested, and is wrapped in a Shared Promise that will
 //     resolve to the Dependency when it is ready.
-pub(crate) struct Injector {
-    value: Value,
+pub(crate) struct Injector<'a> {
+    value: Value<'a>,
 }
 
-enum Value {
-    Provider(Box<dyn Provider<Dependency>>),
-    Pending(Shared<Pending>),
+#[derive(Clone)]
+enum Value<'a> {
+    Provider(Arc<dyn Provider<Dependency>>),
+    Pending(Shared<Pending<'a>>),
 }
 
 /// A Dependency that can be injected into the container
 pub type Dependency = dyn Any + Send + Sync;
 
 /// A Future that will resolve to a Dependency
-pub type Pending = Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>>;
+pub type Pending<'a> = Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send + 'a>>;
 
 /// A trait for async injection Providers
 #[async_trait]
 pub trait Provider<T: Any + Send + Sync + ?Sized>: Send + Sync {
     /// Provide a dependency for the container
-    async fn provide(&self, i: &Inject) -> Result<Arc<T>>;
+    async fn provide(&self, i: &Inject<'_>) -> Result<Arc<T>>;
 }
 
 #[async_trait]
 impl<T: Any + Send + Sync> Provider<dyn Any + Send + Sync> for T {
     /// Provide a dependency for the container
-    async fn provide(&self, i: &Inject) -> Result<Arc<dyn Any + Send + Sync>> {
+    async fn provide(&self, i: &Inject<'_>) -> Result<Arc<dyn Any + Send + Sync>> {
         self.provide(i).await
     }
 }
 
-impl Injector {
-    fn from_pending(pending: Shared<Pending>) -> Self {
+impl<'a> Injector<'a> {
+    fn from_pending(pending: Shared<Pending<'a>>) -> Self {
         Self {
             value: Value::Pending(pending),
         }
     }
 
-    pub(crate) fn from_provider(provider: Box<dyn Provider<Dependency>>) -> Self {
+    pub(crate) fn from_provider(provider: Arc<dyn Provider<Dependency>>) -> Self {
         Self {
             value: Value::Provider(provider),
         }
     }
 
-    fn request(&self, inject: &Inject) -> Shared<Pending> {
+    fn request(&'a self, inject: &'a Inject<'a>) -> Shared<Pending<'a>> {
         self.value = Value::Pending(match &self.value {
             // If this is a Dependency that has already been requested, it will already be in a
             // Pending state. In that cose, clone the inner Shared Promise (which clones the
@@ -84,9 +85,9 @@ impl Injector {
 }
 
 // The base methods powering both the Tag and TypeId modes
-impl Inject {
+impl<'a> Inject<'a> {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub(crate) async fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<Arc<T>> {
+    pub(crate) async fn get_key<T: Any + Send + Sync>(&'a self, key: Key) -> Result<Arc<T>> {
         let available = self.available_type_names();
 
         if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
@@ -101,7 +102,7 @@ impl Inject {
 
     /// Retrieve a reference to a dependency if it exists in the map
     pub(crate) async fn get_key_opt<T: Any + Send + Sync>(
-        &self,
+        &'a self,
         key: Key,
     ) -> Result<Option<Arc<T>>> {
         let injector = self.0.get(&key);
@@ -161,7 +162,7 @@ impl Inject {
     pub(crate) fn provide_key(
         &mut self,
         key: Key,
-        provider: Box<dyn Provider<Dependency>>,
+        provider: Arc<dyn Provider<Dependency>>,
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
@@ -176,7 +177,7 @@ impl Inject {
     pub(crate) fn replace_key_with(
         &mut self,
         key: Key,
-        provider: Box<dyn Provider<Dependency>>,
+        provider: Arc<dyn Provider<Dependency>>,
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
@@ -268,7 +269,7 @@ pub(crate) mod test {
 
     #[async_trait]
     impl Provider<TestService> for TestServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<Arc<TestService>> {
+        async fn provide(&self, _i: &Inject<'_>) -> Result<Arc<TestService>> {
             Ok(Arc::new(TestService::new(self.id.clone())))
         }
     }
@@ -286,14 +287,14 @@ pub(crate) mod test {
 
     #[async_trait]
     impl Provider<OtherService> for OtherServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<Arc<OtherService>> {
+        async fn provide(&self, _i: &Inject<'_>) -> Result<Arc<OtherService>> {
             Ok(Arc::new(OtherService::new(self.id.clone())))
         }
     }
 
     #[async_trait]
     impl Provider<dyn HasId> for OtherServiceProvider {
-        async fn provide(&self, _i: &Inject) -> Result<Arc<dyn HasId>> {
+        async fn provide(&self, _i: &Inject<'_>) -> Result<Arc<dyn HasId>> {
             Ok(Arc::new(OtherService::new(self.id.clone())))
         }
     }
@@ -303,7 +304,7 @@ pub(crate) mod test {
 
     #[async_trait]
     impl Provider<dyn HasId> for TestServiceHasIdProvider {
-        async fn provide(&self, i: &Inject) -> Result<Arc<dyn HasId>> {
+        async fn provide(&self, i: &Inject<'_>) -> Result<Arc<dyn HasId>> {
             // Trigger a borrow so that the reference to `Inject` has to be held across the await
             // point below, to test issues with Inject thread safety.
             let _ = i.get_type::<String>().await;
@@ -320,7 +321,7 @@ pub(crate) mod test {
     async fn test_provide_success() -> Result<()> {
         let mut i = Inject::default();
 
-        i.provide_type::<TestService>(Box::new(TestServiceProvider::new(
+        i.provide_type::<TestService>(Arc::new(TestServiceProvider::new(
             fake::uuid::UUIDv4.fake(),
         )))?;
 

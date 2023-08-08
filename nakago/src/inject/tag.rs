@@ -36,15 +36,15 @@ impl<T> Deref for Tag<T> {
     }
 }
 
-impl Inject {
+impl<'a> Inject<'a> {
     /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
-    pub async fn get<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<Arc<T>> {
+    pub async fn get<T: Any + Send + Sync>(&'a self, tag: &'static Tag<T>) -> Result<Arc<T>> {
         self.get_key(Key::from_tag::<T>(tag.tag)).await
     }
 
     /// Retrieve a reference to a tagged dependency if it exists in the map
     pub async fn get_opt<T: Any + Send + Sync>(
-        &self,
+        &'a self,
         tag: &'static Tag<T>,
     ) -> Result<Option<Arc<T>>> {
         self.get_key_opt(Key::from_tag::<T>(tag.tag)).await
@@ -64,7 +64,7 @@ impl Inject {
     pub fn provide<T: Any + Sync + Send>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: Box<dyn Provider<Dependency>>,
+        provider: Arc<dyn Provider<Dependency>>,
     ) -> Result<()> {
         self.provide_key(Key::from_tag::<T>(tag.tag), provider)
     }
@@ -73,7 +73,7 @@ impl Inject {
     pub fn replace_with<T: Any + Sync + Send>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: Box<dyn Provider<Dependency>>,
+        provider: Arc<dyn Provider<Dependency>>,
     ) -> Result<()> {
         self.replace_key_with(Key::from_tag::<T>(tag.tag), provider)
     }

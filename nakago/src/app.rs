@@ -17,13 +17,13 @@ use crate::{
 };
 
 /// The top-level Application struct
-pub struct Application<C: Config> {
+pub struct Application<'a, C: Config> {
     events: Events,
-    i: inject::Inject,
+    i: inject::Inject<'a>,
     _phantom: PhantomData<C>,
 }
 
-impl<C: Config> Default for Application<C> {
+impl<'a, C: Config> Default for Application<'a, C> {
     fn default() -> Self {
         Self {
             events: Events::default(),
@@ -33,18 +33,18 @@ impl<C: Config> Default for Application<C> {
     }
 }
 
-impl<C> Deref for Application<C>
+impl<'a, C> Deref for Application<'a, C>
 where
     C: Config,
 {
-    type Target = inject::Inject;
+    type Target = inject::Inject<'a>;
 
     fn deref(&self) -> &Self::Target {
         &self.i
     }
 }
 
-impl<C> DerefMut for Application<C>
+impl<'a, C> DerefMut for Application<'a, C>
 where
     C: Config,
 {
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<C> Application<C>
+impl<'a, C> Application<'a, C>
 where
     C: Config,
 {

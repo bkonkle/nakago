@@ -7,12 +7,12 @@ use super::{Inject, Result};
 #[async_trait]
 pub trait Hook: Any + Send {
     /// Handle the event by operating on the Inject container
-    async fn handle(&self, i: &mut Inject) -> Result<()>;
+    async fn handle(&self, i: &mut Inject<'_>) -> Result<()>;
 }
 
-impl Inject {
+impl<'a> Inject<'a> {
     /// Handle a hook by running it against the Inject container
-    pub async fn handle<H>(&mut self, hook: H) -> Result<()>
+    pub async fn handle<H>(&'a mut self, hook: H) -> Result<()>
     where
         H: Hook,
     {
