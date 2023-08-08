@@ -38,13 +38,13 @@ impl<T> Deref for Tag<T> {
 
 impl Inject {
     /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
-    pub async fn get<T: Any + Send + Sync>(&mut self, tag: &'static Tag<T>) -> Result<Arc<T>> {
+    pub async fn get<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<Arc<T>> {
         self.get_key(Key::from_tag::<T>(tag.tag)).await
     }
 
     /// Retrieve a reference to a tagged dependency if it exists in the map
     pub async fn get_opt<T: Any + Send + Sync>(
-        &mut self,
+        &self,
         tag: &'static Tag<T>,
     ) -> Result<Option<Arc<T>>> {
         self.get_key_opt(Key::from_tag::<T>(tag.tag)).await

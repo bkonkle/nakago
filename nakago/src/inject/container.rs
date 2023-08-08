@@ -29,7 +29,10 @@ enum Value {
     Pending(Shared<Pending>),
 }
 
+/// A Dependency that can be injected into the container
 pub type Dependency = dyn Any + Send + Sync;
+
+/// A Future that will resolve to a Dependency
 pub type Pending = Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>>;
 
 /// A trait for async injection Providers
@@ -60,12 +63,12 @@ impl Injector {
         }
     }
 
-    fn request(&mut self, inject: &Inject) -> Shared<Pending> {
-        self.value = Value::Pending(match self.value {
+    fn request(&self, inject: &Inject) -> Shared<Pending> {
+        self.value = Value::Pending(match &self.value {
             // If this is a Dependency that has already been requested, it will already be in a
             // Pending state. In that cose, clone the inner Shared Promise (which clones the
             // inner Arc around the Dependency at the time it's resolved).
-            Value::Pending(pending) => pending,
+            Value::Pending(pending) => pending.clone(),
             // If this Dependency hasn't been requested yet, kick off the inner Shared Promise,
             // which is a Provider that will resolve the Promise with the Dependency inside
             // an Arc.
@@ -83,7 +86,7 @@ impl Injector {
 // The base methods powering both the Tag and TypeId modes
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub(crate) async fn get_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<Arc<T>> {
+    pub(crate) async fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<Arc<T>> {
         let available = self.available_type_names();
 
         if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
@@ -98,20 +101,21 @@ impl Inject {
 
     /// Retrieve a reference to a dependency if it exists in the map
     pub(crate) async fn get_key_opt<T: Any + Send + Sync>(
-        &mut self,
+        &self,
         key: Key,
     ) -> Result<Option<Arc<T>>> {
-        let injector = self.0.get_mut(&key);
+        let injector = self.0.get(&key);
 
         if let Some(injector) = injector {
             let value = injector.request(self).await?;
 
-            return value.downcast::<T>().map(|value| Some(value)).map_err(|_| {
-                Error::TypeMismatch {
+            return value
+                .downcast::<T>()
+                .map(Some)
+                .map_err(|_err| Error::TypeMismatch {
                     key,
                     type_name: std::any::type_name::<T>().to_string(),
-                }
-            });
+                });
         }
 
         Ok(None)
@@ -122,11 +126,10 @@ impl Inject {
         match self.0.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
-                let pending: Pin<
-                    Box<dyn Future<Output = Result<Arc<dyn Any + Send + Sync>>> + Send>,
-                > = Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
-                    dep,
-                ))));
+                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
+                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
+                        dep,
+                    ))));
 
                 let _ = entry.insert(Injector::from_pending(pending.shared()));
 
@@ -139,11 +142,10 @@ impl Inject {
     pub(crate) fn replace_key<T: Any + Send + Sync>(&mut self, key: Key, dep: T) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                let pending: Pin<
-                    Box<dyn Future<Output = Result<Arc<dyn Any + Send + Sync>>> + Send>,
-                > = Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
-                    dep,
-                ))));
+                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
+                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
+                        dep,
+                    ))));
 
                 let _ = entry.insert(Injector::from_pending(pending.shared()));
 
