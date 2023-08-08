@@ -81,10 +81,7 @@ impl Injector {
 // The base methods powering both the Tag and TypeId modes
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub(crate) async fn get_key<T: Any + Send + Sync>(
-        &'static mut self,
-        key: Key,
-    ) -> Result<Arc<T>> {
+    pub(crate) async fn get_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<Arc<T>> {
         let available = self.available_type_names();
 
         if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
@@ -99,7 +96,7 @@ impl Inject {
 
     /// Retrieve a reference to a dependency if it exists in the map
     pub(crate) async fn get_key_opt<T: Any + Send + Sync>(
-        &'static mut self,
+        &mut self,
         key: Key,
     ) -> Result<Option<Arc<T>>> {
         let injector = self.0.get(&key);
@@ -319,10 +316,9 @@ pub(crate) mod test {
     async fn test_provide_success() -> Result<()> {
         let mut i = Inject::default();
 
-        let temp = Box::new(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
-            as Box<dyn Provider<dyn Any + Send + Sync>>;
-
-        i.provide_type::<TestService>(temp)?;
+        i.provide_type::<TestService>(Box::new(TestServiceProvider::new(
+            fake::uuid::UUIDv4.fake(),
+        )))?;
 
         assert!(
             i.0.contains_key(&Key::from_type_id::<Arc<TestService>>()),
