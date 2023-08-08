@@ -1,6 +1,6 @@
 use std::{any::Any, fmt::Display, marker::PhantomData, ops::Deref, sync::Arc};
 
-use super::{Inject, Key, Provider, Result};
+use super::{container::Dependency, Inject, Key, Provider, Result};
 
 /// A dependency injection Tag representing a specific type
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -64,7 +64,7 @@ impl Inject {
     pub fn provide<T: Any + Sync + Send>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: Box<dyn Provider<T>>,
+        provider: Box<dyn Provider<Dependency>>,
     ) -> Result<()> {
         self.provide_key(Key::from_tag::<T>(tag.tag), provider)
     }
@@ -73,7 +73,7 @@ impl Inject {
     pub fn replace_with<T: Any + Sync + Send>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: Box<dyn Provider<T>>,
+        provider: Box<dyn Provider<Dependency>>,
     ) -> Result<()> {
         self.replace_key_with(Key::from_tag::<T>(tag.tag), provider)
     }
