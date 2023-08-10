@@ -64,7 +64,7 @@ impl<'a> Inject<'a> {
     pub fn provide<T: Any + Sync + Send>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: Arc<dyn Provider<Dependency>>,
+        provider: Arc<dyn Provider<'a, Dependency>>,
     ) -> Result<()> {
         self.provide_key(Key::from_tag::<T>(tag.tag), provider)
     }
@@ -73,7 +73,7 @@ impl<'a> Inject<'a> {
     pub fn replace_with<T: Any + Sync + Send>(
         &mut self,
         tag: &'static Tag<T>,
-        provider: Arc<dyn Provider<Dependency>>,
+        provider: Arc<dyn Provider<'a, Dependency>>,
     ) -> Result<()> {
         self.replace_key_with(Key::from_tag::<T>(tag.tag), provider)
     }

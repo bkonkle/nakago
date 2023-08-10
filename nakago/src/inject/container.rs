@@ -14,7 +14,7 @@ use super::{Error, Key, Result};
 
 /// The injection Container
 #[derive(Default)]
-pub struct Inject<'a>(pub(crate) HashMap<Key, Mutex<Injector<'a>>>);
+pub struct Inject<'a>(pub(crate) HashMap<Key, Injector<'a>>);
 
 // An Injector is a wrapper around a Dependency that can be in one of two states:
 //   - Provider: The Dependency has not been requested yet, and a Provider function is available
@@ -22,7 +22,7 @@ pub struct Inject<'a>(pub(crate) HashMap<Key, Mutex<Injector<'a>>>);
 //   - Pending: The Dependency has been requested, and is wrapped in a Shared Promise that will
 //     resolve to the Dependency when it is ready.
 pub(crate) struct Injector<'a> {
-    value: Value<'a>,
+    value: Mutex<Value<'a>>,
 }
 
 #[derive(Clone)]
@@ -55,33 +55,41 @@ impl<'a, T: Any + Send + Sync> Provider<'a, dyn Any + Send + Sync> for T {
 impl<'a> Injector<'a> {
     fn from_pending(pending: Shared<Pending<'a>>) -> Self {
         Self {
-            value: Value::Pending(pending),
+            value: Mutex::new(Value::Pending(pending)),
         }
     }
 
     pub(crate) fn from_provider(provider: Arc<dyn Provider<'a, Dependency>>) -> Self {
         Self {
-            value: Value::Provider(provider),
+            value: Mutex::new(Value::Provider(provider)),
         }
     }
 
-    fn request(&'a mut self, inject: &'a Inject<'a>) -> Shared<Pending<'a>> {
-        self.value = Value::Pending(match &self.value {
-            // If this is a Dependency that has already been requested, it will already be in a
-            // Pending state. In that cose, clone the inner Shared Promise (which clones the
-            // inner Arc around the Dependency at the time it's resolved).
-            Value::Pending(pending) => pending.clone(),
-            // If this Dependency hasn't been requested yet, kick off the inner Shared Promise,
-            // which is a Provider that will resolve the Promise with the Dependency inside
-            // an Arc.
-            Value::Provider(provider) => provider.provide(inject).shared(),
-        });
+    async fn request(&'a self, inject: &'a Inject<'a>) -> Shared<Pending<'a>> {
+        let value = self.value.lock().await;
+        let temp = match &*value {
+            Value::Provider(provider) => Value::Pending(provider.provide(inject).shared()),
+            Value::Pending(pending) => Value::Pending(pending.clone()),
+        };
 
-        if let Value::Pending(pending) = &self.value {
-            return pending.clone();
-        } else {
-            unreachable!()
-        }
+        todo!()
+
+        // self.value = Value::Pending(match &self.value {
+        //     // If this is a Dependency that has already been requested, it will already be in a
+        //     // Pending state. In that cose, clone the inner Shared Promise (which clones the
+        //     // inner Arc around the Dependency at the time it's resolved).
+        //     Value::Pending(pending) => pending.clone(),
+        //     // If this Dependency hasn't been requested yet, kick off the inner Shared Promise,
+        //     // which is a Provider that will resolve the Promise with the Dependency inside
+        //     // an Arc.
+        //     Value::Provider(provider) => provider.provide(inject).shared(),
+        // });
+
+        // if let Value::Pending(pending) = &self.value {
+        //     return pending.clone();
+        // } else {
+        //     unreachable!()
+        // }
     }
 }
 
@@ -107,10 +115,9 @@ impl<'a> Inject<'a> {
         key: Key,
     ) -> Result<Option<Arc<T>>> {
         if let Some(injector) = self.0.get(&key) {
-            let mut value: MutexGuard<'a, Injector<'a>> = injector.lock().await;
-            let temp = value.request(self);
-
-            return temp
+            return injector
+                .request(self)
+                .await
                 .await?
                 .downcast::<T>()
                 .map(Some)
@@ -133,7 +140,7 @@ impl<'a> Inject<'a> {
                         dep,
                     ))));
 
-                let _ = entry.insert(Mutex::new(Injector::from_pending(pending.shared())));
+                let _ = entry.insert(Injector::from_pending(pending.shared()));
 
                 Ok(())
             }
@@ -149,7 +156,7 @@ impl<'a> Inject<'a> {
                         dep,
                     ))));
 
-                let _ = entry.insert(Mutex::new(Injector::from_pending(pending.shared())));
+                let _ = entry.insert(Injector::from_pending(pending.shared()));
 
                 Ok(())
             }
@@ -168,7 +175,7 @@ impl<'a> Inject<'a> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
-                let _ = entry.insert(Mutex::new(Injector::from_provider(provider)));
+                let _ = entry.insert(Injector::from_provider(provider));
 
                 Ok(())
             }
@@ -182,7 +189,7 @@ impl<'a> Inject<'a> {
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                let _ = entry.insert(Mutex::new(Injector::from_provider(provider)));
+                let _ = entry.insert(Injector::from_provider(provider));
 
                 Ok(())
             }

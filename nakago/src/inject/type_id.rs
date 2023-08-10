@@ -26,7 +26,7 @@ impl<'a> Inject<'a> {
     /// Register a Provider for a type-id dependency
     pub fn provide_type<T: Any + Send + Sync>(
         &mut self,
-        provider: Arc<dyn Provider<Dependency>>,
+        provider: Arc<dyn Provider<'a, Dependency>>,
     ) -> Result<()> {
         self.provide_key(Key::from_type_id::<T>(), provider)
     }
@@ -34,7 +34,7 @@ impl<'a> Inject<'a> {
     /// Replace an existing Provider for a type-id dependency
     pub fn replace_type_with<T: Any + Send + Sync>(
         &mut self,
-        provider: Arc<dyn Provider<Dependency>>,
+        provider: Arc<dyn Provider<'a, Dependency>>,
     ) -> Result<()> {
         self.replace_key_with(Key::from_type_id::<T>(), provider)
     }
