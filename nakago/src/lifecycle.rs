@@ -35,7 +35,7 @@ impl Events {
     pub async fn trigger(
         &mut self,
         event: &EventType,
-        i: &mut inject::Inject,
+        i: &'static mut inject::Inject,
     ) -> inject::Result<()> {
         if let Some(hooks) = self.hooks.get(event) {
             for hook in hooks {

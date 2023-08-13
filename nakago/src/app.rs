@@ -18,16 +18,16 @@ use crate::{
 
 /// The top-level Application struct
 pub struct Application<C: Config> {
+    i: &'static mut inject::Inject,
     events: Events,
-    i: inject::Inject,
     _phantom: PhantomData<C>,
 }
 
-impl<C: Config> Default for Application<C> {
-    fn default() -> Self {
+impl<C: Config> Application<C> {
+    fn new(i: &'static mut inject::Inject) -> Self {
         Self {
+            i,
             events: Events::default(),
-            i: inject::Inject::default(),
             _phantom: PhantomData,
         }
     }
@@ -63,15 +63,15 @@ where
     }
 
     /// Trigger the given lifecycle event
-    pub async fn trigger(&mut self, event: &EventType) -> inject::Result<()> {
-        self.events.trigger(event, &mut self.i).await
+    pub async fn trigger(&'static mut self, event: &EventType) -> inject::Result<()> {
+        self.events.trigger(event, self.i).await
     }
 
     /// Initialize the App
     ///
     /// **Provides:**
     ///   - `C: Config`
-    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
+    pub async fn init(&'static mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
         tracing_subscriber::registry()
             .with(tracing_subscriber::EnvFilter::new(
                 std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()),
@@ -83,12 +83,10 @@ where
         panic::set_hook(Box::new(handle_panic));
 
         // Trigger the Init lifecycle event
-        self.events.trigger(&EventType::Init, &mut self.i).await?;
+        self.events.trigger(&EventType::Init, self.i).await?;
 
         // Initialize the Config using the given path
-        InitConfig::<C>::new(config_path)
-            .handle(&mut self.i)
-            .await?;
+        InitConfig::<C>::new(config_path).handle(self.i).await?;
 
         Ok(())
     }
