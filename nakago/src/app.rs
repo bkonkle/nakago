@@ -63,7 +63,7 @@ where
     }
 
     /// Trigger the given lifecycle event
-    pub async fn trigger(&'static mut self, event: &EventType) -> inject::Result<()> {
+    pub async fn trigger(&mut self, event: &EventType) -> inject::Result<()> {
         self.events.trigger(event, &self.i).await
     }
 
@@ -71,7 +71,7 @@ where
     ///
     /// **Provides:**
     ///   - `C: Config`
-    pub async fn init(&'static self, config_path: Option<PathBuf>) -> inject::Result<()> {
+    pub async fn init(&self, config_path: Option<PathBuf>) -> inject::Result<()> {
         tracing_subscriber::registry()
             .with(tracing_subscriber::EnvFilter::new(
                 std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()),
@@ -92,7 +92,7 @@ where
     }
 
     /// Run the Application by starting the listener
-    pub async fn start(&'static self) -> inject::Result<()> {
+    pub async fn start(&self) -> inject::Result<()> {
         // Trigger the Start lifecycle event
         self.events.trigger(&EventType::Startup, &self.i).await?;
 
@@ -100,7 +100,7 @@ where
     }
 
     /// Shut down the Application by stopping the listener
-    pub async fn stop(&'static self) -> inject::Result<()> {
+    pub async fn stop(&self) -> inject::Result<()> {
         // Trigger the Stop lifecycle event
         self.events.trigger(&EventType::Shutdown, &self.i).await?;
 

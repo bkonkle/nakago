@@ -52,7 +52,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_inject_success() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         let service = TestService::new(fake::uuid::UUIDv4.fake());
 
@@ -70,7 +70,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_inject_occupied() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         i.inject_type(TestService::new(fake::uuid::UUIDv4.fake()))
             .await?;
@@ -94,7 +94,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_get_opt_success() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
@@ -109,7 +109,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_get_opt_vec_success() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
@@ -136,7 +136,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_get_success() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
@@ -151,7 +151,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_dyn_get_success() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
@@ -188,7 +188,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_replace_success() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
@@ -210,7 +210,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_replace_not_found() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         i.inject_type(Box::new(TestService::new(fake::uuid::UUIDv4.fake())))
             .await?;

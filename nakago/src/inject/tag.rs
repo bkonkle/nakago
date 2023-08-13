@@ -144,7 +144,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_get_tag_opt_success() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
@@ -221,7 +221,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_replace_tag_success() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
@@ -241,7 +241,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_replace_not_found() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
             .await?;
