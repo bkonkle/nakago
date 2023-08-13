@@ -163,33 +163,33 @@ impl Inject {
         }
     }
 
-    pub(crate) async fn provide_key<T: Any + Send + Sync>(
+    pub(crate) async fn provide_key(
         &self,
         key: Key,
-        provider: impl Provider<T>,
+        provider: Arc<dyn Provider<Dependency>>,
     ) -> Result<()> {
         let mut container = self.0.write().await;
 
         match container.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
-                let _ = entry.insert(Injector::from_provider(Arc::new(provider)));
+                let _ = entry.insert(Injector::from_provider(provider));
 
                 Ok(())
             }
         }
     }
 
-    pub(crate) async fn replace_key_with<T: Any + Send + Sync>(
+    pub(crate) async fn replace_key_with(
         &self,
         key: Key,
-        provider: impl Provider<T>,
+        provider: Arc<dyn Provider<Dependency>>,
     ) -> Result<()> {
         let mut container = self.0.write().await;
 
         match container.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                let _ = entry.insert(Injector::from_provider(Arc::new(provider)));
+                let _ = entry.insert(Injector::from_provider(provider));
 
                 Ok(())
             }
@@ -324,8 +324,10 @@ pub(crate) mod test {
     async fn test_provide_success() -> Result<()> {
         let i = Inject::default();
 
-        i.provide_type::<TestService>(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
-            .await?;
+        i.provide_type::<TestService>(Arc::new(TestServiceProvider::new(
+            fake::uuid::UUIDv4.fake(),
+        )))
+        .await?;
 
         assert!(
             i.0.read()
