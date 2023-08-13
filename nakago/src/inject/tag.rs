@@ -38,44 +38,46 @@ impl<T> Deref for Tag<T> {
 
 impl Inject {
     /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
-    pub async fn get<T: Any + Send + Sync>(&'static self, tag: &'static Tag<T>) -> Result<Arc<T>> {
+    pub async fn get<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<Arc<T>> {
         self.get_key(Key::from_tag::<T>(tag.tag)).await
     }
 
     /// Retrieve a reference to a tagged dependency if it exists in the map
     pub async fn get_opt<T: Any + Send + Sync>(
-        &'static self,
+        &self,
         tag: &'static Tag<T>,
     ) -> Result<Option<Arc<T>>> {
         self.get_key_opt(Key::from_tag::<T>(tag.tag)).await
     }
 
     /// Provide a tagged dependency directly
-    pub fn inject<T: Any + Sync + Send>(&mut self, tag: &'static Tag<T>, dep: T) -> Result<()> {
-        self.inject_key(Key::from_tag::<T>(tag.tag), dep)
+    pub async fn inject<T: Any + Sync + Send>(&self, tag: &'static Tag<T>, dep: T) -> Result<()> {
+        self.inject_key(Key::from_tag::<T>(tag.tag), dep).await
     }
 
     /// Replace an existing tagged dependency directly
-    pub fn replace<T: Any + Sync + Send>(&mut self, tag: &'static Tag<T>, dep: T) -> Result<()> {
-        self.replace_key(Key::from_tag::<T>(tag.tag), dep)
+    pub async fn replace<T: Any + Sync + Send>(&self, tag: &'static Tag<T>, dep: T) -> Result<()> {
+        self.replace_key(Key::from_tag::<T>(tag.tag), dep).await
     }
 
     /// Register a Provider for a tagged dependency
-    pub fn provide<T: Any + Sync + Send>(
-        &mut self,
+    pub async fn provide<T: Any + Sync + Send>(
+        &self,
         tag: &'static Tag<T>,
-        provider: impl Provider<T> + 'static,
+        provider: impl Provider<T>,
     ) -> Result<()> {
         self.provide_key(Key::from_tag::<T>(tag.tag), provider)
+            .await
     }
 
     /// Replace an existing Provider for a tagged dependency
-    pub fn replace_with<T: Any + Sync + Send>(
-        &mut self,
+    pub async fn replace_with<T: Any + Sync + Send>(
+        &self,
         tag: &'static Tag<T>,
-        provider: impl Provider<T> + 'static,
+        provider: impl Provider<T>,
     ) -> Result<()> {
         self.replace_key_with(Key::from_tag::<T>(tag.tag), provider)
+            .await
     }
 }
 
@@ -99,28 +101,34 @@ pub(crate) mod test {
         fn test_fn(&self) {}
     }
 
-    #[test]
-    fn test_inject_tag_success() -> Result<()> {
-        let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_inject_tag_success() -> Result<()> {
+        let i = Inject::default();
 
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
+        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
         assert!(
-            i.0.contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
+            i.0.read()
+                .await
+                .contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
             "key does not exist in injection container"
         );
 
         Ok(())
     }
 
-    #[test]
-    fn test_inject_tag_occupied() -> Result<()> {
-        let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_inject_tag_occupied() -> Result<()> {
+        let i = Inject::default();
 
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
+        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
         // Inject the same type a second time
-        let result = i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()));
+        let result = i
+            .inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            .await;
 
         if let Err(err) = result {
             assert_eq!(
@@ -140,7 +148,8 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))?;
+        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))
+            .await?;
 
         let result = i.get_opt(&SERVICE_TAG).await?.unwrap();
 
@@ -162,11 +171,12 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_get_tag_success() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))?;
+        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))
+            .await?;
 
         let result = i.get(&SERVICE_TAG).await?;
 
@@ -177,11 +187,12 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_get_dyn_tag_success() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject::<Arc<dyn HasId>>(&DYN_TAG, Arc::new(TestService::new(expected.clone())))?;
+        i.inject::<Arc<dyn HasId>>(&DYN_TAG, Arc::new(TestService::new(expected.clone())))
+            .await?;
 
         let result = i.get(&DYN_TAG).await?;
 
@@ -214,10 +225,12 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
+        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
         // Override the instance that was injected the first time
-        i.replace(&SERVICE_TAG, TestService::new(expected.clone()))?;
+        i.replace(&SERVICE_TAG, TestService::new(expected.clone()))
+            .await?;
 
         let result = i.get(&SERVICE_TAG).await?;
 
@@ -226,14 +239,17 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_replace_not_found() -> Result<()> {
+    #[tokio::test]
+    async fn test_replace_not_found() -> Result<()> {
         let mut i = Inject::default();
 
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
+        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
         // Override a type that doesn't have any instances yet
-        let result = i.replace(&OTHER_TAG, OtherService::new(fake::uuid::UUIDv4.fake()));
+        let result = i
+            .replace(&OTHER_TAG, OtherService::new(fake::uuid::UUIDv4.fake()))
+            .await;
 
         if let Err(err) = result {
             assert_eq!(

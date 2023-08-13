@@ -43,7 +43,7 @@ impl<C: Config> InitConfig<C> {
 
 #[async_trait]
 impl<C: Config> inject::Hook for InitConfig<C> {
-    async fn handle(&self, i: &'static mut inject::Inject) -> inject::Result<()> {
+    async fn handle(&self, i: &inject::Inject) -> inject::Result<()> {
         if let Ok(loaders) = i.get(&CONFIG_LOADERS).await {
             let loader = Loader::<C>::new(loaders.lock().await.clone());
 
@@ -51,7 +51,7 @@ impl<C: Config> inject::Hook for InitConfig<C> {
                 .load(self.custom_path.clone())
                 .map_err(|e| inject::Error::Provider(Arc::new(e.into())))?;
 
-            i.inject_type(config)?;
+            i.inject_type(config).await?;
         }
 
         Ok(())
@@ -76,7 +76,7 @@ impl AddConfigLoaders {
 
 #[async_trait]
 impl inject::Hook for AddConfigLoaders {
-    async fn handle(&self, i: &'static mut inject::Inject) -> inject::Result<()> {
+    async fn handle(&self, i: &inject::Inject) -> inject::Result<()> {
         if let Ok(existing) = i.get(&CONFIG_LOADERS).await {
             let mut existing = existing.lock().await;
 
@@ -85,7 +85,8 @@ impl inject::Hook for AddConfigLoaders {
                 existing.push(loader.clone());
             }
         } else {
-            i.inject(&CONFIG_LOADERS, Mutex::new(self.loaders.clone()))?;
+            i.inject(&CONFIG_LOADERS, Mutex::new(self.loaders.clone()))
+                .await?;
         }
 
         Ok(())

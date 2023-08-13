@@ -33,9 +33,9 @@ impl Events {
 
     /// Trigger the given lifecycle event and handle hooks with the given injection container
     pub async fn trigger(
-        &mut self,
+        &self,
         event: &EventType,
-        i: &'static mut inject::Inject,
+        i: &'static inject::Inject,
     ) -> inject::Result<()> {
         if let Some(hooks) = self.hooks.get(event) {
             for hook in hooks {
