@@ -22,7 +22,7 @@ pub(crate) struct Injector {
 
 #[derive(Clone)]
 enum Value {
-    Provider(Arc<dyn AnyProvider>),
+    Provider(Arc<dyn ProvideAny>),
     Pending(Shared<Pending>),
 }
 
@@ -36,23 +36,14 @@ pub type Pending = Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>>
 #[async_trait]
 pub trait Provider<T: Any + Send + Sync + ?Sized>: Send + Sync {
     /// Provide a dependency for the container
-    async fn provide(self, i: Inject) -> Result<Arc<T>>;
+    async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<T>>;
 }
 
 #[async_trait]
-pub trait AnyProvider: Send + Sync {
-    async fn provide_any(self, i: Inject) -> Result<Arc<Dependency>>;
-}
-
-#[async_trait]
-impl<T: Any + Send + Sync> AnyProvider for Arc<dyn Provider<T>> {
-    /// Provide a dependency for the container
-    async fn provide_any(self, i: Inject) -> Result<Arc<Dependency>> {
-        println!(">------ provide any ------<");
-        let dep = self.provide(i).await?;
-
-        Ok(dep)
-    }
+/// A trait for async injection Providers that can provide any type
+pub trait ProvideAny: Send + Sync {
+    /// Provide an Any dependency for the container
+    async fn provide_any(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>>;
 }
 
 impl Injector {
@@ -62,31 +53,24 @@ impl Injector {
         }
     }
 
-    pub(crate) fn from_provider(provider: Arc<dyn AnyProvider>) -> Self {
+    pub(crate) fn from_provider<T: Any + Send + Sync>(
+        provider: impl Provider<T> + ProvideAny + 'static,
+    ) -> Self {
         Self {
-            value: RwLock::new(Value::Provider(provider)),
+            value: RwLock::new(Value::Provider(Arc::new(provider))),
         }
     }
 
     async fn request(&self, inject: Inject) -> Shared<Pending> {
-        println!(">------ getting value ------<");
-
         let value = self.value.read().await;
 
-        println!(">------ value lock acquired ------<");
-
         if let Value::Pending(pending) = &*value {
-            println!(">------ returning already pending value ------<");
             return pending.clone();
         }
 
         drop(value);
 
-        println!(">------ getting mut value ------<");
-
         let mut value = self.value.write().await;
-
-        println!(">------ mut value lock acquired ------<");
 
         *value = Value::Pending(match value.clone() {
             Value::Pending(pending) => pending,
@@ -94,7 +78,6 @@ impl Injector {
         });
 
         if let Value::Pending(pending) = &*value {
-            println!(">------ returning pending value ------<");
             pending.clone()
         } else {
             // We still hold the lock and the above operation is guaranteed to return a pending
@@ -111,11 +94,7 @@ impl Inject {
         if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
             Ok(dep)
         } else {
-            println!(">------ accessing container ------<");
-
             let container = self.0.read().await;
-
-            println!(">------ lock acquired ------<");
 
             Err(Error::NotFound {
                 missing: key,
@@ -129,17 +108,11 @@ impl Inject {
         &self,
         key: Key,
     ) -> Result<Option<Arc<T>>> {
-        println!(">------ accessing container (opt) ------<");
-
         let container = self.0.read().await;
-
-        println!(">------ lock acquired (opt) ------<");
 
         if let Some(injector) = container.get(&key) {
             let pending = injector.request(self.clone()).await;
-            println!(">- pending -> {:?}", pending);
             let value = pending.await?;
-            println!(">- value -> {:?}", value);
 
             return value
                 .downcast::<T>()
@@ -194,7 +167,11 @@ impl Inject {
         }
     }
 
-    pub(crate) async fn provide_key(&self, key: Key, provider: Arc<dyn AnyProvider>) -> Result<()> {
+    pub(crate) async fn provide_key<T: Any + Send + Sync>(
+        &self,
+        key: Key,
+        provider: impl Provider<T> + ProvideAny + 'static,
+    ) -> Result<()> {
         let mut container = self.0.write().await;
 
         match container.entry(key.clone()) {
@@ -207,10 +184,10 @@ impl Inject {
         }
     }
 
-    pub(crate) async fn replace_key_with(
+    pub(crate) async fn replace_key_with<T: Any + Send + Sync>(
         &self,
         key: Key,
-        provider: Arc<dyn AnyProvider>,
+        provider: impl Provider<T> + ProvideAny + 'static,
     ) -> Result<()> {
         let mut container = self.0.write().await;
 
@@ -254,6 +231,7 @@ pub(crate) mod test {
         fn get_id(&self) -> String;
     }
 
+    #[derive(Debug, Clone)]
     pub struct TestService {
         pub(crate) id: String,
     }
@@ -299,10 +277,17 @@ pub(crate) mod test {
 
     #[async_trait]
     impl Provider<TestService> for TestServiceProvider {
-        async fn provide(self, _i: Inject) -> Result<Arc<TestService>> {
-            println!(">- providing -> {:?}", self.id);
+        async fn provide(self: Arc<Self>, _i: Inject) -> Result<Arc<TestService>> {
+            Ok(Arc::new(TestService::new(self.id.clone())))
+        }
+    }
 
-            Ok(Arc::new(TestService::new(self.id)))
+    #[async_trait]
+    impl ProvideAny for TestServiceProvider {
+        async fn provide_any(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>> {
+            let dep = self.provide(i).await?;
+
+            Ok(dep)
         }
     }
 
@@ -319,15 +304,15 @@ pub(crate) mod test {
 
     #[async_trait]
     impl Provider<OtherService> for OtherServiceProvider {
-        async fn provide(self, _i: Inject) -> Result<Arc<OtherService>> {
-            Ok(Arc::new(OtherService::new(self.id)))
+        async fn provide(self: Arc<Self>, _i: Inject) -> Result<Arc<OtherService>> {
+            Ok(Arc::new(OtherService::new(self.id.clone())))
         }
     }
 
     #[async_trait]
     impl Provider<dyn HasId> for OtherServiceProvider {
-        async fn provide(self, _i: Inject) -> Result<Arc<dyn HasId>> {
-            Ok(Arc::new(OtherService::new(self.id)))
+        async fn provide(self: Arc<Self>, _i: Inject) -> Result<Arc<dyn HasId>> {
+            Ok(Arc::new(OtherService::new(self.id.clone())))
         }
     }
 
@@ -336,7 +321,7 @@ pub(crate) mod test {
 
     #[async_trait]
     impl Provider<dyn HasId> for TestServiceHasIdProvider {
-        async fn provide(self, i: Inject) -> Result<Arc<dyn HasId>> {
+        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<dyn HasId>> {
             // Trigger a borrow so that the reference to `Inject` has to be held across the await
             // point below, to test issues with Inject thread safety.
             let _ = i.get_type::<String>().await;
@@ -353,10 +338,8 @@ pub(crate) mod test {
     async fn test_provide_success() -> Result<()> {
         let i = Inject::default();
 
-        i.provide_type::<TestService>(Arc::new(TestServiceProvider::new(
-            fake::uuid::UUIDv4.fake(),
-        )))
-        .await?;
+        i.provide_type::<TestService>(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
         assert!(
             i.0.read()
