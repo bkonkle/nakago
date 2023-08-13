@@ -21,7 +21,7 @@ pub enum Id {
 }
 
 impl Key {
-    pub(crate) fn from_type_id<T: Any>() -> Self {
+    pub(crate) fn from_type_id<T: Any + ?Sized>() -> Self {
         Self {
             id: Id::TypeId(TypeId::of::<T>()),
             type_name: type_name::<T>().to_string(),

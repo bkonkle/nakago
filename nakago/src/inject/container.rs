@@ -53,7 +53,7 @@ impl Injector {
         }
     }
 
-    pub(crate) fn from_provider<T: Any + Send + Sync>(
+    pub(crate) fn from_provider<T: Any + Send + Sync + ?Sized>(
         provider: impl Provider<T> + ProvideAny + 'static,
     ) -> Self {
         Self {
@@ -167,7 +167,7 @@ impl Inject {
         }
     }
 
-    pub(crate) async fn provide_key<T: Any + Send + Sync>(
+    pub(crate) async fn provide_key<T: Any + Send + Sync + ?Sized>(
         &self,
         key: Key,
         provider: impl Provider<T> + ProvideAny + 'static,
@@ -332,13 +332,24 @@ pub(crate) mod test {
         }
     }
 
+    #[async_trait]
+    impl ProvideAny for TestServiceHasIdProvider {
+        async fn provide_any(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>> {
+            let dep = self.provide(i).await?;
+
+            Ok(dep)
+        }
+    }
+
     // TODO: Re-implement these tests
 
     #[tokio::test]
     async fn test_provide_success() -> Result<()> {
         let i = Inject::default();
 
-        i.provide_type::<TestService>(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+        let id: String = fake::uuid::UUIDv4.fake();
+
+        i.provide_type::<TestService>(TestServiceProvider::new(id.clone()))
             .await?;
 
         assert!(
@@ -348,25 +359,29 @@ pub(crate) mod test {
             "key does not exist in injection container"
         );
 
-        let _ = i.get_type::<TestService>().await?;
+        let service = i.get_type::<TestService>().await?;
+
+        assert_eq!(service.id, id);
 
         Ok(())
     }
 
-    // #[tokio::test]
-    // async fn test_provide_dyn_success() -> Result<()> {
-    //     let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_provide_dyn_success() -> Result<()> {
+        let mut i = Inject::default();
 
-    //     i.provide_type_old(TestServiceHasIdProvider::default())
-    //         .await?;
+        i.provide_type::<dyn HasId>(TestServiceHasIdProvider::default())
+            .await?;
 
-    //     assert!(
-    //         i.0.contains_key(&Key::from_type_id::<Arc<dyn HasId>>()),
-    //         "key does not exist in injection container"
-    //     );
+        assert!(
+            i.0.read()
+                .await
+                .contains_key(&Key::from_type_id::<Arc<dyn HasId>>()),
+            "key does not exist in injection container"
+        );
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     // #[tokio::test]
     // async fn test_provide_occupied() -> Result<()> {

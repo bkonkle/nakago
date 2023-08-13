@@ -24,7 +24,7 @@ impl Inject {
     }
 
     /// Register a Provider for a type-id dependency
-    pub async fn provide_type<T: Any + Send + Sync>(
+    pub async fn provide_type<T: Any + Send + Sync + ?Sized>(
         &self,
         provider: impl Provider<T> + ProvideAny + 'static,
     ) -> Result<()> {
