@@ -1,15 +1,15 @@
 use std::{any::Any, sync::Arc};
 
-use super::{container::Dependency, Inject, Key, Provider, Result};
+use super::{Inject, Key, Provider, Result};
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub async fn get_type<T: Any + Send + Sync>(&self) -> Result<Arc<T>> {
+    pub async fn get_type<T: Any + Send + Sync>(&'static self) -> Result<Arc<T>> {
         self.get_key(Key::from_type_id::<T>()).await
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
-    pub async fn get_type_opt<T: Any + Send + Sync>(&self) -> Result<Option<Arc<T>>> {
+    pub async fn get_type_opt<T: Any + Send + Sync>(&'static self) -> Result<Option<Arc<T>>> {
         self.get_key_opt(Key::from_type_id::<T>()).await
     }
 
@@ -26,7 +26,7 @@ impl Inject {
     /// Register a Provider for a type-id dependency
     pub fn provide_type<T: Any + Send + Sync>(
         &mut self,
-        provider: Box<dyn Provider<Dependency>>,
+        provider: impl Provider<T> + 'static,
     ) -> Result<()> {
         self.provide_key(Key::from_type_id::<T>(), provider)
     }
@@ -34,7 +34,7 @@ impl Inject {
     /// Replace an existing Provider for a type-id dependency
     pub fn replace_type_with<T: Any + Send + Sync>(
         &mut self,
-        provider: Box<dyn Provider<Dependency>>,
+        provider: impl Provider<T> + 'static,
     ) -> Result<()> {
         self.replace_key_with(Key::from_type_id::<T>(), provider)
     }

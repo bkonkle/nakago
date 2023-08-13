@@ -8,6 +8,7 @@ use std::{
 
 use async_trait::async_trait;
 use futures::{future::Shared, Future, FutureExt};
+use tokio::sync::RwLock;
 
 use super::{Error, Key, Result};
 
@@ -15,17 +16,13 @@ use super::{Error, Key, Result};
 #[derive(Default)]
 pub struct Inject(pub(crate) HashMap<Key, Injector>);
 
-// An Injector is a wrapper around a Dependency that can be in one of two states:
-//   - Provider: The Dependency has not been requested yet, and a Provider function is available
-//     to create the Dependency when it is requested.
-//   - Pending: The Dependency has been requested, and is wrapped in a Shared Promise that will
-//     resolve to the Dependency when it is ready.
 pub(crate) struct Injector {
-    value: Value,
+    value: RwLock<Value>,
 }
 
+#[derive(Clone)]
 enum Value {
-    Provider(Box<dyn Provider<Dependency>>),
+    Provider(Arc<dyn Provider<Dependency>>),
     Pending(Shared<Pending>),
 }
 
@@ -39,13 +36,13 @@ pub type Pending = Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>>
 #[async_trait]
 pub trait Provider<T: Any + Send + Sync + ?Sized>: Send + Sync {
     /// Provide a dependency for the container
-    async fn provide(&self, i: &Inject) -> Result<Arc<T>>;
+    async fn provide(self, i: &Inject) -> Result<Arc<T>>;
 }
 
 #[async_trait]
 impl<T: Any + Send + Sync> Provider<dyn Any + Send + Sync> for T {
     /// Provide a dependency for the container
-    async fn provide(&self, i: &Inject) -> Result<Arc<dyn Any + Send + Sync>> {
+    async fn provide(self, i: &Inject) -> Result<Arc<dyn Any + Send + Sync>> {
         self.provide(i).await
     }
 }
@@ -53,32 +50,32 @@ impl<T: Any + Send + Sync> Provider<dyn Any + Send + Sync> for T {
 impl Injector {
     fn from_pending(pending: Shared<Pending>) -> Self {
         Self {
-            value: Value::Pending(pending),
+            value: RwLock::new(Value::Pending(pending)),
         }
     }
 
-    pub(crate) fn from_provider(provider: Box<dyn Provider<Dependency>>) -> Self {
+    pub(crate) fn from_provider(provider: Arc<dyn Provider<Dependency>>) -> Self {
         Self {
-            value: Value::Provider(provider),
+            value: RwLock::new(Value::Provider(provider)),
         }
     }
 
-    fn request(&self, inject: &Inject) -> Shared<Pending> {
-        self.value = Value::Pending(match &self.value {
-            // If this is a Dependency that has already been requested, it will already be in a
-            // Pending state. In that cose, clone the inner Shared Promise (which clones the
-            // inner Arc around the Dependency at the time it's resolved).
-            Value::Pending(pending) => pending.clone(),
-            // If this Dependency hasn't been requested yet, kick off the inner Shared Promise,
-            // which is a Provider that will resolve the Promise with the Dependency inside
-            // an Arc.
-            Value::Provider(provider) => provider.provide(inject).shared(),
-        });
+    async fn request(&self, inject: &'static Inject) -> Shared<Pending> {
+        let value = self.value.read().await.clone();
 
-        if let Value::Pending(pending) = &self.value {
+        if let Value::Pending(pending) = value {
             return pending.clone();
-        } else {
-            unreachable!()
+        }
+
+        let mut value = self.value.write().await;
+
+        match value.clone() {
+            Value::Pending(pending) => pending.clone(),
+            Value::Provider(provider) => {
+                let pending = provider.provide(inject).shared();
+                *value = Value::Pending(pending.clone());
+                pending.clone()
+            }
         }
     }
 }
@@ -86,7 +83,7 @@ impl Injector {
 // The base methods powering both the Tag and TypeId modes
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub(crate) async fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<Arc<T>> {
+    pub(crate) async fn get_key<T: Any + Send + Sync>(&'static self, key: Key) -> Result<Arc<T>> {
         let available = self.available_type_names();
 
         if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
@@ -101,13 +98,13 @@ impl Inject {
 
     /// Retrieve a reference to a dependency if it exists in the map
     pub(crate) async fn get_key_opt<T: Any + Send + Sync>(
-        &self,
+        &'static self,
         key: Key,
     ) -> Result<Option<Arc<T>>> {
         let injector = self.0.get(&key);
 
         if let Some(injector) = injector {
-            let value = injector.request(self).await?;
+            let value = injector.request(self).await.await?;
 
             return value
                 .downcast::<T>()
@@ -158,29 +155,29 @@ impl Inject {
         }
     }
 
-    pub(crate) fn provide_key(
+    pub(crate) fn provide_key<T: Any + Send + Sync>(
         &mut self,
         key: Key,
-        provider: Box<dyn Provider<Dependency>>,
+        provider: impl Provider<T> + 'static,
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
-                let _ = entry.insert(Injector::from_provider(provider));
+                let _ = entry.insert(Injector::from_provider(Arc::new(provider)));
 
                 Ok(())
             }
         }
     }
 
-    pub(crate) fn replace_key_with(
+    pub(crate) fn replace_key_with<T: Any + Send + Sync>(
         &mut self,
         key: Key,
-        provider: Box<dyn Provider<Dependency>>,
+        provider: impl Provider<T> + 'static,
     ) -> Result<()> {
         match self.0.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                let _ = entry.insert(Injector::from_provider(provider));
+                let _ = entry.insert(Injector::from_provider(Arc::new(provider)));
 
                 Ok(())
             }
