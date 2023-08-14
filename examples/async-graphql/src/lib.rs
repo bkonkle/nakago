@@ -23,10 +23,10 @@ pub mod config;
 pub mod utils;
 
 /// Database utils
-mod db;
+pub mod db;
 
 /// GraphQL utils
-mod graphql;
+pub mod graphql;
 
 /// Error macros
 #[macro_use]

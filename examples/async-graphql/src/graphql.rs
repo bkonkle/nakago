@@ -38,6 +38,7 @@ pub struct Mutation(
 /// The application's top-level merged GraphQL schema
 pub type GraphQLSchema = Schema<Query, Mutation, EmptySubscription>;
 
+/// Tag(GraphQLSchema)
 pub const GRAPHQL_SCHEMA: Tag<GraphQLSchema> = Tag::new("GraphQLSchema");
 
 /// Initialize all necessary dependencies to create a `GraphQLSchema`. Very simple dependency
@@ -64,6 +65,8 @@ pub struct InitGraphQLSchema {}
 #[async_trait]
 impl Hook for InitGraphQLSchema {
     async fn handle(&self, i: &Inject) -> InjectResult<()> {
+        println!(">------ InitGraphQLSchema ------<");
+
         let user_loader = i.get(&USER_LOADER).await?;
         let profile_loader = i.get(&PROFILE_LOADER).await?;
         let role_grant_loader = i.get(&ROLE_GRANT_LOADER).await?;

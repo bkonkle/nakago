@@ -1,4 +1,5 @@
-use nakago::inject;
+use async_trait::async_trait;
+use nakago::{Hook, Inject, InjectResult};
 
 use super::{
     episodes::providers::{
@@ -30,36 +31,42 @@ use super::{
 ///
 /// **Depends on:**
 ///  - `Tag(DatabaseConnection)`
-pub async fn init_domains(i: &inject::Inject) -> inject::Result<()> {
-    i.provide(&USERS_SERVICE, ProvideUsersService::default())
-        .await?;
+#[derive(Default)]
+pub struct InitDomains {}
 
-    i.provide(&USER_LOADER, ProvideUserLoader::default())
-        .await?;
+#[async_trait]
+impl Hook for InitDomains {
+    async fn handle(&self, i: &Inject) -> InjectResult<()> {
+        i.provide(&USERS_SERVICE, ProvideUsersService::default())
+            .await?;
 
-    i.provide(&PROFILES_SERVICE, ProvideProfilesService::default())
-        .await?;
+        i.provide(&USER_LOADER, ProvideUserLoader::default())
+            .await?;
 
-    i.provide(&PROFILE_LOADER, ProvideProfileLoader::default())
-        .await?;
+        i.provide(&PROFILES_SERVICE, ProvideProfilesService::default())
+            .await?;
 
-    i.provide(&ROLE_GRANTS_SERVICE, ProvideRoleGrantsService::default())
-        .await?;
+        i.provide(&PROFILE_LOADER, ProvideProfileLoader::default())
+            .await?;
 
-    i.provide(&ROLE_GRANT_LOADER, ProvideRoleGrantLoader::default())
-        .await?;
+        i.provide(&ROLE_GRANTS_SERVICE, ProvideRoleGrantsService::default())
+            .await?;
 
-    i.provide(&SHOWS_SERVICE, ProvideShowsService::default())
-        .await?;
+        i.provide(&ROLE_GRANT_LOADER, ProvideRoleGrantLoader::default())
+            .await?;
 
-    i.provide(&SHOW_LOADER, ProvideShowLoader::default())
-        .await?;
+        i.provide(&SHOWS_SERVICE, ProvideShowsService::default())
+            .await?;
 
-    i.provide(&EPISODES_SERVICE, ProvideEpisodesService::default())
-        .await?;
+        i.provide(&SHOW_LOADER, ProvideShowLoader::default())
+            .await?;
 
-    i.provide(&EPISODE_LOADER, ProvideEpisodeLoader::default())
-        .await?;
+        i.provide(&EPISODES_SERVICE, ProvideEpisodesService::default())
+            .await?;
 
-    Ok(())
+        i.provide(&EPISODE_LOADER, ProvideEpisodeLoader::default())
+            .await?;
+
+        Ok(())
+    }
 }
