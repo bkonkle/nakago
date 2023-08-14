@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2023-08-13
+
+### Changed
+
+- Re-arranged the `nakago-axum` package a bit, to remove "providers.rs" files.
+
 ## [0.7.1] - 2023-08-13
 
 ### Changed
@@ -104,7 +110,8 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
-[0.7.1]: https://github.com/bkonkle/nakago/compare/0.6.0...0.7.1
+[0.7.2]: https://github.com/bkonkle/nakago/compare/0.7.1...0.7.2
+[0.7.1]: https://github.com/bkonkle/nakago/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/bkonkle/nakago/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/bkonkle/nakago/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/bkonkle/nakago/compare/0.4.0...0.5.0
