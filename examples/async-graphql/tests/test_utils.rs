@@ -19,13 +19,15 @@ use nakago_axum::{auth::config::AuthConfig, AxumApplication};
 use nakago_examples_async_graphql::{
     config::AppConfig,
     domains::{
-        episodes::{model::Episode, mutations::CreateEpisodeInput, providers::EPISODES_SERVICE},
-        profiles::{model::Profile, mutations::CreateProfileInput, providers::PROFILES_SERVICE},
-        shows::{model::Show, mutations::CreateShowInput, providers::SHOWS_SERVICE},
-        users::{model::User, providers::USERS_SERVICE},
+        episodes::{model::Episode, mutations::CreateEpisodeInput, service::EPISODES_SERVICE},
+        profiles::{model::Profile, mutations::CreateProfileInput, service::PROFILES_SERVICE},
+        shows::{model::Show, mutations::CreateShowInput, service::SHOWS_SERVICE},
+        users::{model::User, service::USERS_SERVICE},
+        InitDomains,
     },
-    providers::{InitApp, StartApp},
-    routes::{init_events_route, init_graphql_route, init_health_route, AppState},
+    init::InitApp,
+    routes::AppState,
+    utils::authz::InitAuthz,
 };
 use once_cell::sync::Lazy;
 use serde::Deserialize;
@@ -51,10 +53,8 @@ pub fn http_client() -> Client<HttpsConnector<HttpConnector>> {
 pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
     let mut app = AxumApplication::<AppConfig>::default();
     app.on(&EventType::Init, InitApp::default());
-    app.on(&EventType::Init, init_health_route());
-    app.on(&EventType::Init, init_graphql_route());
-    app.on(&EventType::Init, init_events_route());
-    app.on(&EventType::Startup, StartApp::default());
+    app.on(&EventType::Init, InitDomains::default());
+    app.on(&EventType::Startup, InitAuthz::default());
 
     let server = app.run::<AppState>(None).await?;
     let addr = server.local_addr();

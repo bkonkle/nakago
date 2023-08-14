@@ -7,9 +7,6 @@ pub mod handlers;
 /// `WebSocket` Events
 pub mod events;
 
-/// Dependency Injection providers
-pub mod providers;
-
 /// Axum Routes
 pub mod routes;
 
@@ -20,13 +17,16 @@ pub mod domains;
 pub mod config;
 
 /// Application utils
-mod utils;
+pub mod utils;
 
 /// Database utils
-mod db;
+pub mod db;
 
 /// GraphQL utils
-mod graphql;
+pub mod graphql;
+
+/// App Initialization
+pub mod init;
 
 /// Error macros
 #[macro_use]

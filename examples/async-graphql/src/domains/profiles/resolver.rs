@@ -9,7 +9,7 @@ use super::{
     service::ProfilesService,
 };
 use crate::{
-    domains::users::{model::User, service::UserLoader},
+    domains::users::{loaders::UserLoader, model::User},
     utils::graphql::{as_graphql_error, graphql_error},
 };
 

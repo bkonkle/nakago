@@ -12,7 +12,8 @@ use crate::domains::{
         resolver::{EpisodesMutation, EpisodesQuery},
         service::{EpisodesService, MockEpisodesService},
     },
-    shows::service::{MockShowsService, ShowLoader, ShowsService},
+    shows::loaders::ShowLoader,
+    shows::service::{MockShowsService, ShowsService},
 };
 
 fn init(

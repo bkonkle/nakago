@@ -1,7 +1,7 @@
 use anyhow::Result;
 use fake::{faker::internet::en::FreeEmail, Fake};
 use hyper::body::to_bytes;
-use nakago_examples_async_graphql::domains::users::providers::USERS_SERVICE;
+use nakago_examples_async_graphql::domains::users::service::USERS_SERVICE;
 use pretty_assertions::assert_eq;
 use serde_json::{json, Value};
 use ulid::Ulid;
