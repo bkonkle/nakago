@@ -1,6 +1,6 @@
 #![allow(dead_code)] // Since each test is an independent module, this is needed
 
-use std::{default::Default, net::SocketAddr, time::Duration};
+use std::{default::Default, net::SocketAddr, sync::Arc, time::Duration};
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -14,18 +14,20 @@ use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
 use hyper::{client::HttpConnector, Body, Client, Method, Request};
 use hyper_tls::HttpsConnector;
-use nakago::{inject, EventType};
+use nakago::{Dependency, EventType, Inject, InjectResult, Provider};
 use nakago_axum::{auth::config::AuthConfig, AxumApplication};
 use nakago_examples_async_graphql::{
     config::AppConfig,
     domains::{
-        episodes::{model::Episode, mutations::CreateEpisodeInput, providers::EPISODES_SERVICE},
-        profiles::{model::Profile, mutations::CreateProfileInput, providers::PROFILES_SERVICE},
-        shows::{model::Show, mutations::CreateShowInput, providers::SHOWS_SERVICE},
-        users::{model::User, providers::USERS_SERVICE},
+        episodes::{model::Episode, mutations::CreateEpisodeInput, service::EPISODES_SERVICE},
+        profiles::{model::Profile, mutations::CreateProfileInput, service::PROFILES_SERVICE},
+        shows::{model::Show, mutations::CreateShowInput, service::SHOWS_SERVICE},
+        users::{model::User, service::USERS_SERVICE},
+        InitDomains,
     },
-    providers::{InitApp, StartApp},
-    routes::{init_events_route, init_graphql_route, init_health_route, AppState},
+    init::InitApp,
+    routes::AppState,
+    utils::authz::InitAuthz,
 };
 use once_cell::sync::Lazy;
 use serde::Deserialize;
@@ -51,10 +53,8 @@ pub fn http_client() -> Client<HttpsConnector<HttpConnector>> {
 pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
     let mut app = AxumApplication::<AppConfig>::default();
     app.on(&EventType::Init, InitApp::default());
-    app.on(&EventType::Init, init_health_route());
-    app.on(&EventType::Init, init_graphql_route());
-    app.on(&EventType::Init, init_events_route());
-    app.on(&EventType::Startup, StartApp::default());
+    app.on(&EventType::Init, InitDomains::default());
+    app.on(&EventType::Startup, InitAuthz::default());
 
     let server = app.run::<AppState>(None).await?;
     let addr = server.local_addr();
@@ -72,12 +72,11 @@ pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
 struct HttpClientProvider {}
 
 #[async_trait]
-impl inject::Provider<Client<HttpsConnector<HttpConnector>>> for HttpClientProvider {
-    async fn provide(
-        &self,
-        _i: &inject::Inject,
-    ) -> inject::Result<Client<HttpsConnector<HttpConnector>>> {
-        Ok(Client::builder().build::<_, Body>(HttpsConnector::new()))
+impl Provider for HttpClientProvider {
+    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Dependency>> {
+        Ok(Arc::new(
+            Client::builder().build::<_, Body>(HttpsConnector::new()),
+        ))
     }
 }
 
@@ -95,7 +94,9 @@ impl TestUtils {
     pub async fn init() -> Result<Self> {
         let (app, addr) = run_server().await?;
 
-        let auth = AuthConfig::from_ref(app.get_type::<AppConfig>()?);
+        let config = app.get_type::<AppConfig>().await?;
+
+        let auth = AuthConfig::from_ref(&*config);
 
         let graphql = GraphQL::new(format!(
             "http://localhost:{port}/graphql",
@@ -147,14 +148,14 @@ impl TestUtils {
         username: &str,
         email: &str,
     ) -> Result<(User, Profile)> {
-        let users = self.app.get(&USERS_SERVICE)?;
+        let users = self.app.get(&USERS_SERVICE).await?;
         let user = users.create(username).await?;
 
         let mut profile_input: CreateProfileInput = Faker.fake();
         profile_input.user_id = user.id.clone();
         profile_input.email = email.to_string();
 
-        let profiles = self.app.get(&PROFILES_SERVICE)?;
+        let profiles = self.app.get(&PROFILES_SERVICE).await?;
         let profile = profiles.create(&profile_input, &false).await?;
 
         Ok((user, profile))
@@ -172,7 +173,7 @@ impl TestUtils {
             ..Default::default()
         };
 
-        let shows = self.app.get(&SHOWS_SERVICE)?;
+        let shows = self.app.get(&SHOWS_SERVICE).await?;
         let show = shows.create(&show_input).await?;
 
         let episode_input = CreateEpisodeInput {
@@ -181,7 +182,7 @@ impl TestUtils {
             ..Default::default()
         };
 
-        let episodes = self.app.get(&EPISODES_SERVICE)?;
+        let episodes = self.app.get(&EPISODES_SERVICE).await?;
         let episode = episodes.create(&episode_input, &false).await?;
 
         Ok((show, episode))

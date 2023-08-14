@@ -8,8 +8,9 @@ use log::info;
 use nakago::EventType;
 use nakago_axum::AxumApplication;
 use pico_args::{Arguments, Error};
-use providers::{InitApp, StartApp};
-use routes::{init_events_route, init_graphql_route, init_health_route, AppState};
+use routes::AppState;
+
+use crate::{domains::InitDomains, init::InitApp, utils::authz::InitAuthz};
 
 mod config;
 mod db;
@@ -17,7 +18,7 @@ mod domains;
 mod events;
 mod graphql;
 mod handlers;
-mod providers;
+mod init;
 mod routes;
 mod utils;
 
@@ -52,11 +53,9 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let mut app = AxumApplication::<AppConfig>::default();
+    app.on(&EventType::Init, InitDomains::default());
     app.on(&EventType::Init, InitApp::default());
-    app.on(&EventType::Init, init_health_route());
-    app.on(&EventType::Init, init_graphql_route());
-    app.on(&EventType::Init, init_events_route());
-    app.on(&EventType::Startup, StartApp::default());
+    app.on(&EventType::Startup, InitAuthz::default());
 
     let server = app.run::<AppState>(args.config_path).await?;
     let addr = server.local_addr();

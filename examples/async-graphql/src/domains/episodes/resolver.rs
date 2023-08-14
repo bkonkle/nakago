@@ -11,8 +11,7 @@ use super::{
 };
 use crate::{
     domains::{
-        shows::model::Show,
-        shows::service::{ShowLoader, ShowsService},
+        shows::loaders::ShowLoader, shows::model::Show, shows::service::ShowsService,
         users::model::User,
     },
     utils::graphql::{as_graphql_error, graphql_error},
@@ -35,7 +34,7 @@ impl EpisodesQuery {
         ctx: &Context<'_>,
         #[graphql(desc = "The Episode id")] id: String,
     ) -> Result<Option<Episode>> {
-        let episodes = ctx.data_unchecked::<Arc<dyn EpisodesService>>();
+        let episodes = ctx.data_unchecked::<Arc<Box<dyn EpisodesService>>>();
 
         // Check to see if the associated Show is selected
         let with_show = ctx.look_ahead().field("show").exists();
@@ -58,7 +57,7 @@ impl EpisodesQuery {
         page: Option<u64>,
         page_size: Option<u64>,
     ) -> Result<EpisodesPage> {
-        let episodes = ctx.data_unchecked::<Arc<dyn EpisodesService>>();
+        let episodes = ctx.data_unchecked::<Arc<Box<dyn EpisodesService>>>();
 
         // Check to see if the associated Show is selected
         let with_show = ctx.look_ahead().field("data").field("show").exists();
@@ -84,8 +83,8 @@ impl EpisodesMutation {
         ctx: &Context<'_>,
         input: CreateEpisodeInput,
     ) -> Result<MutateEpisodeResult> {
-        let shows = ctx.data_unchecked::<Arc<dyn ShowsService>>();
-        let episodes = ctx.data_unchecked::<Arc<dyn EpisodesService>>();
+        let shows = ctx.data_unchecked::<Arc<Box<dyn ShowsService>>>();
+        let episodes = ctx.data_unchecked::<Arc<Box<dyn EpisodesService>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
@@ -131,7 +130,7 @@ impl EpisodesMutation {
         id: String,
         input: UpdateEpisodeInput,
     ) -> Result<MutateEpisodeResult> {
-        let episodes = ctx.data_unchecked::<Arc<dyn EpisodesService>>();
+        let episodes = ctx.data_unchecked::<Arc<Box<dyn EpisodesService>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
@@ -179,7 +178,7 @@ impl EpisodesMutation {
 
     /// Remove an existing Episode
     pub async fn delete_episode(&self, ctx: &Context<'_>, id: String) -> Result<bool> {
-        let episodes = ctx.data_unchecked::<Arc<dyn EpisodesService>>();
+        let episodes = ctx.data_unchecked::<Arc<Box<dyn EpisodesService>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 

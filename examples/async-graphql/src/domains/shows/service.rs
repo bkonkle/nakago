@@ -1,21 +1,25 @@
+use std::sync::Arc;
+
 use anyhow::Result;
-use async_graphql::{
-    dataloader::Loader,
-    FieldError,
-    MaybeUndefined::{Null, Undefined, Value},
-};
+use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
+use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
 use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
-use std::{collections::HashMap, sync::Arc};
 
-use crate::domains::shows::{
-    model::{self, Show},
-    mutations::{CreateShowInput, UpdateShowInput},
-    queries::{ShowCondition, ShowsOrderBy},
+use crate::{
+    db::DATABASE_CONNECTION,
+    domains::shows::{
+        model::{self, Show},
+        mutations::{CreateShowInput, UpdateShowInput},
+        queries::{ShowCondition, ShowsOrderBy},
+    },
+    utils::{ordering::Ordering, pagination::ManyResponse},
 };
-use crate::utils::{ordering::Ordering, pagination::ManyResponse};
+
+/// Tag(ShowsService)
+pub const SHOWS_SERVICE: Tag<Box<dyn ShowsService>> = Tag::new("ShowsService");
 
 /// A ShowsService applies business logic to a dynamic ShowsRepository implementation.
 #[cfg_attr(test, automock)]
@@ -203,31 +207,22 @@ impl ShowsService for DefaultShowsService {
     }
 }
 
-/// A dataloader for `Show` instances
-pub struct ShowLoader {
-    /// The SeaOrm database connection
-    shows: Arc<dyn ShowsService>,
-}
-
-/// The default implementation for the `ShowLoader`
-impl ShowLoader {
-    /// Create a new instance
-    pub fn new(shows: Arc<dyn ShowsService>) -> Self {
-        Self { shows }
-    }
-}
+/// Provide the ShowsService
+///
+/// **Provides:** `Arc<dyn ShowsService>`
+///
+/// **Depends on:**
+///   - `Tag(DatabaseConnection)`
+#[derive(Default)]
+pub struct ProvideShowsService {}
 
 #[async_trait]
-impl Loader<String> for ShowLoader {
-    type Value = Show;
-    type Error = FieldError;
+impl Provider for ProvideShowsService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let db = i.get(&DATABASE_CONNECTION).await?;
 
-    async fn load(&self, keys: &[String]) -> Result<HashMap<String, Self::Value>, Self::Error> {
-        let shows = self.shows.get_by_ids(keys.into()).await?;
+        let service: Box<dyn ShowsService> = Box::new(DefaultShowsService::new(db));
 
-        Ok(shows
-            .into_iter()
-            .map(|show| (show.id.clone(), show))
-            .collect())
+        Ok(Arc::new(service))
     }
 }

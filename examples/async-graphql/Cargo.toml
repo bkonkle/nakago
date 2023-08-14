@@ -1,6 +1,6 @@
 [package]
 name = "nakago-examples-async-graphql"
-version = "0.1.0"
+version = "0.2.1"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A lightweight Rust framework for sharp services 😎"
@@ -11,8 +11,8 @@ publish = false
 
 [dependencies]
 anyhow = "1.0"
-async-graphql = { version = "5.0", features = ["chrono", "dataloader"] }
-async-graphql-axum = "5.0"
+async-graphql = { version = "6.0", features = ["chrono", "dataloader"] }
+async-graphql-axum = "6.0"
 async-trait = "0.1"
 axum = { version = "0.6", features = ["ws", "macros"] }
 chrono = { version = "0.4.19", features = ["serde"] }
@@ -22,13 +22,13 @@ futures = "0.3"
 hyper = "0.14"
 log = "0.4"
 once_cell = "1.9"
-nakago = "0.6"
-nakago-axum = "0.6"
+nakago = "0.7"
+nakago-axum = "0.7"
 oso = "0.27"
 pico-args = "0.5.0"
-pretty_env_logger = "0.4"
+pretty_env_logger = "0.5"
 rand = "0.8"
-sea-orm = { version = "0.11", features = [
+sea-orm = { version = "0.12", features = [
     "macros",
     "mock",
     "runtime-tokio-rustls",
@@ -45,7 +45,7 @@ ulid = "1.0"
 
 [dev-dependencies]
 biscuit = "0.6.0-beta1"
-criterion = "0.4"
+criterion = "0.5"
 fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 futures-util = { version = "0.3", default-features = false, features = [
     "sink",
@@ -55,5 +55,5 @@ hyper-tls = "0.5"
 maplit = { version = "1" }
 mockall = "0.11"
 pretty_assertions = "1.2"
-tokio-tungstenite = "0.18"
+tokio-tungstenite = "0.20"
 url = "2.0.0"

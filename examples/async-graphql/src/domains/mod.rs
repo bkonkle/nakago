@@ -17,4 +17,6 @@ pub mod shows;
 pub mod episodes;
 
 /// Dependency injection providers
-pub mod providers;
+pub mod init;
+
+pub use init::InitDomains;

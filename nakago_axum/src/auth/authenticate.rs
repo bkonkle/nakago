@@ -1,28 +1,36 @@
 #![allow(unused_imports)]
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use axum::{
     extract::{FromRef, FromRequestParts, State},
     Extension,
 };
-use biscuit::{jwa::SignatureAlgorithm, jws::Header, Empty, JWT};
+use biscuit::{jwa::SignatureAlgorithm, jwk::JWKSet, jws::Header, Empty, JWT};
 use http::{header::AUTHORIZATION, request::Parts, HeaderMap, HeaderValue};
-use std::sync::Arc;
+use nakago::{
+    inject::{self, container::Dependency},
+    Tag,
+};
 
 use super::{
     errors::AuthError::{self, InvalidAuthHeaderError},
-    jwks::{self, get_secret_from_key_set},
+    jwks::{get_secret_from_key_set, JWKS},
 };
+
+/// The AuthState Tag
+pub const AUTH_STATE: Tag<AuthState> = Tag::new("AuthState");
 
 /// The state interface needed for Authentication
 #[derive(Clone)]
 #[allow(dead_code)]
 pub struct AuthState {
-    jwks: Arc<jwks::JWKS>,
+    jwks: Arc<JWKSet<Empty>>,
 }
 
 impl AuthState {
     /// Create a new AuthState instance
-    pub fn new(jwks: Arc<jwks::JWKS>) -> Self {
+    pub fn new(jwks: Arc<JWKSet<Empty>>) -> Self {
         Self { jwks }
     }
 }
@@ -108,6 +116,25 @@ pub fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>,
     }
 
     Ok(Some(auth_header.trim_start_matches(BEARER)))
+}
+
+/// Provide the AuthState needed in order to use the `Subject` extractor in an Axum handler
+///
+/// **Provides:** `AuthState`
+///
+/// **Depends on:**
+///   - `Tag(JWKS)`
+#[derive(Default)]
+pub struct ProvideAuthState {}
+
+#[async_trait]
+impl inject::Provider for ProvideAuthState {
+    async fn provide(self: Arc<Self>, i: inject::Inject) -> inject::Result<Arc<Dependency>> {
+        let jwks = i.get(&JWKS).await?;
+        let auth_state = AuthState::new(jwks);
+
+        Ok(Arc::new(auth_state))
+    }
 }
 
 #[cfg(feature = "integration")]

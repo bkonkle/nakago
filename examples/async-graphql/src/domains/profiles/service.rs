@@ -1,14 +1,12 @@
+use std::sync::Arc;
+
 use anyhow::Result;
-use async_graphql::{
-    dataloader::Loader,
-    FieldError,
-    MaybeUndefined::{Null, Undefined, Value},
-};
+use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
+use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
 use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
-use std::{collections::HashMap, sync::Arc};
 
 use super::{
     model::{self, Profile, ProfileList, ProfileOption},
@@ -16,9 +14,13 @@ use super::{
     queries::{ProfileCondition, ProfilesOrderBy},
 };
 use crate::{
+    db::DATABASE_CONNECTION,
     domains::users::model as user_model,
     utils::{ordering::Ordering, pagination::ManyResponse},
 };
+
+/// Tag(ProfilesService)
+pub const PROFILES_SERVICE: Tag<Box<dyn ProfilesService>> = Tag::new("ProfilesService");
 
 /// A ProfilesService applies business logic to a dynamic ProfilesRepository implementation.
 #[cfg_attr(test, automock)]
@@ -347,33 +349,22 @@ impl ProfilesService for DefaultProfilesService {
     }
 }
 
-/// A dataloader for `Profile` instances
-pub struct ProfileLoader {
-    /// The SeaOrm database connection
-    profiles: Arc<dyn ProfilesService>,
-}
-
-/// The default implementation for the `ProfileLoader`
-impl ProfileLoader {
-    /// Create a new instance
-    pub fn new(profiles: Arc<dyn ProfilesService>) -> Self {
-        Self {
-            profiles: profiles.clone(),
-        }
-    }
-}
+/// Provide the ProfilesService
+///
+/// **Provides:** `Arc<dyn ProfilesService>`
+///
+/// **Depends on:**
+///   - `Tag(DatabaseConnection)`
+#[derive(Default)]
+pub struct ProvideProfilesService {}
 
 #[async_trait]
-impl Loader<String> for ProfileLoader {
-    type Value = Profile;
-    type Error = FieldError;
+impl Provider for ProvideProfilesService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let db = i.get(&DATABASE_CONNECTION).await?;
 
-    async fn load(&self, keys: &[String]) -> Result<HashMap<String, Self::Value>, Self::Error> {
-        let profiles = self.profiles.get_by_ids(keys.into()).await?;
+        let service: Box<dyn ProfilesService> = Box::new(DefaultProfilesService::new(db));
 
-        Ok(profiles
-            .into_iter()
-            .map(|profile| (profile.id.clone(), profile))
-            .collect())
+        Ok(Arc::new(service))
     }
 }

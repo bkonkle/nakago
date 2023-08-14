@@ -1,14 +1,12 @@
+use std::sync::Arc;
+
 use anyhow::Result;
-use async_graphql::{
-    dataloader::Loader,
-    FieldError,
-    MaybeUndefined::{Null, Undefined, Value},
-};
+use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
+use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
 use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
-use std::{collections::HashMap, sync::Arc};
 
 use super::{
     model::{self, Episode, EpisodeList, EpisodeOption},
@@ -16,9 +14,13 @@ use super::{
     queries::{EpisodeCondition, EpisodesOrderBy},
 };
 use crate::{
+    db::DATABASE_CONNECTION,
     domains::shows::model as show_model,
     utils::{ordering::Ordering, pagination::ManyResponse},
 };
+
+/// Tag(EpisodesService)
+pub const EPISODES_SERVICE: Tag<Box<dyn EpisodesService>> = Tag::new("EpisodesService");
 
 /// An EpisodesService applies business logic to a dynamic EpisodesRepository implementation.
 #[cfg_attr(test, automock)]
@@ -277,31 +279,22 @@ impl EpisodesService for DefaultEpisodesService {
     }
 }
 
-/// A dataloader for `Episode` instances
-pub struct EpisodeLoader {
-    /// The SeaOrm database connection
-    episodes: Arc<dyn EpisodesService>,
-}
-
-/// The default implementation for the `EpisodeLoader`
-impl EpisodeLoader {
-    /// Create a new instance
-    pub fn new(episodes: Arc<dyn EpisodesService>) -> Self {
-        Self { episodes }
-    }
-}
+/// Provide the EpisodesService
+///
+/// **Provides:** `Arc<dyn EpisodesService>`
+///
+/// **Depends on:**
+///   - `Tag(DatabaseConnection)`
+#[derive(Default)]
+pub struct ProvideEpisodesService {}
 
 #[async_trait]
-impl Loader<String> for EpisodeLoader {
-    type Value = Episode;
-    type Error = FieldError;
+impl Provider for ProvideEpisodesService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let db = i.get(&DATABASE_CONNECTION).await?;
 
-    async fn load(&self, keys: &[String]) -> Result<HashMap<String, Self::Value>, Self::Error> {
-        let episodes = self.episodes.get_by_ids(keys.into()).await?;
+        let service: Box<dyn EpisodesService> = Box::new(DefaultEpisodesService::new(db));
 
-        Ok(episodes
-            .into_iter()
-            .map(|episode| (episode.id.clone(), episode))
-            .collect())
+        Ok(Arc::new(service))
     }
 }

@@ -9,7 +9,7 @@ use super::{
     service::ProfilesService,
 };
 use crate::{
-    domains::users::{model::User, service::UserLoader},
+    domains::users::{loaders::UserLoader, model::User},
     utils::graphql::{as_graphql_error, graphql_error},
 };
 
@@ -27,7 +27,7 @@ impl ProfilesQuery {
     /// Get a single Profile
     async fn get_profile(&self, ctx: &Context<'_>, id: String) -> Result<Option<Profile>> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<dyn ProfilesService>>();
+        let profiles = ctx.data_unchecked::<Arc<Box<dyn ProfilesService>>>();
 
         // Check to see if the associated User is selected
         let with_user = ctx.look_ahead().field("user").exists();
@@ -65,7 +65,7 @@ impl ProfilesQuery {
         page_size: Option<u64>,
     ) -> Result<ProfilesPage> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<dyn ProfilesService>>();
+        let profiles = ctx.data_unchecked::<Arc<Box<dyn ProfilesService>>>();
 
         // Retrieve the current request User id for authorization
         let user_id = user.clone().map(|u| u.id);
@@ -97,7 +97,7 @@ impl ProfilesMutation {
         input: CreateProfileInput,
     ) -> Result<MutateProfileResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<dyn ProfilesService>>();
+        let profiles = ctx.data_unchecked::<Arc<Box<dyn ProfilesService>>>();
 
         // Retrieve the current request User id for authorization
         let user_id = user.clone().map(|u| u.id);
@@ -136,7 +136,7 @@ impl ProfilesMutation {
         input: UpdateProfileInput,
     ) -> Result<MutateProfileResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<dyn ProfilesService>>();
+        let profiles = ctx.data_unchecked::<Arc<Box<dyn ProfilesService>>>();
 
         // Retrieve the existing Profile for authorization
         let existing = profiles
@@ -183,7 +183,7 @@ impl ProfilesMutation {
     /// Remove an existing Profile
     async fn delete_profile(&self, ctx: &Context<'_>, id: String) -> Result<bool> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<dyn ProfilesService>>();
+        let profiles = ctx.data_unchecked::<Arc<Box<dyn ProfilesService>>>();
 
         // Retrieve the existing Profile for authorization
         let existing = profiles

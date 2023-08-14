@@ -42,8 +42,8 @@ impl UsersMutation {
         input: CreateUserInput,
     ) -> Result<MutateUserResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let users = ctx.data_unchecked::<Arc<dyn UsersService>>();
-        let profiles = ctx.data_unchecked::<Arc<dyn ProfilesService>>();
+        let users = ctx.data_unchecked::<Arc<Box<dyn UsersService>>>();
+        let profiles = ctx.data_unchecked::<Arc<Box<dyn ProfilesService>>>();
         let subject = ctx.data_unchecked::<Subject>();
 
         // If the User exists in the GraphQL context, simply return it
@@ -91,7 +91,7 @@ impl UsersMutation {
         input: UpdateUserInput,
     ) -> Result<MutateUserResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let users = ctx.data_unchecked::<Arc<dyn UsersService>>();
+        let users = ctx.data_unchecked::<Arc<Box<dyn UsersService>>>();
 
         // Check to see if the associated Profile is selected
         let with_roles = ctx.look_ahead().field("user").field("roles").exists();

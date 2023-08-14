@@ -56,8 +56,10 @@ jobs:
       - name: Dry run - Nakago
         run: cargo publish --dry-run -p nakago
 
-      - name: Dry run - Nakago Axum
-        run: cargo publish --dry-run -p nakago-axum
+      # TODO: Once full publishing is enabled above, these can be restored
 
-      - name: Dry run - Nakago SeaORM
-        run: cargo publish --dry-run -p nakago-sea-orm
+      # - name: Dry run - Nakago Axum
+      #   run: cargo publish --dry-run -p nakago-axum
+
+      # - name: Dry run - Nakago SeaORM
+      #   run: cargo publish --dry-run -p nakago-sea-orm
