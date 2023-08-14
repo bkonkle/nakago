@@ -25,7 +25,7 @@ use crate::{
     graphql::{InitGraphQLSchema, GRAPHQL_SCHEMA},
     handlers::{EventsState, GraphQLState},
     routes::AppState,
-    utils::providers::{add_app_config_loaders, ProvideOso, OSO},
+    utils::providers::{ProvideOso, OSO},
 };
 
 /// Provide the AppState for Axum
@@ -51,24 +51,6 @@ impl Provider for ProvideAppState {
         let graphql = GraphQLState::new(users, schema);
 
         Ok(Arc::new(AppState::new((*auth).clone(), events, graphql)))
-    }
-}
-
-/// Initialize the Application
-///
-/// **Provides or Modifies:**
-///   - `Tag(ConfigLoaders)`
-#[derive(Default)]
-pub struct InitApp {}
-
-#[async_trait]
-impl Hook for InitApp {
-    /// Initialize the ConfigLoaders needed for Axum integration. Injects `Tag(ConfigLoaders)` if it
-    /// has not been provided yet.
-    async fn handle(&self, i: &Inject) -> InjectResult<()> {
-        add_app_config_loaders().handle(i).await?;
-
-        Ok(())
     }
 }
 

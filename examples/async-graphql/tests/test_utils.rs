@@ -24,8 +24,9 @@ use nakago_examples_async_graphql::{
         shows::{model::Show, mutations::CreateShowInput, providers::SHOWS_SERVICE},
         users::{model::User, providers::USERS_SERVICE},
     },
-    providers::{InitApp, StartApp},
+    providers::StartApp,
     routes::{init_events_route, init_graphql_route, init_health_route, AppState},
+    utils::providers::init_config_loaders,
 };
 use once_cell::sync::Lazy;
 use serde::Deserialize;
@@ -50,7 +51,7 @@ pub fn http_client() -> Client<HttpsConnector<HttpConnector>> {
 /// Run the Application Server
 pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
     let mut app = AxumApplication::<AppConfig>::default();
-    app.on(&EventType::Init, InitApp::default());
+    app.on(&EventType::Init, init_config_loaders());
     app.on(&EventType::Init, init_health_route());
     app.on(&EventType::Init, init_graphql_route());
     app.on(&EventType::Init, init_events_route());

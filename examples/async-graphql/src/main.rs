@@ -8,8 +8,10 @@ use log::info;
 use nakago::EventType;
 use nakago_axum::AxumApplication;
 use pico_args::{Arguments, Error};
-use providers::{InitApp, StartApp};
+use providers::StartApp;
 use routes::{init_events_route, init_graphql_route, init_health_route, AppState};
+
+use crate::utils::providers::init_config_loaders;
 
 mod config;
 mod db;
@@ -52,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let mut app = AxumApplication::<AppConfig>::default();
-    app.on(&EventType::Init, InitApp::default());
+    app.on(&EventType::Init, init_config_loaders());
     app.on(&EventType::Init, init_health_route());
     app.on(&EventType::Init, init_graphql_route());
     app.on(&EventType::Init, init_events_route());

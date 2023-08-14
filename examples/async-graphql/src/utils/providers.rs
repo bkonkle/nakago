@@ -25,6 +25,6 @@ impl Provider for ProvideOso {
 ///
 /// **Provides or Modifies:**
 ///   - `Tag(ConfigLoaders)`
-pub fn add_app_config_loaders() -> AddConfigLoaders {
+pub fn init_config_loaders() -> AddConfigLoaders {
     AddConfigLoaders::new(vec![Arc::<DatabaseConfigLoader>::default()])
 }

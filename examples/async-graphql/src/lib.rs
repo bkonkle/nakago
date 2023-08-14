@@ -20,7 +20,7 @@ pub mod domains;
 pub mod config;
 
 /// Application utils
-mod utils;
+pub mod utils;
 
 /// Database utils
 mod db;
