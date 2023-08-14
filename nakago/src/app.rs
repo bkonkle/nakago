@@ -64,14 +64,14 @@ where
 
     /// Trigger the given lifecycle event
     pub async fn trigger(&mut self, event: &EventType) -> inject::Result<()> {
-        self.events.trigger(event, &mut self.i).await
+        self.events.trigger(event, &self.i).await
     }
 
     /// Initialize the App
     ///
     /// **Provides:**
     ///   - `C: Config`
-    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
+    pub async fn init(&self, config_path: Option<PathBuf>) -> inject::Result<()> {
         tracing_subscriber::registry()
             .with(tracing_subscriber::EnvFilter::new(
                 std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()),
@@ -83,32 +83,26 @@ where
         panic::set_hook(Box::new(handle_panic));
 
         // Trigger the Init lifecycle event
-        self.events.trigger(&EventType::Init, &mut self.i).await?;
+        self.events.trigger(&EventType::Init, &self.i).await?;
 
         // Initialize the Config using the given path
-        InitConfig::<C>::new(config_path)
-            .handle(&mut self.i)
-            .await?;
+        InitConfig::<C>::new(config_path).handle(&self.i).await?;
 
         Ok(())
     }
 
     /// Run the Application by starting the listener
-    pub async fn start(&mut self) -> inject::Result<()> {
+    pub async fn start(&self) -> inject::Result<()> {
         // Trigger the Start lifecycle event
-        self.events
-            .trigger(&EventType::Startup, &mut self.i)
-            .await?;
+        self.events.trigger(&EventType::Startup, &self.i).await?;
 
         Ok(())
     }
 
     /// Shut down the Application by stopping the listener
-    pub async fn stop(&mut self) -> inject::Result<()> {
+    pub async fn stop(&self) -> inject::Result<()> {
         // Trigger the Stop lifecycle event
-        self.events
-            .trigger(&EventType::Shutdown, &mut self.i)
-            .await?;
+        self.events.trigger(&EventType::Shutdown, &self.i).await?;
 
         Ok(())
     }

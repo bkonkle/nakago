@@ -1,120 +1,226 @@
-use std::{any::Any, collections::HashMap, fmt::Debug};
+use std::{
+    any::Any,
+    collections::{hash_map::Entry, HashMap},
+    future::ready,
+    pin::Pin,
+    sync::Arc,
+};
+
+use async_trait::async_trait;
+use futures::{future::Shared, Future, FutureExt};
+use tokio::sync::RwLock;
 
 use super::{Error, Key, Result};
 
-/// A type map for dependency injection
-pub(crate) type TypeMap = HashMap<Key, Box<dyn Any + Send + Sync>>;
-
 /// The injection Container
-#[derive(Default, Debug)]
-pub struct Inject(pub(crate) TypeMap);
+#[derive(Default, Clone)]
+pub struct Inject(pub(crate) Arc<RwLock<HashMap<Key, Injector>>>);
+
+pub(crate) struct Injector {
+    value: RwLock<Value>,
+}
+
+#[derive(Clone)]
+enum Value {
+    Provider(Arc<dyn Provider>),
+    Pending(Shared<Pending>),
+}
+
+/// A Dependency that can be injected into the container
+pub type Dependency = dyn Any + Send + Sync;
+
+/// A Future that will resolve to a Dependency
+pub type Pending = Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>>;
+
+/// A trait for async injection Providers
+#[async_trait]
+pub trait Provider: Send + Sync {
+    /// Provide a dependency for the container
+    async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>>;
+}
+
+impl Injector {
+    fn from_pending(pending: Shared<Pending>) -> Self {
+        Self {
+            value: RwLock::new(Value::Pending(pending)),
+        }
+    }
+
+    pub(crate) fn from_provider(provider: impl Provider + 'static) -> Self {
+        Self {
+            value: RwLock::new(Value::Provider(Arc::new(provider))),
+        }
+    }
+
+    async fn request(&self, inject: Inject) -> Shared<Pending> {
+        let value = self.value.read().await;
+
+        if let Value::Pending(pending) = &*value {
+            return pending.clone();
+        }
+
+        drop(value);
+
+        let mut value = self.value.write().await;
+
+        *value = Value::Pending(match value.clone() {
+            Value::Pending(pending) => pending,
+            Value::Provider(provider) => provider.provide(inject).shared(),
+        });
+
+        if let Value::Pending(pending) = &*value {
+            pending.clone()
+        } else {
+            // We still hold the lock and the above operation is guaranteed to return a pending
+            // value, so this should not be reachable.
+            unreachable!()
+        }
+    }
+}
 
 // The base methods powering both the Tag and TypeId modes
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
-    pub(crate) fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<&T> {
-        self.get_key_opt::<T>(key.clone())?
-            .ok_or_else(|| Error::NotFound {
-                missing: key,
-                available: self.available_type_names(),
-            })
-    }
+    pub(crate) async fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<Arc<T>> {
+        if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
+            Ok(dep)
+        } else {
+            let container = self.0.read().await;
 
-    /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub(crate) fn get_key_mut<T: Any + Send + Sync>(&mut self, key: Key) -> Result<&mut T> {
-        let available = self.available_type_names();
-
-        self.get_key_mut_opt::<T>(key.clone())?
-            .ok_or(Error::NotFound {
+            Err(Error::NotFound {
                 missing: key,
-                available,
+                available: container.keys().cloned().collect(),
             })
+        }
     }
 
     /// Retrieve a reference to a dependency if it exists in the map
-    pub(crate) fn get_key_opt<T: Any + Send + Sync>(&self, key: Key) -> Result<Option<&T>> {
-        if let Some(d) = self.0.get(&key) {
-            if let Some(dep) = d.downcast_ref::<T>() {
-                Ok(Some(dep))
-            } else {
-                Err(Error::TypeMismatch {
-                    key,
-                    type_name: std::any::type_name::<T>().to_string(),
-                })
-            }
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Retrieve a mutable reference to a dependency if it exists in the map
-    pub(crate) fn get_key_mut_opt<T: Any + Send + Sync>(
-        &mut self,
+    pub(crate) async fn get_key_opt<T: Any + Send + Sync>(
+        &self,
         key: Key,
-    ) -> Result<Option<&mut T>> {
-        if let Some(d) = self.0.get_mut(&key) {
-            if let Some(dep) = d.downcast_mut::<T>() {
-                Ok(Some(dep))
-            } else {
-                Err(Error::TypeMismatch {
-                    key,
-                    type_name: std::any::type_name::<T>().to_string(),
-                })
-            }
-        } else {
-            Ok(None)
+    ) -> Result<Option<Arc<T>>> {
+        let container = self.0.read().await;
+
+        if let Some(injector) = container.get(&key) {
+            let pending = injector.request(self.clone()).await;
+            let value = pending.await?;
+
+            return value
+                .downcast::<T>()
+                .map(Some)
+                .map_err(|_err| Error::TypeMismatch(key));
         }
+
+        Ok(None)
     }
 
     /// Provide a dependency directly
-    pub(crate) fn inject_key<T: Any + Send + Sync>(&mut self, key: Key, dep: T) -> Result<()> {
-        if self.0.contains_key(&key) {
-            return Err(Error::Occupied(key));
+    pub(crate) async fn inject_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
+        let mut container = self.0.write().await;
+
+        match container.entry(key.clone()) {
+            Entry::Occupied(_) => Err(Error::Occupied(key)),
+            Entry::Vacant(entry) => {
+                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
+                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
+                        dep,
+                    ))));
+
+                let _ = entry.insert(Injector::from_pending(pending.shared()));
+
+                Ok(())
+            }
         }
-
-        let _ = self.0.insert(key, Box::new(dep));
-
-        Ok(())
     }
 
     /// Replace an existing dependency directly
-    pub(crate) fn replace_key<T: Any + Send + Sync>(&mut self, key: Key, dep: T) -> Result<()> {
-        if !self.0.contains_key(&key) {
-            return Err(Error::NotFound {
+    pub(crate) async fn replace_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
+        let mut container = self.0.write().await;
+
+        match container.entry(key.clone()) {
+            Entry::Occupied(mut entry) => {
+                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
+                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
+                        dep,
+                    ))));
+
+                let _ = entry.insert(Injector::from_pending(pending.shared()));
+
+                Ok(())
+            }
+            Entry::Vacant(_) => Err(Error::NotFound {
                 missing: key,
-                available: self.available_type_names(),
-            });
+                available: container.keys().cloned().collect(),
+            }),
         }
-
-        self.0.insert(key, Box::new(dep));
-
-        Ok(())
     }
 
-    /// Remove a dependency from the map and return it for use
-    pub(crate) fn consume_key<T: Any + Send + Sync>(&mut self, key: Key) -> Result<T> {
-        self.0
-            .remove(&key)
-            .ok_or_else(|| Error::NotFound {
-                missing: key.clone(),
-                available: self.available_type_names(),
-            })
-            .and_then(|d| d.downcast().map_err(|_err| Error::CannotConsume(key)))
-            .map(|d| *d)
+    #[allow(clippy::extra_unused_type_parameters)]
+    pub(crate) async fn provide_key<T: Any + Send + Sync + ?Sized>(
+        &self,
+        key: Key,
+        provider: impl Provider + 'static,
+    ) -> Result<()> {
+        let mut container = self.0.write().await;
+
+        match container.entry(key.clone()) {
+            Entry::Occupied(_) => Err(Error::Occupied(key)),
+            Entry::Vacant(entry) => {
+                let _ = entry.insert(Injector::from_provider(provider));
+
+                Ok(())
+            }
+        }
     }
 
-    /// Return a list of all available type names in the map
-    pub(crate) fn available_type_names(&self) -> Vec<Key> {
-        self.0.keys().cloned().collect()
+    #[allow(clippy::extra_unused_type_parameters)]
+    pub(crate) async fn replace_key_with<T: Any + Send + Sync + ?Sized>(
+        &self,
+        key: Key,
+        provider: impl Provider + 'static,
+    ) -> Result<()> {
+        let mut container = self.0.write().await;
+
+        match container.entry(key.clone()) {
+            Entry::Occupied(mut entry) => {
+                let _ = entry.insert(Injector::from_provider(provider));
+
+                Ok(())
+            }
+            Entry::Vacant(_) => Err(Error::NotFound {
+                missing: key,
+                available: container.keys().cloned().collect(),
+            }),
+        }
     }
+}
+
+/// Wrap an error that can be converted into an Anyhow error with an inject Provider error
+pub fn to_provider_error<E>(e: E) -> Error
+where
+    anyhow::Error: From<E>,
+{
+    Error::Provider(Arc::new(e.into()))
 }
 
 #[cfg(test)]
 pub(crate) mod test {
+    use fake::Fake;
+    use std::{any::type_name, sync::Arc};
+    use tokio::time::{sleep, Duration};
+
+    use crate::inject::{
+        tag::test::{DYN_TAG, OTHER_TAG, SERVICE_TAG},
+        Key,
+    };
+
+    use super::*;
+
     pub trait HasId: Send + Sync {
         fn get_id(&self) -> String;
     }
 
+    #[derive(Debug, Clone)]
     pub struct TestService {
         pub(crate) id: String,
     }
@@ -145,5 +251,300 @@ pub(crate) mod test {
         fn get_id(&self) -> String {
             self.other_id.clone()
         }
+    }
+
+    pub struct TestServiceProvider {
+        id: String,
+    }
+
+    impl TestServiceProvider {
+        /// Create a new TestServiceProvider instance
+        pub fn new(id: String) -> Self {
+            Self { id }
+        }
+    }
+
+    #[async_trait]
+    impl Provider for TestServiceProvider {
+        async fn provide(self: Arc<Self>, _i: Inject) -> Result<Arc<Dependency>> {
+            sleep(Duration::from_millis(1)).await;
+
+            Ok(Arc::new(TestService::new(self.id.clone())))
+        }
+    }
+
+    pub struct OtherServiceProvider {
+        id: String,
+    }
+
+    impl OtherServiceProvider {
+        /// Create a new OtherServiceProvider instance
+        pub fn new(id: String) -> Self {
+            Self { id }
+        }
+    }
+
+    #[async_trait]
+    impl Provider for OtherServiceProvider {
+        async fn provide(self: Arc<Self>, _i: Inject) -> Result<Arc<Dependency>> {
+            Ok(Arc::new(OtherService::new(self.id.clone())))
+        }
+    }
+
+    #[derive(Default)]
+    pub struct HasIdProvider {}
+
+    #[async_trait]
+    impl Provider for HasIdProvider {
+        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>> {
+            // Trigger a borrow so that the reference to `Inject` has to be held across the await
+            // point below, to test issues with Inject thread safety.
+            let _ = i.get_type_opt::<String>().await?;
+
+            sleep(Duration::from_millis(1)).await;
+
+            let dep: Box<dyn HasId> = Box::new(OtherService::new("test-service".to_string()));
+
+            Ok(Arc::new(dep))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_provide_success() -> Result<()> {
+        let i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide_type::<TestService>(TestServiceProvider::new(expected.clone()))
+            .await?;
+
+        assert!(
+            i.0.read()
+                .await
+                .contains_key(&Key::from_type_id::<TestService>()),
+            "key does not exist in injection container"
+        );
+
+        let service = i.get_type::<TestService>().await?;
+
+        assert_eq!(service.id, expected);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_provide_dyn_success() -> Result<()> {
+        let i = Inject::default();
+
+        i.provide_type::<Box<dyn HasId>>(HasIdProvider::default())
+            .await?;
+
+        assert!(
+            i.0.read()
+                .await
+                .contains_key(&Key::from_type_id::<Box<dyn HasId>>()),
+            "key does not exist in injection container"
+        );
+
+        let service = i.get_type::<Box<dyn HasId>>().await?;
+
+        assert_eq!(service.get_id(), "test-service");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_provide_occupied() -> Result<()> {
+        let i = Inject::default();
+
+        let expected = format!("{} has already been provided", type_name::<TestService>());
+
+        i.provide_type::<TestService>(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .await?;
+
+        let result = i
+            .provide_type::<TestService>(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .await;
+
+        if let Err(err) = result {
+            assert_eq!(err.to_string(), expected);
+        } else {
+            panic!("did not return Err as expected")
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_replace_with_success() -> Result<()> {
+        let i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide_type::<TestService>(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .await?;
+
+        // Override the instance that was injected the first time
+        i.replace_type_with::<TestService>(TestServiceProvider::new(expected.clone()))
+            .await?;
+
+        let result = i.get_type::<TestService>().await?;
+
+        assert_eq!(result.id, expected);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_replace_with_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let expected = format!(
+            "{} was not found\n\nAvailable:\n - {}",
+            type_name::<OtherService>(),
+            type_name::<TestService>()
+        );
+
+        i.provide_type::<TestService>(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .await?;
+
+        // Override a type that doesn't have any instances yet
+        let result = i
+            .replace_type_with::<OtherService>(OtherServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .await;
+
+        if let Err(err) = result {
+            assert_eq!(err.to_string(), expected);
+        } else {
+            panic!("did not return Err as expected")
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_provide_tag_success() -> Result<()> {
+        let i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+            .await?;
+
+        assert!(
+            i.0.read()
+                .await
+                .contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
+            "key does not exist in injection container"
+        );
+
+        let result = i.get(&SERVICE_TAG).await?;
+
+        assert_eq!(result.id, expected);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_provide_tag_dyn_success() -> Result<()> {
+        let i = Inject::default();
+
+        i.provide(&DYN_TAG, HasIdProvider::default()).await?;
+
+        assert!(
+            i.0.read()
+                .await
+                .contains_key(&Key::from_tag::<Box<dyn HasId>>(&DYN_TAG)),
+            "key does not exist in injection container"
+        );
+
+        let result = i.get(&DYN_TAG).await?;
+
+        assert_eq!(result.get_id(), "test-service");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_provide_tag_occupied() -> Result<()> {
+        let i = Inject::default();
+
+        let expected = format!("{} has already been provided", SERVICE_TAG);
+
+        i.provide(
+            &SERVICE_TAG,
+            TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
+        )
+        .await?;
+
+        let result = i
+            .provide(
+                &SERVICE_TAG,
+                TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
+            )
+            .await;
+
+        if let Err(err) = result {
+            assert_eq!(err.to_string(), expected);
+        } else {
+            panic!("did not return Err as expected")
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_replace_tag_with_success() -> Result<()> {
+        let i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide(
+            &SERVICE_TAG,
+            TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
+        )
+        .await?;
+
+        // Override the instance that was injected the first time
+        i.replace_with(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+            .await?;
+
+        let result = i.get(&SERVICE_TAG).await?;
+
+        assert_eq!(expected, result.id);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_replace_tag_with_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let expected = format!(
+            "{} was not found\n\nAvailable:\n - {}",
+            OTHER_TAG, SERVICE_TAG
+        );
+
+        i.provide(
+            &SERVICE_TAG,
+            TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
+        )
+        .await?;
+
+        // Override a type that doesn't have any instances yet
+        let result = i
+            .replace_with(
+                &OTHER_TAG,
+                OtherServiceProvider::new(fake::uuid::UUIDv4.fake()),
+            )
+            .await;
+
+        if let Err(err) = result {
+            assert_eq!(err.to_string(), expected);
+        } else {
+            panic!("did not return Err as expected")
+        }
+
+        Ok(())
     }
 }

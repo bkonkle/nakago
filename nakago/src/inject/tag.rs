@@ -1,7 +1,6 @@
-use std::{any::Any, fmt::Display, marker::PhantomData, ops::Deref};
+use std::{any::Any, fmt::Display, marker::PhantomData, ops::Deref, sync::Arc};
 
-use super::{Key, Result};
-use crate::Inject;
+use super::{Inject, Key, Provider, Result};
 
 /// A dependency injection Tag representing a specific type
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -39,48 +38,51 @@ impl<T> Deref for Tag<T> {
 
 impl Inject {
     /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
-    pub fn get<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<&T> {
-        self.get_key(Key::from_tag::<T>(tag.tag))
-    }
-
-    /// Retrieve a mutable reference to a dependency if it exists, and return an error otherwise
-    pub fn get_mut<T: Any + Send + Sync>(&mut self, tag: &'static Tag<T>) -> Result<&mut T> {
-        self.get_key_mut(Key::from_tag::<T>(tag.tag))
+    pub async fn get<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<Arc<T>> {
+        self.get_key(Key::from_tag::<T>(tag.tag)).await
     }
 
     /// Retrieve a reference to a tagged dependency if it exists in the map
-    pub fn get_opt<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<Option<&T>> {
-        self.get_key_opt(Key::from_tag::<T>(tag.tag))
-    }
-
-    /// Retrieve a mutable reference to a tagged dependency if it exists in the map
-    pub fn get_mut_opt<T: Any + Send + Sync>(
-        &mut self,
+    pub async fn get_opt<T: Any + Send + Sync>(
+        &self,
         tag: &'static Tag<T>,
-    ) -> Result<Option<&mut T>> {
-        self.get_key_mut_opt(Key::from_tag::<T>(tag.tag))
+    ) -> Result<Option<Arc<T>>> {
+        self.get_key_opt(Key::from_tag::<T>(tag.tag)).await
     }
 
     /// Provide a tagged dependency directly
-    pub fn inject<T: Any + Sync + Send>(&mut self, tag: &'static Tag<T>, dep: T) -> Result<()> {
-        self.inject_key(Key::from_tag::<T>(tag.tag), dep)
+    pub async fn inject<T: Any + Sync + Send>(&self, tag: &'static Tag<T>, dep: T) -> Result<()> {
+        self.inject_key(Key::from_tag::<T>(tag.tag), dep).await
     }
 
     /// Replace an existing tagged dependency directly
-    pub fn replace<T: Any + Sync + Send>(&mut self, tag: &'static Tag<T>, dep: T) -> Result<()> {
-        self.replace_key(Key::from_tag::<T>(tag.tag), dep)
+    pub async fn replace<T: Any + Sync + Send>(&self, tag: &'static Tag<T>, dep: T) -> Result<()> {
+        self.replace_key(Key::from_tag::<T>(tag.tag), dep).await
     }
 
-    /// Consume a tagged dependency, removing it from the container and moving it to the caller
-    pub fn consume<T: Any + Sync + Send>(&mut self, tag: &'static Tag<T>) -> Result<T> {
-        self.consume_key(Key::from_tag::<T>(tag.tag))
+    /// Register a Provider for a tagged dependency
+    pub async fn provide<T: Any + Sync + Send>(
+        &self,
+        tag: &'static Tag<T>,
+        provider: impl Provider + 'static,
+    ) -> Result<()> {
+        self.provide_key::<T>(Key::from_tag::<T>(tag.tag), provider)
+            .await
+    }
+
+    /// Replace an existing Provider for a tagged dependency
+    pub async fn replace_with<T: Any + Sync + Send>(
+        &self,
+        tag: &'static Tag<T>,
+        provider: impl Provider + 'static,
+    ) -> Result<()> {
+        self.replace_key_with::<T>(Key::from_tag::<T>(tag.tag), provider)
+            .await
     }
 }
 
 #[cfg(test)]
 pub(crate) mod test {
-    use std::sync::Arc;
-
     use fake::Fake;
 
     use super::*;
@@ -91,34 +93,40 @@ pub(crate) mod test {
 
     pub const SERVICE_TAG: Tag<TestService> = Tag::new("InMemoryTestService");
     pub const OTHER_TAG: Tag<OtherService> = Tag::new("InMemoryOtherService");
-    pub const DYN_TAG: Tag<Arc<dyn HasId>> = Tag::new("DynHasIdService");
+    pub const DYN_TAG: Tag<Box<dyn HasId>> = Tag::new("DynHasIdService");
 
     trait DynamicService: Sync + Send {
         fn test_fn(&self) {}
     }
 
-    #[test]
-    fn test_inject_tag_success() -> Result<()> {
-        let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_inject_tag_success() -> Result<()> {
+        let i = Inject::default();
 
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
+        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
         assert!(
-            i.0.contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
+            i.0.read()
+                .await
+                .contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
             "key does not exist in injection container"
         );
 
         Ok(())
     }
 
-    #[test]
-    fn test_inject_tag_occupied() -> Result<()> {
-        let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_inject_tag_occupied() -> Result<()> {
+        let i = Inject::default();
 
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
+        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
         // Inject the same type a second time
-        let result = i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()));
+        let result = i
+            .inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            .await;
 
         if let Err(err) = result {
             assert_eq!(
@@ -132,67 +140,70 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_get_tag_opt_success() -> Result<()> {
-        let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_get_tag_opt_success() -> Result<()> {
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))?;
+        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))
+            .await?;
 
-        let result = i.get_opt(&SERVICE_TAG)?.unwrap();
+        let result = i.get_opt(&SERVICE_TAG).await?.unwrap();
 
         assert_eq!(expected, result.id);
 
         Ok(())
     }
 
-    #[test]
-    fn test_get_tag_opt_not_found() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_tag_opt_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.get_opt(&SERVICE_TAG)?;
+        let result = i.get_opt(&SERVICE_TAG).await?;
 
         assert!(result.is_none());
 
         Ok(())
     }
 
-    #[test]
-    fn test_get_tag_success() -> Result<()> {
-        let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_get_tag_success() -> Result<()> {
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))?;
+        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))
+            .await?;
 
-        let result = i.get(&SERVICE_TAG)?;
+        let result = i.get(&SERVICE_TAG).await?;
 
         assert_eq!(expected, result.id);
 
         Ok(())
     }
 
-    #[test]
-    fn test_get_dyn_tag_success() -> Result<()> {
-        let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_get_dyn_tag_success() -> Result<()> {
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject::<Arc<dyn HasId>>(&DYN_TAG, Arc::new(TestService::new(expected.clone())))?;
+        i.inject::<Box<dyn HasId>>(&DYN_TAG, Box::new(TestService::new(expected.clone())))
+            .await?;
 
-        let result = i.get(&DYN_TAG)?;
+        let result = i.get(&DYN_TAG).await?;
 
         assert_eq!(expected, result.get_id());
 
         Ok(())
     }
 
-    #[test]
-    fn test_get_tag_not_found() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_tag_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.get(&SERVICE_TAG);
+        let result = i.get(&SERVICE_TAG).await;
 
         if let Err(err) = result {
             assert_eq!(
@@ -206,91 +217,37 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_get_tag_mut_opt_success() -> Result<()> {
-        let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_replace_tag_success() -> Result<()> {
+        let i = Inject::default();
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))?;
-
-        let result = i.get_mut_opt(&SERVICE_TAG)?.unwrap();
-
-        assert_eq!(expected, result.id);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_tag_mut_opt_not_found() -> Result<()> {
-        let mut i = Inject::default();
-
-        let result = i.get_mut_opt(&SERVICE_TAG)?;
-
-        assert!(result.is_none());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_tag_mut_success() -> Result<()> {
-        let mut i = Inject::default();
-
-        let expected: String = fake::uuid::UUIDv4.fake();
-
-        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))?;
-
-        let result = i.get_mut(&SERVICE_TAG)?;
-
-        assert_eq!(expected, result.id);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_tag_mut_not_found() -> Result<()> {
-        let mut i = Inject::default();
-
-        let result = i.get_mut(&SERVICE_TAG);
-
-        if let Err(err) = result {
-            assert_eq!(
-                format!("{} was not found\n\nAvailable: (empty)", SERVICE_TAG),
-                err.to_string()
-            );
-        } else {
-            panic!("did not return Err as expected")
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_replace_tag_success() -> Result<()> {
-        let mut i = Inject::default();
-
-        let expected: String = fake::uuid::UUIDv4.fake();
-
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
+        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
         // Override the instance that was injected the first time
-        i.replace(&SERVICE_TAG, TestService::new(expected.clone()))?;
+        i.replace(&SERVICE_TAG, TestService::new(expected.clone()))
+            .await?;
 
-        let result = i.get(&SERVICE_TAG)?;
+        let result = i.get(&SERVICE_TAG).await?;
 
         assert_eq!(expected, result.id);
 
         Ok(())
     }
 
-    #[test]
-    fn test_replace_not_found() -> Result<()> {
-        let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_replace_not_found() -> Result<()> {
+        let i = Inject::default();
 
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))?;
+        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
         // Override a type that doesn't have any instances yet
-        let result = i.replace(&OTHER_TAG, OtherService::new(fake::uuid::UUIDv4.fake()));
+        let result = i
+            .replace(&OTHER_TAG, OtherService::new(fake::uuid::UUIDv4.fake()))
+            .await;
 
         if let Err(err) = result {
             assert_eq!(

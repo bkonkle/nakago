@@ -41,17 +41,14 @@ pub async fn health_handler() -> Json<HealthResponse> {
 /// State for the GraphQL Handler
 #[derive(Clone)]
 pub struct GraphQLState {
-    users: Arc<dyn UsersService>,
-    schema: GraphQLSchema,
+    users: Arc<Box<dyn UsersService>>,
+    schema: Arc<GraphQLSchema>,
 }
 
 impl GraphQLState {
     /// Create a new GraphQLState instance
-    pub fn new(users: &Arc<dyn UsersService>, schema: GraphQLSchema) -> Self {
-        Self {
-            users: users.clone(),
-            schema,
-        }
+    pub fn new(users: Arc<Box<dyn UsersService>>, schema: Arc<GraphQLSchema>) -> Self {
+        Self { users, schema }
     }
 }
 
@@ -89,17 +86,14 @@ pub async fn graphql_handler(
 /// State for the WebSocket Events Handler
 #[derive(Clone)]
 pub struct EventsState {
-    users: Arc<dyn UsersService>,
-    handler: SocketHandler,
+    users: Arc<Box<dyn UsersService>>,
+    handler: Arc<SocketHandler>,
 }
 
 impl EventsState {
     /// Create a new EventsState instance
-    pub fn new(users: &Arc<dyn UsersService>, handler: SocketHandler) -> Self {
-        Self {
-            users: users.clone(),
-            handler,
-        }
+    pub fn new(users: Arc<Box<dyn UsersService>>, handler: Arc<SocketHandler>) -> Self {
+        Self { users, handler }
     }
 }
 

@@ -1,13 +1,13 @@
 use async_graphql::dataloader::DataLoader;
 use async_trait::async_trait;
-use nakago::inject;
+use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
 use std::sync::Arc;
 
 use super::service::{DefaultShowsService, ShowLoader, ShowsService};
 use crate::db::providers::DATABASE_CONNECTION;
 
 /// Tag(ShowsService)
-pub const SHOWS_SERVICE: inject::Tag<Arc<dyn ShowsService>> = inject::Tag::new("ShowsService");
+pub const SHOWS_SERVICE: Tag<Box<dyn ShowsService>> = Tag::new("ShowsService");
 
 /// Provide the ShowsService
 ///
@@ -19,16 +19,18 @@ pub const SHOWS_SERVICE: inject::Tag<Arc<dyn ShowsService>> = inject::Tag::new("
 pub struct ProvideShowsService {}
 
 #[async_trait]
-impl inject::Provider<Arc<dyn ShowsService>> for ProvideShowsService {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<Arc<dyn ShowsService>> {
-        let db = i.get(&DATABASE_CONNECTION)?;
+impl Provider for ProvideShowsService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let db = i.get(&DATABASE_CONNECTION).await?;
 
-        Ok(Arc::new(DefaultShowsService::new(db.clone())))
+        let service: Box<dyn ShowsService> = Box::new(DefaultShowsService::new(db));
+
+        Ok(Arc::new(service))
     }
 }
 
 /// Tag(ShowLoader)
-pub const SHOW_LOADER: inject::Tag<DataLoader<ShowLoader>> = inject::Tag::new("ShowLoader");
+pub const SHOW_LOADER: Tag<DataLoader<ShowLoader>> = Tag::new("ShowLoader");
 
 /// Provide the ShowLoader
 ///
@@ -40,13 +42,13 @@ pub const SHOW_LOADER: inject::Tag<DataLoader<ShowLoader>> = inject::Tag::new("S
 pub struct ProvideShowLoader {}
 
 #[async_trait]
-impl inject::Provider<DataLoader<ShowLoader>> for ProvideShowLoader {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<DataLoader<ShowLoader>> {
-        let shows_service = i.get(&SHOWS_SERVICE)?;
+impl Provider for ProvideShowLoader {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let shows_service = i.get(&SHOWS_SERVICE).await?;
 
-        Ok(DataLoader::new(
+        Ok(Arc::new(DataLoader::new(
             ShowLoader::new(shows_service.clone()),
             tokio::spawn,
-        ))
+        )))
     }
 }

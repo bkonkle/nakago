@@ -350,16 +350,14 @@ impl ProfilesService for DefaultProfilesService {
 /// A dataloader for `Profile` instances
 pub struct ProfileLoader {
     /// The SeaOrm database connection
-    profiles: Arc<dyn ProfilesService>,
+    profiles: Arc<Box<dyn ProfilesService>>,
 }
 
 /// The default implementation for the `ProfileLoader`
 impl ProfileLoader {
     /// Create a new instance
-    pub fn new(profiles: Arc<dyn ProfilesService>) -> Self {
-        Self {
-            profiles: profiles.clone(),
-        }
+    pub fn new(profiles: Arc<Box<dyn ProfilesService>>) -> Self {
+        Self { profiles }
     }
 }
 

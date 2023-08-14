@@ -1,13 +1,16 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use nakago::{inject, Tag};
+use nakago::{
+    inject::{self, container::Dependency},
+    Tag,
+};
 use sea_orm::DatabaseConnection;
 
 use crate::config::AppConfig;
 
 /// The PostgresPool Tag
-pub const DATABASE_CONNECTION: Tag<Arc<DatabaseConnection>> = Tag::new("DatabaseConnection");
+pub const DATABASE_CONNECTION: Tag<DatabaseConnection> = Tag::new("DatabaseConnection");
 
 /// Provide a SeaOrm Database connection
 ///
@@ -19,9 +22,9 @@ pub const DATABASE_CONNECTION: Tag<Arc<DatabaseConnection>> = Tag::new("Database
 pub struct ProvideDatabaseConnection {}
 
 #[async_trait]
-impl inject::Provider<Arc<DatabaseConnection>> for ProvideDatabaseConnection {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<Arc<DatabaseConnection>> {
-        let config = i.get_type::<AppConfig>()?;
+impl inject::Provider for ProvideDatabaseConnection {
+    async fn provide(self: Arc<Self>, i: inject::Inject) -> inject::Result<Arc<Dependency>> {
+        let config = i.get_type::<AppConfig>().await?;
 
         Ok(Arc::new(
             sea_orm::Database::connect(&config.database.url)

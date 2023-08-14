@@ -42,7 +42,7 @@ async fn test_profile_create_simple() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a user and profile with this username
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let user = users.create(&username).await?;
 
     let req = utils.graphql.query(
@@ -169,7 +169,7 @@ async fn test_profile_create_authz() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a user and profile with this username
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let _ = users.create(&username).await?;
 
     let req = utils.graphql.query(
@@ -260,7 +260,7 @@ async fn test_profile_get_empty() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a user with this username
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let _ = users.create(&username).await?;
 
     let req = utils

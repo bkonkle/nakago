@@ -163,13 +163,13 @@ impl UsersService for DefaultUsersService {
 /// A dataloader for `User` instances
 pub struct UserLoader {
     /// The SeaOrm database connection
-    locations: Arc<dyn UsersService>,
+    locations: Arc<Box<dyn UsersService>>,
 }
 
 /// The default implementation for the `UserLoader`
 impl UserLoader {
     /// Create a new instance
-    pub fn new(locations: Arc<dyn UsersService>) -> Self {
+    pub fn new(locations: Arc<Box<dyn UsersService>>) -> Self {
         Self { locations }
     }
 }

@@ -30,7 +30,7 @@ use super::{
 ///
 /// **Depends on:**
 ///  - `Tag(DatabaseConnection)`
-pub async fn init_domains(i: &mut inject::Inject) -> inject::Result<()> {
+pub async fn init_domains(i: &inject::Inject) -> inject::Result<()> {
     i.provide(&USERS_SERVICE, ProvideUsersService::default())
         .await?;
 

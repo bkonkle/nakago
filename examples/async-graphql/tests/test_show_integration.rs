@@ -157,7 +157,7 @@ async fn test_show_get_simple() -> Result<()> {
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE)?;
+    let shows = utils.app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let req = utils
@@ -251,7 +251,7 @@ async fn test_show_get_many() -> Result<()> {
     show_input.title = "Test Show".to_string();
     show_input.summary = Some("test-summary".to_string());
 
-    let shows = app.get(&SHOWS_SERVICE)?;
+    let shows = app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let mut other_show_input: CreateShowInput = Faker.fake();
@@ -325,17 +325,17 @@ async fn test_show_update_simple() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a User
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let user = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE)?;
+    let shows = utils.app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     // Grant the admin role to this User for this Show
-    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE)?;
+    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE).await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "admin".to_string(),
@@ -422,7 +422,7 @@ async fn test_show_update_requires_authn() -> Result<()> {
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = app.get(&SHOWS_SERVICE)?;
+    let shows = app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let req = graphql.query(
@@ -459,13 +459,13 @@ async fn test_show_update_requires_authz() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a User
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let _ = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE)?;
+    let shows = utils.app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let req = utils.graphql.query(
@@ -513,17 +513,17 @@ async fn test_show_delete_simple() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a User
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let user = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE)?;
+    let shows = utils.app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     // Grant the admin role to this User for this Show
-    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE)?;
+    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE).await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "admin".to_string(),
@@ -589,7 +589,7 @@ async fn test_show_delete_requires_authn() -> Result<()> {
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = app.get(&SHOWS_SERVICE)?;
+    let shows = app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let req = graphql.query(DELETE_SHOW, json!({"id": show.id}), None)?;
@@ -617,13 +617,13 @@ async fn test_show_delete_requires_authz() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a User
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let _ = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE)?;
+    let shows = utils.app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let req = utils
