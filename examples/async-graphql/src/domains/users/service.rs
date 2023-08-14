@@ -5,13 +5,14 @@ use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
 use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
-use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
+use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
+use sea_orm::{entity::*, query::*, EntityTrait};
 
 use super::{
     model::{self, User, UserOption},
     mutations::UpdateUserInput,
 };
-use crate::{db::DATABASE_CONNECTION, domains::role_grants::model as role_grant_model};
+use crate::domains::role_grants::model as role_grant_model;
 
 /// Tag(UsersService)
 pub const USERS_SERVICE: Tag<Box<dyn UsersService>> = Tag::new("UsersService");

@@ -19,9 +19,6 @@ pub mod config;
 /// Application utils
 pub mod utils;
 
-/// Database utils
-pub mod db;
-
 /// GraphQL utils
 pub mod graphql;
 

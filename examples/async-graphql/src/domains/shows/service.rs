@@ -6,10 +6,10 @@ use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
 use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
-use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
+use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
+use sea_orm::{entity::*, query::*, EntityTrait};
 
 use crate::{
-    db::DATABASE_CONNECTION,
     domains::shows::{
         model::{self, Show},
         mutations::{CreateShowInput, UpdateShowInput},
