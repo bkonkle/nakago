@@ -6,26 +6,14 @@ use std::path::PathBuf;
 use config::AppConfig;
 use log::info;
 use nakago::EventType;
-use nakago_axum::{
-    auth::{
-        providers::{AUTH_STATE, JWKS},
-        ProvideAuthState, ProvideJwks,
-    },
-    AxumApplication,
-};
+use nakago_axum::AxumApplication;
 use pico_args::{Arguments, Error};
 use routes::{init_events_route, init_graphql_route, init_health_route, AppState};
 
 use crate::{
-    db::providers::{ProvideDatabaseConnection, DATABASE_CONNECTION},
     domains::providers::InitDomains,
-    events::{
-        providers::{CONNECTIONS, SOCKET_HANDLER},
-        ProvideConnections, ProvideSocket,
-    },
-    graphql::InitGraphQLSchema,
-    providers::{InitAuthz, ProvideAppState},
-    utils::providers::{init_config_loaders, ProvideOso, OSO},
+    init::InitApp,
+    utils::{authz::InitAuthz, config::init_config_loaders},
 };
 
 mod config;
@@ -34,7 +22,7 @@ mod domains;
 mod events;
 mod graphql;
 mod handlers;
-mod providers;
+mod init;
 mod routes;
 mod utils;
 
@@ -69,30 +57,13 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let mut app = AxumApplication::<AppConfig>::default();
-
-    app.provide(&JWKS, ProvideJwks::<AppConfig>::default())
-        .await?;
-    app.provide(&DATABASE_CONNECTION, ProvideDatabaseConnection::default())
-        .await?;
-    app.provide(&OSO, ProvideOso::default()).await?;
-    app.provide(&CONNECTIONS, ProvideConnections::default())
-        .await?;
-
-    app.provide(&SOCKET_HANDLER, ProvideSocket::default())
-        .await?;
-    app.provide(&AUTH_STATE, ProvideAuthState::default())
-        .await?;
-
-    app.provide_type::<AppState>(ProvideAppState::default())
-        .await?;
-
+    app.on(&EventType::Init, InitDomains::default());
+    app.on(&EventType::Init, InitApp::default());
     app.on(&EventType::Init, init_config_loaders());
     app.on(&EventType::Init, init_health_route());
     app.on(&EventType::Init, init_graphql_route());
     app.on(&EventType::Init, init_events_route());
-    app.on(&EventType::Startup, InitDomains::default());
     app.on(&EventType::Startup, InitAuthz::default());
-    app.on(&EventType::Startup, InitGraphQLSchema::default());
 
     let server = app.run::<AppState>(args.config_path).await?;
     let addr = server.local_addr();

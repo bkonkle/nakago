@@ -15,17 +15,9 @@ use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
 use hyper::{client::HttpConnector, Body, Client, Method, Request};
 use hyper_tls::HttpsConnector;
 use nakago::{Dependency, EventType, Inject, InjectResult, Provider};
-use nakago_axum::{
-    auth::{
-        config::AuthConfig,
-        providers::{AUTH_STATE, JWKS},
-        ProvideAuthState, ProvideJwks,
-    },
-    AxumApplication,
-};
+use nakago_axum::{auth::config::AuthConfig, AxumApplication};
 use nakago_examples_async_graphql::{
     config::AppConfig,
-    db::providers::{ProvideDatabaseConnection, DATABASE_CONNECTION},
     domains::{
         episodes::{model::Episode, mutations::CreateEpisodeInput, providers::EPISODES_SERVICE},
         profiles::{model::Profile, mutations::CreateProfileInput, providers::PROFILES_SERVICE},
@@ -33,14 +25,9 @@ use nakago_examples_async_graphql::{
         shows::{model::Show, mutations::CreateShowInput, providers::SHOWS_SERVICE},
         users::{model::User, providers::USERS_SERVICE},
     },
-    events::{
-        providers::{CONNECTIONS, SOCKET_HANDLER},
-        ProvideConnections, ProvideSocket,
-    },
-    graphql::InitGraphQLSchema,
-    providers::{InitAuthz, ProvideAppState},
+    init::InitApp,
     routes::{init_events_route, init_graphql_route, init_health_route, AppState},
-    utils::providers::{init_config_loaders, ProvideOso, OSO},
+    utils::{authz::InitAuthz, config::init_config_loaders},
 };
 use once_cell::sync::Lazy;
 use serde::Deserialize;
@@ -65,30 +52,13 @@ pub fn http_client() -> Client<HttpsConnector<HttpConnector>> {
 /// Run the Application Server
 pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
     let mut app = AxumApplication::<AppConfig>::default();
-
-    app.provide(&JWKS, ProvideJwks::<AppConfig>::default())
-        .await?;
-    app.provide(&DATABASE_CONNECTION, ProvideDatabaseConnection::default())
-        .await?;
-    app.provide(&OSO, ProvideOso::default()).await?;
-    app.provide(&CONNECTIONS, ProvideConnections::default())
-        .await?;
-
-    app.provide(&SOCKET_HANDLER, ProvideSocket::default())
-        .await?;
-    app.provide(&AUTH_STATE, ProvideAuthState::default())
-        .await?;
-
-    app.provide_type::<AppState>(ProvideAppState::default())
-        .await?;
-
+    app.on(&EventType::Init, InitApp::default());
+    app.on(&EventType::Init, InitDomains::default());
     app.on(&EventType::Init, init_config_loaders());
     app.on(&EventType::Init, init_health_route());
     app.on(&EventType::Init, init_graphql_route());
     app.on(&EventType::Init, init_events_route());
-    app.on(&EventType::Startup, InitDomains::default());
     app.on(&EventType::Startup, InitAuthz::default());
-    app.on(&EventType::Startup, InitGraphQLSchema::default());
 
     let server = app.run::<AppState>(None).await?;
     let addr = server.local_addr();
