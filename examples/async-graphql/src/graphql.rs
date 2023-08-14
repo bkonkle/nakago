@@ -82,7 +82,7 @@ impl Hook for InitGraphQLSchema {
             &GRAPHQL_SCHEMA,
             Schema::build(Query::default(), Mutation::default(), EmptySubscription)
                 .data(config.clone())
-                .data(oso.clone())
+                .data((*oso).clone())
                 .data(users.clone())
                 .data(user_loader.clone())
                 .data(profile_loader.clone())
