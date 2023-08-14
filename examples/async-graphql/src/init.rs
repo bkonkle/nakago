@@ -13,8 +13,11 @@ use crate::{
         ProvideConnections, ProvideSocket,
     },
     graphql::{ProvideGraphQLSchema, GRAPHQL_SCHEMA},
-    routes::{AppState, ProvideAppState},
-    utils::authz::{ProvideOso, OSO},
+    routes::{init_events_route, init_graphql_route, init_health_route, AppState, ProvideAppState},
+    utils::{
+        authz::{ProvideOso, OSO},
+        config::init_config_loaders,
+    },
 };
 
 /// Initializes dependency Providers for the Application
@@ -24,6 +27,7 @@ pub struct InitApp {}
 #[async_trait]
 impl Hook for InitApp {
     async fn handle(&self, i: &Inject) -> InjectResult<()> {
+        // First add some final providers
         i.provide(&JWKS, ProvideJwks::<AppConfig>::default())
             .await?;
         i.provide(&DATABASE_CONNECTION, ProvideDatabaseConnection::default())
@@ -39,6 +43,12 @@ impl Hook for InitApp {
 
         i.provide_type::<AppState>(ProvideAppState::default())
             .await?;
+
+        // Then, eagerly run some dependent init hooks
+        init_config_loaders().handle(i).await?;
+        init_health_route().handle(i).await?;
+        init_graphql_route().handle(i).await?;
+        init_events_route().handle(i).await?;
 
         Ok(())
     }
