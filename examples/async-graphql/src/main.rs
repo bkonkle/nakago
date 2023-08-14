@@ -10,7 +10,7 @@ use nakago_axum::AxumApplication;
 use pico_args::{Arguments, Error};
 use routes::AppState;
 
-use crate::{domains::providers::InitDomains, init::InitApp, utils::authz::InitAuthz};
+use crate::{domains::InitDomains, init::InitApp, utils::authz::InitAuthz};
 
 mod config;
 mod db;

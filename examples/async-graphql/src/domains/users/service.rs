@@ -1,16 +1,20 @@
+use std::sync::Arc;
+
 use anyhow::Result;
-use async_graphql::{dataloader::Loader, FieldError};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
+use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
 use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
-use std::{collections::HashMap, sync::Arc};
 
 use super::{
     model::{self, User, UserOption},
     mutations::UpdateUserInput,
 };
-use crate::domains::role_grants::model as role_grant_model;
+use crate::{db::DATABASE_CONNECTION, domains::role_grants::model as role_grant_model};
+
+/// Tag(UsersService)
+pub const USERS_SERVICE: Tag<Box<dyn UsersService>> = Tag::new("UsersService");
 
 /// A UsersService appliies business logic to a dynamic UsersRepository implementation.
 #[cfg_attr(test, automock)]
@@ -160,31 +164,22 @@ impl UsersService for DefaultUsersService {
     }
 }
 
-/// A dataloader for `User` instances
-pub struct UserLoader {
-    /// The SeaOrm database connection
-    locations: Arc<Box<dyn UsersService>>,
-}
-
-/// The default implementation for the `UserLoader`
-impl UserLoader {
-    /// Create a new instance
-    pub fn new(locations: Arc<Box<dyn UsersService>>) -> Self {
-        Self { locations }
-    }
-}
+/// Provide the UsersService
+///
+/// **Provides:** `Arc<dyn UsersServiceTrait>`
+///
+/// **Depends on:**
+///   - `Tag(DatabaseConnection)`
+#[derive(Default)]
+pub struct ProvideUsersService {}
 
 #[async_trait]
-impl Loader<String> for UserLoader {
-    type Value = User;
-    type Error = FieldError;
+impl Provider for ProvideUsersService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let db = i.get(&DATABASE_CONNECTION).await?;
 
-    async fn load(&self, keys: &[String]) -> Result<HashMap<String, Self::Value>, Self::Error> {
-        let locations = self.locations.get_by_ids(keys.into()).await?;
+        let service: Box<dyn UsersService> = Box::new(DefaultUsersService::new(db));
 
-        Ok(locations
-            .into_iter()
-            .map(|location| (location.id.clone(), location))
-            .collect())
+        Ok(Arc::new(service))
     }
 }

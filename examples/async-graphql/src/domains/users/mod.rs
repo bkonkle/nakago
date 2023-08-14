@@ -12,8 +12,8 @@ pub mod mutations;
 /// GraphQL Resolver
 pub mod resolver;
 
-/// Dependency injection providers
-pub mod providers;
+/// DataLoaders
+pub mod loaders;
 
 /// Authorization rules
 pub const AUTHORIZATION: &str = include_str!("authorization.polar");

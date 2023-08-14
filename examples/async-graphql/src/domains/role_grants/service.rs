@@ -1,12 +1,18 @@
+use std::sync::Arc;
+
 use anyhow::Result;
-use async_graphql::{dataloader::Loader, FieldError};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
+use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
 use sea_orm::{entity::*, query::*, Condition, DatabaseConnection, EntityTrait};
-use std::{collections::HashMap, sync::Arc};
+
+use crate::db::DATABASE_CONNECTION;
 
 use super::model::{self, CreateRoleGrantInput, RoleGrant};
+
+/// Tag(RoleGrantsService)
+pub const ROLE_GRANTS_SERVICE: Tag<Box<dyn RoleGrantsService>> = Tag::new("RoleGrantsService");
 
 /// A RoleGrantsService appliies business logic to a dynamic RoleGrantsRepository implementation.
 #[cfg_attr(test, automock)]
@@ -92,31 +98,22 @@ impl RoleGrantsService for DefaultRoleGrantsService {
     }
 }
 
-/// A dataloader for `RoleGrant` instances
-pub struct RoleGrantLoader {
-    /// The SeaOrm database connection
-    role_grants: Arc<Box<dyn RoleGrantsService>>,
-}
-
-/// The default implementation for the `RoleGrantLoader`
-impl RoleGrantLoader {
-    /// Create a new instance
-    pub fn new(role_grants: Arc<Box<dyn RoleGrantsService>>) -> Self {
-        Self { role_grants }
-    }
-}
+/// Provide the RoleGrantsService
+///
+/// **Provides:** `Arc<dyn RoleGrantsService>`
+///
+/// **Depends on:**
+///   - `Tag(DatabaseConnection)`
+#[derive(Default)]
+pub struct ProvideRoleGrantsService {}
 
 #[async_trait]
-impl Loader<String> for RoleGrantLoader {
-    type Value = RoleGrant;
-    type Error = FieldError;
+impl Provider for ProvideRoleGrantsService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let db = i.get(&DATABASE_CONNECTION).await?;
 
-    async fn load(&self, keys: &[String]) -> Result<HashMap<String, Self::Value>, Self::Error> {
-        let role_grants = self.role_grants.get_by_ids(keys.into()).await?;
+        let service: Box<dyn RoleGrantsService> = Box::new(DefaultRoleGrantsService::new(db));
 
-        Ok(role_grants
-            .into_iter()
-            .map(|role_grant| (role_grant.id.clone(), role_grant))
-            .collect())
+        Ok(Arc::new(service))
     }
 }

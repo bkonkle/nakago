@@ -11,8 +11,7 @@ use super::{
 };
 use crate::{
     domains::{
-        shows::model::Show,
-        shows::service::{ShowLoader, ShowsService},
+        shows::loaders::ShowLoader, shows::model::Show, shows::service::ShowsService,
         users::model::User,
     },
     utils::graphql::{as_graphql_error, graphql_error},

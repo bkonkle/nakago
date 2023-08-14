@@ -5,13 +5,13 @@ use axum::{extract::FromRef, routing::get, Router};
 use nakago::{Dependency, Inject, InjectResult, Provider};
 use nakago_axum::{
     app::State,
-    auth::{authenticate::AuthState, providers::AUTH_STATE},
+    auth::{authenticate::AuthState, AUTH_STATE},
     InitRoute, Route,
 };
 
 use crate::{
-    domains::users::providers::USERS_SERVICE, events::providers::SOCKET_HANDLER,
-    graphql::GRAPHQL_SCHEMA, handlers::GraphQLState,
+    domains::users::service::USERS_SERVICE, events::SOCKET_HANDLER, graphql::GRAPHQL_SCHEMA,
+    handlers::GraphQLState,
 };
 
 use super::handlers::{events_handler, graphiql, graphql_handler, health_handler, EventsState};

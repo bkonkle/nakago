@@ -1,21 +1,26 @@
+use std::sync::Arc;
+
 use anyhow::Result;
+use async_trait::async_trait;
 use axum::extract::ws::WebSocket;
 use futures::{SinkExt, StreamExt, TryFutureExt};
 use log::error;
-use std::sync::Arc;
+use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use crate::{domains::users::model::User, events::connections::Session};
+/// The SocketHandler Tag
+pub const SOCKET_HANDLER: Tag<SocketHandler> = Tag::new("SocketHandler");
 
 use super::{
-    connections::Connections,
+    connections::{Connections, CONNECTIONS},
     messages::IncomingMessage,
     messages::{
         IncomingMessage::Ping,
         OutgoingMessage::{Error, Pong},
     },
 };
+use crate::{domains::users::model::User, events::connections::Session};
 
 /// WebSocket Event Handler
 #[derive(Clone)]
@@ -104,5 +109,24 @@ impl SocketHandler {
         self.connections.send(conn_id, Pong.into()).await;
 
         Ok(())
+    }
+}
+
+/// Provide a new WebSocket Event Handler
+///
+/// **Provides:** `SocketHandler`
+///
+/// **Depends on:**
+///   - `Tag(Connections)`
+///   - `Tag(CommandsController)`
+#[derive(Default)]
+pub struct ProvideSocket {}
+
+#[async_trait]
+impl Provider for ProvideSocket {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let connections = i.get(&CONNECTIONS).await?;
+
+        Ok(Arc::new(SocketHandler::new(connections)))
     }
 }

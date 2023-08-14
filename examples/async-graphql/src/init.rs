@@ -1,16 +1,14 @@
 use async_trait::async_trait;
 use nakago::{Hook, Inject, InjectResult};
 use nakago_axum::auth::{
-    providers::{AUTH_STATE, JWKS},
-    ProvideAuthState, ProvideJwks,
+    ProvideAuthState, ProvideJwks, {AUTH_STATE, JWKS},
 };
 
 use crate::{
     config::AppConfig,
-    db::providers::{ProvideDatabaseConnection, DATABASE_CONNECTION},
+    db::{ProvideDatabaseConnection, DATABASE_CONNECTION},
     events::{
-        providers::{CONNECTIONS, SOCKET_HANDLER},
-        ProvideConnections, ProvideSocket,
+        ProvideConnections, ProvideSocket, {CONNECTIONS, SOCKET_HANDLER},
     },
     graphql::{ProvideGraphQLSchema, GRAPHQL_SCHEMA},
     routes::{init_events_route, init_graphql_route, init_health_route, AppState, ProvideAppState},

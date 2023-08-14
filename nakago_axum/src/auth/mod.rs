@@ -12,9 +12,6 @@ pub mod jwks;
 /// JWT authentication
 pub mod authenticate;
 
-/// Dependency injection providers
-pub mod providers;
-
-pub use authenticate::Subject;
+pub use authenticate::{ProvideAuthState, Subject, AUTH_STATE};
 pub use errors::AuthError;
-pub use providers::{ProvideAuthState, ProvideJwks};
+pub use jwks::{ProvideJwks, JWKS};

@@ -7,11 +7,11 @@ use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
 use crate::{
     config::AppConfig,
     domains::{
-        episodes::providers::{EPISODES_SERVICE, EPISODE_LOADER},
-        profiles::providers::{PROFILES_SERVICE, PROFILE_LOADER},
-        role_grants::providers::{ROLE_GRANTS_SERVICE, ROLE_GRANT_LOADER},
-        shows::providers::{SHOWS_SERVICE, SHOW_LOADER},
-        users::providers::{USERS_SERVICE, USER_LOADER},
+        episodes::loaders::EPISODE_LOADER, episodes::service::EPISODES_SERVICE,
+        profiles::loaders::PROFILE_LOADER, profiles::service::PROFILES_SERVICE,
+        role_grants::loaders::ROLE_GRANT_LOADER, role_grants::service::ROLE_GRANTS_SERVICE,
+        shows::loaders::SHOW_LOADER, shows::service::SHOWS_SERVICE, users::loaders::USER_LOADER,
+        users::service::USERS_SERVICE,
     },
 };
 use crate::{
