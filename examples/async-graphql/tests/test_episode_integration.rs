@@ -44,17 +44,17 @@ async fn test_episode_create_simple() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a user and a show
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let user = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE)?;
+    let shows = utils.app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     // Grant the manager role to this user for this episode's show
-    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE)?;
+    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE).await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "manager".to_string(),
@@ -156,7 +156,7 @@ async fn test_episode_create_authn() -> Result<()> {
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = app.get(&SHOWS_SERVICE)?;
+    let shows = app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let req = graphql.query(
@@ -196,11 +196,11 @@ async fn test_episode_create_authz() -> Result<()> {
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE)?;
+    let shows = utils.app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     // Create a user with this username
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let _ = users.create(&username).await?;
 
     let req = utils.graphql.query(
@@ -425,7 +425,7 @@ async fn test_episode_update() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a user with this username
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let user = users.create(&username).await?;
 
     let (show, episode) = utils
@@ -433,7 +433,7 @@ async fn test_episode_update() -> Result<()> {
         .await?;
 
     // Grant the manager role to this user for this episode's show
-    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE)?;
+    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE).await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "manager".to_string(),
@@ -556,7 +556,7 @@ async fn test_episode_update_authz() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a user with this username
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let _ = users.create(&username).await?;
 
     let (_, episode) = utils
@@ -607,7 +607,7 @@ async fn test_episode_delete() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a user with this username
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let user = users.create(&username).await?;
 
     let (show, episode) = utils
@@ -615,7 +615,7 @@ async fn test_episode_delete() -> Result<()> {
         .await?;
 
     // Grant the manager role to this user for this episode's show
-    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE)?;
+    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE).await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "manager".to_string(),
@@ -708,7 +708,7 @@ async fn test_episode_delete_authz() -> Result<()> {
     let token = utils.create_jwt(&username);
 
     // Create a user with this username
-    let users = utils.app.get(&USERS_SERVICE)?;
+    let users = utils.app.get(&USERS_SERVICE).await?;
     let _ = users.create(&username).await?;
 
     let (_, episode) = utils

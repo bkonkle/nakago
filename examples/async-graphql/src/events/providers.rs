@@ -38,6 +38,6 @@ impl Provider for ProvideSocket {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
         let connections = i.get(&CONNECTIONS).await?;
 
-        Ok(Arc::new(SocketHandler::new(connections.clone())))
+        Ok(Arc::new(SocketHandler::new(connections)))
     }
 }

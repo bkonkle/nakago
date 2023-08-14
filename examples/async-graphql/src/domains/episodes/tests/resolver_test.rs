@@ -20,7 +20,7 @@ fn init(
 ) -> Schema<EpisodesQuery, EpisodesMutation, EmptySubscription> {
     let service: Arc<dyn EpisodesService> = Arc::new(service);
 
-    let shows_service: Arc<dyn ShowsService> = Arc::new(MockShowsService::new());
+    let shows_service: Arc<Box<dyn ShowsService>> = Arc::new(Box::new(MockShowsService::new()));
     let show_loader = ShowLoader::new(shows_service);
 
     Schema::build(

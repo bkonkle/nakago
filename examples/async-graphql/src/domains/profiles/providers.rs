@@ -24,7 +24,7 @@ impl Provider for ProvideProfilesService {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
         let db = i.get(&DATABASE_CONNECTION).await?;
 
-        let service: Box<dyn ProfilesService> = Box::new(DefaultProfilesService::new(db.clone()));
+        let service: Box<dyn ProfilesService> = Box::new(DefaultProfilesService::new(db));
 
         Ok(Arc::new(service))
     }

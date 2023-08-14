@@ -24,8 +24,7 @@ impl Provider for ProvideRoleGrantsService {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
         let db = i.get(&DATABASE_CONNECTION).await?;
 
-        let service: Box<dyn RoleGrantsService> =
-            Box::new(DefaultRoleGrantsService::new(db.clone()));
+        let service: Box<dyn RoleGrantsService> = Box::new(DefaultRoleGrantsService::new(db));
 
         Ok(Arc::new(service))
     }
