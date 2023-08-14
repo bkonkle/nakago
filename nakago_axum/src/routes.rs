@@ -42,13 +42,13 @@ impl<S: State> InitRoute<S> {
 
 #[async_trait]
 impl<S: State> inject::Hook for InitRoute<S> {
-    async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
+    async fn handle(&self, i: &inject::Inject) -> inject::Result<()> {
         let route = (self.get_route)(i);
 
-        if let Some(routes) = i.get_type_opt::<Mutex<Vec<Route<S>>>>()? {
+        if let Some(routes) = i.get_type_opt::<Mutex<Vec<Route<S>>>>().await? {
             routes.lock().await.push(route);
         } else {
-            i.inject_type(Mutex::new(vec![route]))?;
+            i.inject_type(Mutex::new(vec![route])).await?;
         }
 
         Ok(())

@@ -95,13 +95,13 @@ impl RoleGrantsService for DefaultRoleGrantsService {
 /// A dataloader for `RoleGrant` instances
 pub struct RoleGrantLoader {
     /// The SeaOrm database connection
-    role_grants: Arc<dyn RoleGrantsService>,
+    role_grants: Arc<Box<dyn RoleGrantsService>>,
 }
 
 /// The default implementation for the `RoleGrantLoader`
 impl RoleGrantLoader {
     /// Create a new instance
-    pub fn new(role_grants: Arc<dyn RoleGrantsService>) -> Self {
+    pub fn new(role_grants: Arc<Box<dyn RoleGrantsService>>) -> Self {
         Self { role_grants }
     }
 }

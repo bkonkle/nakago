@@ -206,13 +206,13 @@ impl ShowsService for DefaultShowsService {
 /// A dataloader for `Show` instances
 pub struct ShowLoader {
     /// The SeaOrm database connection
-    shows: Arc<dyn ShowsService>,
+    shows: Arc<Box<dyn ShowsService>>,
 }
 
 /// The default implementation for the `ShowLoader`
 impl ShowLoader {
     /// Create a new instance
-    pub fn new(shows: Arc<dyn ShowsService>) -> Self {
+    pub fn new(shows: Arc<Box<dyn ShowsService>>) -> Self {
         Self { shows }
     }
 }

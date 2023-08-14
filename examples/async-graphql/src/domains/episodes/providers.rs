@@ -2,14 +2,13 @@ use std::sync::Arc;
 
 use async_graphql::dataloader::DataLoader;
 use async_trait::async_trait;
-use nakago::inject;
+use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
 
 use super::service::{DefaultEpisodesService, EpisodeLoader, EpisodesService};
 use crate::db::providers::DATABASE_CONNECTION;
 
 /// Tag(EpisodesService)
-pub const EPISODES_SERVICE: inject::Tag<Arc<dyn EpisodesService>> =
-    inject::Tag::new("EpisodesService");
+pub const EPISODES_SERVICE: Tag<Box<dyn EpisodesService>> = Tag::new("EpisodesService");
 
 /// Provide the EpisodesService
 ///
@@ -21,17 +20,18 @@ pub const EPISODES_SERVICE: inject::Tag<Arc<dyn EpisodesService>> =
 pub struct ProvideEpisodesService {}
 
 #[async_trait]
-impl inject::Provider<Arc<dyn EpisodesService>> for ProvideEpisodesService {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<Arc<dyn EpisodesService>> {
-        let db = i.get(&DATABASE_CONNECTION)?;
+impl Provider for ProvideEpisodesService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let db = i.get(&DATABASE_CONNECTION).await?;
 
-        Ok(Arc::new(DefaultEpisodesService::new(db.clone())))
+        let service: Box<dyn EpisodesService> = Box::new(DefaultEpisodesService::new(db.clone()));
+
+        Ok(Arc::new(service))
     }
 }
 
 /// Tag(EpisodeLoader)
-pub const EPISODE_LOADER: inject::Tag<Arc<DataLoader<EpisodeLoader>>> =
-    inject::Tag::new("EpisodeLoader");
+pub const EPISODE_LOADER: Tag<DataLoader<EpisodeLoader>> = Tag::new("EpisodeLoader");
 
 /// Provide the EpisodeLoader
 ///
@@ -43,9 +43,9 @@ pub const EPISODE_LOADER: inject::Tag<Arc<DataLoader<EpisodeLoader>>> =
 pub struct ProvideEpisodeLoader {}
 
 #[async_trait]
-impl inject::Provider<Arc<DataLoader<EpisodeLoader>>> for ProvideEpisodeLoader {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<Arc<DataLoader<EpisodeLoader>>> {
-        let episodes_service = i.get(&EPISODES_SERVICE)?;
+impl Provider for ProvideEpisodeLoader {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let episodes_service = i.get(&EPISODES_SERVICE).await?;
 
         Ok(Arc::new(DataLoader::new(
             EpisodeLoader::new(episodes_service.clone()),

@@ -16,7 +16,7 @@ pub mod type_id;
 /// Hooks
 pub mod hooks;
 
-pub use container::{to_provider_error, Inject, Provider};
+pub use container::{to_provider_error, Dependency, Inject, Provider};
 pub use error::{Error, Result};
 pub use hooks::Hook;
 pub use key::{Id, Key};

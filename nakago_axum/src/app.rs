@@ -76,14 +76,14 @@ where
 
         let mut router = Router::<S>::new();
 
-        if let Some(routes) = self.app.get_type_opt::<Mutex<Vec<Route<S>>>>()? {
+        if let Some(routes) = self.app.get_type_opt::<Mutex<Vec<Route<S>>>>().await? {
             let routes: Vec<Route<S>> = routes.lock().await.drain(..).collect();
             for route in routes {
                 router = router.nest(&route.path, route.router.into_inner());
             }
         };
 
-        let state = self.app.get_type::<S>()?.clone();
+        let state = (*self.app.get_type::<S>().await?).clone();
 
         let app: Router = Router::new()
             .layer(
@@ -93,8 +93,8 @@ where
             )
             .merge(router.with_state(state));
 
-        let config = self.app.get_type::<C>()?;
-        let http = HttpConfig::from_ref(config);
+        let config = self.app.get_type::<C>().await?;
+        let http = HttpConfig::from_ref(&*config);
 
         let server = Server::bind(
             &format!("0.0.0.0:{}", http.port)

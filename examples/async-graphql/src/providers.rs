@@ -1,5 +1,7 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
-use nakago::inject;
+use nakago::{to_provider_error, Dependency, Hook, Inject, InjectResult, Provider};
 use nakago_axum::auth::{
     providers::{AUTH_STATE, JWKS},
     ProvideAuthState, ProvideJwks,
@@ -38,17 +40,17 @@ use crate::{
 pub struct ProvideAppState {}
 
 #[async_trait]
-impl inject::Provider<AppState> for ProvideAppState {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<AppState> {
-        let auth = i.get(&AUTH_STATE)?;
-        let users = i.get(&USERS_SERVICE)?;
-        let handler = i.get(&SOCKET_HANDLER)?;
-        let schema = i.get(&GRAPHQL_SCHEMA)?;
+impl Provider for ProvideAppState {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let auth = i.get(&AUTH_STATE).await?;
+        let users = i.get(&USERS_SERVICE).await?;
+        let handler = i.get(&SOCKET_HANDLER).await?;
+        let schema = i.get(&GRAPHQL_SCHEMA).await?;
 
-        let events = EventsState::new(users, handler.clone());
-        let graphql = GraphQLState::new(users, schema.clone());
+        let events = EventsState::new(users.clone(), handler.clone());
+        let graphql = GraphQLState::new(users, schema);
 
-        Ok(AppState::new(auth.clone(), events, graphql))
+        Ok(Arc::new(AppState::new((*auth).clone(), events, graphql)))
     }
 }
 
@@ -60,10 +62,10 @@ impl inject::Provider<AppState> for ProvideAppState {
 pub struct InitApp {}
 
 #[async_trait]
-impl inject::Hook for InitApp {
+impl Hook for InitApp {
     /// Initialize the ConfigLoaders needed for Axum integration. Injects `Tag(ConfigLoaders)` if it
     /// has not been provided yet.
-    async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
+    async fn handle(&self, i: &Inject) -> InjectResult<()> {
         add_app_config_loaders().handle(i).await?;
 
         Ok(())
@@ -85,8 +87,8 @@ impl inject::Hook for InitApp {
 pub struct StartApp {}
 
 #[async_trait]
-impl inject::Hook for StartApp {
-    async fn handle(&self, i: &mut inject::Inject) -> inject::Result<()> {
+impl Hook for StartApp {
+    async fn handle(&self, i: &Inject) -> InjectResult<()> {
         i.provide(&JWKS, ProvideJwks::<AppConfig>::default())
             .await?;
         i.provide(&DATABASE_CONNECTION, ProvideDatabaseConnection::default())
@@ -103,7 +105,8 @@ impl inject::Hook for StartApp {
         i.provide(&SOCKET_HANDLER, ProvideSocket::default()).await?;
         i.provide(&AUTH_STATE, ProvideAuthState::default()).await?;
 
-        i.provide_type(ProvideAppState::default()).await?;
+        i.provide_type::<AppState>(ProvideAppState::default())
+            .await?;
 
         Ok(())
     }
@@ -113,18 +116,18 @@ impl inject::Hook for StartApp {
 ///
 /// **Depends on (and modifies):**
 ///   - `Tag(Oso)`
-pub async fn init_authz(i: &mut inject::Inject) -> inject::Result<()> {
+pub async fn init_authz(i: &Inject) -> InjectResult<()> {
     // Set up authorization
-    let mut oso = i.get(&OSO)?.clone();
+    let mut oso = (*i.get(&OSO).await?).clone();
 
     oso.register_class(User::get_polar_class_builder().name("User").build())
-        .map_err(inject::to_provider_error)?;
+        .map_err(to_provider_error)?;
     oso.register_class(Profile::get_polar_class_builder().name("Profile").build())
-        .map_err(inject::to_provider_error)?;
+        .map_err(to_provider_error)?;
     oso.register_class(Show::get_polar_class_builder().name("Show").build())
-        .map_err(inject::to_provider_error)?;
+        .map_err(to_provider_error)?;
     oso.register_class(Episode::get_polar_class_builder().name("Episode").build())
-        .map_err(inject::to_provider_error)?;
+        .map_err(to_provider_error)?;
 
     oso.load_str(
         &[
@@ -135,9 +138,9 @@ pub async fn init_authz(i: &mut inject::Inject) -> inject::Result<()> {
         ]
         .join("\n"),
     )
-    .map_err(inject::to_provider_error)?;
+    .map_err(to_provider_error)?;
 
-    i.replace(&OSO, oso)?;
+    i.replace(&OSO, oso).await?;
 
     Ok(())
 }

@@ -280,13 +280,13 @@ impl EpisodesService for DefaultEpisodesService {
 /// A dataloader for `Episode` instances
 pub struct EpisodeLoader {
     /// The SeaOrm database connection
-    episodes: Arc<dyn EpisodesService>,
+    episodes: Arc<Box<dyn EpisodesService>>,
 }
 
 /// The default implementation for the `EpisodeLoader`
 impl EpisodeLoader {
     /// Create a new instance
-    pub fn new(episodes: Arc<dyn EpisodesService>) -> Self {
+    pub fn new(episodes: Arc<Box<dyn EpisodesService>>) -> Self {
         Self { episodes }
     }
 }

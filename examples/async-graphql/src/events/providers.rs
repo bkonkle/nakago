@@ -1,11 +1,11 @@
 use async_trait::async_trait;
-use nakago::{inject, Tag};
+use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
 use std::sync::Arc;
 
 use super::{Connections, SocketHandler};
 
 /// The Connections Tag
-pub const CONNECTIONS: Tag<Arc<Connections>> = Tag::new("Connections");
+pub const CONNECTIONS: Tag<Connections> = Tag::new("Connections");
 
 /// Provide the default Connections implementation
 ///
@@ -14,8 +14,8 @@ pub const CONNECTIONS: Tag<Arc<Connections>> = Tag::new("Connections");
 pub struct ProvideConnections {}
 
 #[async_trait]
-impl inject::Provider<Arc<Connections>> for ProvideConnections {
-    async fn provide(&self, _i: &inject::Inject) -> inject::Result<Arc<Connections>> {
+impl Provider for ProvideConnections {
+    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Dependency>> {
         Ok(Arc::new(Connections::default()))
     }
 }
@@ -34,10 +34,10 @@ pub const SOCKET_HANDLER: Tag<SocketHandler> = Tag::new("SocketHandler");
 pub struct ProvideSocket {}
 
 #[async_trait]
-impl inject::Provider<SocketHandler> for ProvideSocket {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<SocketHandler> {
-        let connections = i.get(&CONNECTIONS)?;
+impl Provider for ProvideSocket {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let connections = i.get(&CONNECTIONS).await?;
 
-        Ok(SocketHandler::new(connections.clone()))
+        Ok(Arc::new(SocketHandler::new(connections.clone())))
     }
 }

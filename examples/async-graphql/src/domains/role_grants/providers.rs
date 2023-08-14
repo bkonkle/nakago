@@ -2,14 +2,13 @@ use std::sync::Arc;
 
 use async_graphql::dataloader::DataLoader;
 use async_trait::async_trait;
-use nakago::inject;
+use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
 
 use super::service::{DefaultRoleGrantsService, RoleGrantLoader, RoleGrantsService};
 use crate::db::providers::DATABASE_CONNECTION;
 
 /// Tag(RoleGrantsService)
-pub const ROLE_GRANTS_SERVICE: inject::Tag<Arc<dyn RoleGrantsService>> =
-    inject::Tag::new("RoleGrantsService");
+pub const ROLE_GRANTS_SERVICE: Tag<Box<dyn RoleGrantsService>> = Tag::new("RoleGrantsService");
 
 /// Provide the RoleGrantsService
 ///
@@ -21,17 +20,19 @@ pub const ROLE_GRANTS_SERVICE: inject::Tag<Arc<dyn RoleGrantsService>> =
 pub struct ProvideRoleGrantsService {}
 
 #[async_trait]
-impl inject::Provider<Arc<dyn RoleGrantsService>> for ProvideRoleGrantsService {
-    async fn provide(&self, i: &inject::Inject) -> inject::Result<Arc<dyn RoleGrantsService>> {
-        let db = i.get(&DATABASE_CONNECTION)?;
+impl Provider for ProvideRoleGrantsService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let db = i.get(&DATABASE_CONNECTION).await?;
 
-        Ok(Arc::new(DefaultRoleGrantsService::new(db.clone())))
+        let service: Box<dyn RoleGrantsService> =
+            Box::new(DefaultRoleGrantsService::new(db.clone()));
+
+        Ok(Arc::new(service))
     }
 }
 
 /// Tag(RoleGrantLoader)
-pub const ROLE_GRANT_LOADER: inject::Tag<Arc<DataLoader<RoleGrantLoader>>> =
-    inject::Tag::new("RoleGrantLoader");
+pub const ROLE_GRANT_LOADER: Tag<DataLoader<RoleGrantLoader>> = Tag::new("RoleGrantLoader");
 
 /// Provide the RoleGrantLoader
 ///
@@ -43,12 +44,9 @@ pub const ROLE_GRANT_LOADER: inject::Tag<Arc<DataLoader<RoleGrantLoader>>> =
 pub struct ProvideRoleGrantLoader {}
 
 #[async_trait]
-impl inject::Provider<Arc<DataLoader<RoleGrantLoader>>> for ProvideRoleGrantLoader {
-    async fn provide(
-        &self,
-        i: &inject::Inject,
-    ) -> inject::Result<Arc<DataLoader<RoleGrantLoader>>> {
-        let role_grants_service = i.get(&ROLE_GRANTS_SERVICE)?;
+impl Provider for ProvideRoleGrantLoader {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+        let role_grants_service = i.get(&ROLE_GRANTS_SERVICE).await?;
 
         Ok(Arc::new(DataLoader::new(
             RoleGrantLoader::new(role_grants_service.clone()),

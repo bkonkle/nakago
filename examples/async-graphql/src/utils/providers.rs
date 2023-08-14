@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use nakago::{config::AddConfigLoaders, inject, Tag};
+use nakago::{config::AddConfigLoaders, Dependency, Inject, InjectResult, Provider, Tag};
 use oso::Oso;
 use std::sync::Arc;
 
@@ -15,9 +15,9 @@ pub const OSO: Tag<Oso> = Tag::new("Oso");
 pub struct ProvideOso {}
 
 #[async_trait]
-impl inject::Provider<Oso> for ProvideOso {
-    async fn provide(&self, _i: &inject::Inject) -> inject::Result<Oso> {
-        Ok(Oso::new())
+impl Provider for ProvideOso {
+    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Dependency>> {
+        Ok(Arc::new(Oso::new()))
     }
 }
 
