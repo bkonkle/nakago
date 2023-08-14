@@ -1,6 +1,6 @@
 use std::{any::Any, fmt::Display, marker::PhantomData, ops::Deref, sync::Arc};
 
-use super::{container::ProvideAny, Inject, Key, Provider, Result};
+use super::{Inject, Key, Provider, Result};
 
 /// A dependency injection Tag representing a specific type
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -64,9 +64,9 @@ impl Inject {
     pub async fn provide<T: Any + Sync + Send>(
         &self,
         tag: &'static Tag<T>,
-        provider: impl Provider<T> + ProvideAny + 'static,
+        provider: impl Provider + 'static,
     ) -> Result<()> {
-        self.provide_key(Key::from_tag::<T>(tag.tag), provider)
+        self.provide_key::<T>(Key::from_tag::<T>(tag.tag), provider)
             .await
     }
 
@@ -74,17 +74,15 @@ impl Inject {
     pub async fn replace_with<T: Any + Sync + Send>(
         &self,
         tag: &'static Tag<T>,
-        provider: impl Provider<T> + ProvideAny + 'static,
+        provider: impl Provider + 'static,
     ) -> Result<()> {
-        self.replace_key_with(Key::from_tag::<T>(tag.tag), provider)
+        self.replace_key_with::<T>(Key::from_tag::<T>(tag.tag), provider)
             .await
     }
 }
 
 #[cfg(test)]
 pub(crate) mod test {
-    use std::sync::Arc;
-
     use fake::Fake;
 
     use super::*;
@@ -95,7 +93,7 @@ pub(crate) mod test {
 
     pub const SERVICE_TAG: Tag<TestService> = Tag::new("InMemoryTestService");
     pub const OTHER_TAG: Tag<OtherService> = Tag::new("InMemoryOtherService");
-    pub const DYN_TAG: Tag<Arc<dyn HasId>> = Tag::new("DynHasIdService");
+    pub const DYN_TAG: Tag<Box<dyn HasId>> = Tag::new("DynHasIdService");
 
     trait DynamicService: Sync + Send {
         fn test_fn(&self) {}
@@ -191,7 +189,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject::<Arc<dyn HasId>>(&DYN_TAG, Arc::new(TestService::new(expected.clone())))
+        i.inject::<Box<dyn HasId>>(&DYN_TAG, Box::new(TestService::new(expected.clone())))
             .await?;
 
         let result = i.get(&DYN_TAG).await?;

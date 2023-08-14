@@ -22,7 +22,7 @@ pub(crate) struct Injector {
 
 #[derive(Clone)]
 enum Value {
-    Provider(Arc<dyn ProvideAny>),
+    Provider(Arc<dyn Provider>),
     Pending(Shared<Pending>),
 }
 
@@ -34,16 +34,9 @@ pub type Pending = Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>>
 
 /// A trait for async injection Providers
 #[async_trait]
-pub trait Provider<T: Any + Send + Sync + ?Sized>: Send + Sync {
+pub trait Provider: Send + Sync {
     /// Provide a dependency for the container
-    async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<T>>;
-}
-
-#[async_trait]
-/// A trait for async injection Providers that can provide any type
-pub trait ProvideAny: Send + Sync {
-    /// Provide an Any dependency for the container
-    async fn provide_any(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>>;
+    async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>>;
 }
 
 impl Injector {
@@ -53,9 +46,7 @@ impl Injector {
         }
     }
 
-    pub(crate) fn from_provider<T: Any + Send + Sync + ?Sized>(
-        provider: impl Provider<T> + ProvideAny + 'static,
-    ) -> Self {
+    pub(crate) fn from_provider(provider: impl Provider + 'static) -> Self {
         Self {
             value: RwLock::new(Value::Provider(Arc::new(provider))),
         }
@@ -74,7 +65,7 @@ impl Injector {
 
         *value = Value::Pending(match value.clone() {
             Value::Pending(pending) => pending,
-            Value::Provider(provider) => provider.provide_any(inject).shared(),
+            Value::Provider(provider) => provider.provide(inject).shared(),
         });
 
         if let Value::Pending(pending) = &*value {
@@ -117,10 +108,7 @@ impl Inject {
             return value
                 .downcast::<T>()
                 .map(Some)
-                .map_err(|_err| Error::TypeMismatch {
-                    key,
-                    type_name: std::any::type_name::<T>().to_string(),
-                });
+                .map_err(|_err| Error::TypeMismatch(key));
         }
 
         Ok(None)
@@ -167,10 +155,11 @@ impl Inject {
         }
     }
 
+    #[allow(clippy::extra_unused_type_parameters)]
     pub(crate) async fn provide_key<T: Any + Send + Sync + ?Sized>(
         &self,
         key: Key,
-        provider: impl Provider<T> + ProvideAny + 'static,
+        provider: impl Provider + 'static,
     ) -> Result<()> {
         let mut container = self.0.write().await;
 
@@ -184,10 +173,11 @@ impl Inject {
         }
     }
 
-    pub(crate) async fn replace_key_with<T: Any + Send + Sync>(
+    #[allow(clippy::extra_unused_type_parameters)]
+    pub(crate) async fn replace_key_with<T: Any + Send + Sync + ?Sized>(
         &self,
         key: Key,
-        provider: impl Provider<T> + ProvideAny + 'static,
+        provider: impl Provider + 'static,
     ) -> Result<()> {
         let mut container = self.0.write().await;
 
@@ -216,14 +206,13 @@ where
 #[cfg(test)]
 pub(crate) mod test {
     use fake::Fake;
-    use std::sync::Arc;
+    use std::{any::type_name, sync::Arc};
     use tokio::time::{sleep, Duration};
 
-    // TODO: Uncomment when tests below are re-implemented
-    // use crate::inject::{
-    //     tag::test::{DYN_TAG, OTHER_TAG, SERVICE_TAG},
-    //     Key,
-    // };
+    use crate::inject::{
+        tag::test::{DYN_TAG, OTHER_TAG, SERVICE_TAG},
+        Key,
+    };
 
     use super::*;
 
@@ -276,18 +265,11 @@ pub(crate) mod test {
     }
 
     #[async_trait]
-    impl Provider<TestService> for TestServiceProvider {
-        async fn provide(self: Arc<Self>, _i: Inject) -> Result<Arc<TestService>> {
+    impl Provider for TestServiceProvider {
+        async fn provide(self: Arc<Self>, _i: Inject) -> Result<Arc<Dependency>> {
+            sleep(Duration::from_millis(1)).await;
+
             Ok(Arc::new(TestService::new(self.id.clone())))
-        }
-    }
-
-    #[async_trait]
-    impl ProvideAny for TestServiceProvider {
-        async fn provide_any(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>> {
-            let dep = self.provide(i).await?;
-
-            Ok(dep)
         }
     }
 
@@ -303,53 +285,37 @@ pub(crate) mod test {
     }
 
     #[async_trait]
-    impl Provider<OtherService> for OtherServiceProvider {
-        async fn provide(self: Arc<Self>, _i: Inject) -> Result<Arc<OtherService>> {
-            Ok(Arc::new(OtherService::new(self.id.clone())))
-        }
-    }
-
-    #[async_trait]
-    impl Provider<dyn HasId> for OtherServiceProvider {
-        async fn provide(self: Arc<Self>, _i: Inject) -> Result<Arc<dyn HasId>> {
+    impl Provider for OtherServiceProvider {
+        async fn provide(self: Arc<Self>, _i: Inject) -> Result<Arc<Dependency>> {
             Ok(Arc::new(OtherService::new(self.id.clone())))
         }
     }
 
     #[derive(Default)]
-    pub struct TestServiceHasIdProvider {}
+    pub struct HasIdProvider {}
 
     #[async_trait]
-    impl Provider<dyn HasId> for TestServiceHasIdProvider {
-        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<dyn HasId>> {
+    impl Provider for HasIdProvider {
+        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>> {
             // Trigger a borrow so that the reference to `Inject` has to be held across the await
             // point below, to test issues with Inject thread safety.
-            let _ = i.get_type::<String>().await;
+            let _ = i.get_type_opt::<String>().await?;
 
             sleep(Duration::from_millis(1)).await;
 
-            Ok(Arc::new(OtherService::new("test-service".to_string())))
+            let dep: Box<dyn HasId> = Box::new(OtherService::new("test-service".to_string()));
+
+            Ok(Arc::new(dep))
         }
     }
-
-    #[async_trait]
-    impl ProvideAny for TestServiceHasIdProvider {
-        async fn provide_any(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>> {
-            let dep = self.provide(i).await?;
-
-            Ok(dep)
-        }
-    }
-
-    // TODO: Re-implement these tests
 
     #[tokio::test]
     async fn test_provide_success() -> Result<()> {
         let i = Inject::default();
 
-        let id: String = fake::uuid::UUIDv4.fake();
+        let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide_type::<TestService>(TestServiceProvider::new(id.clone()))
+        i.provide_type::<TestService>(TestServiceProvider::new(expected.clone()))
             .await?;
 
         assert!(
@@ -361,216 +327,224 @@ pub(crate) mod test {
 
         let service = i.get_type::<TestService>().await?;
 
-        assert_eq!(service.id, id);
+        assert_eq!(service.id, expected);
 
         Ok(())
     }
 
     #[tokio::test]
     async fn test_provide_dyn_success() -> Result<()> {
-        let mut i = Inject::default();
+        let i = Inject::default();
 
-        i.provide_type::<dyn HasId>(TestServiceHasIdProvider::default())
+        i.provide_type::<Box<dyn HasId>>(HasIdProvider::default())
             .await?;
 
         assert!(
             i.0.read()
                 .await
-                .contains_key(&Key::from_type_id::<Arc<dyn HasId>>()),
+                .contains_key(&Key::from_type_id::<Box<dyn HasId>>()),
             "key does not exist in injection container"
         );
+
+        let service = i.get_type::<Box<dyn HasId>>().await?;
+
+        assert_eq!(service.get_id(), "test-service");
 
         Ok(())
     }
 
-    // #[tokio::test]
-    // async fn test_provide_occupied() -> Result<()> {
-    //     let mut i = Inject::default();
+    #[tokio::test]
+    async fn test_provide_occupied() -> Result<()> {
+        let i = Inject::default();
 
-    //     i.provide_type_old(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
-    //         .await?;
+        let expected = format!("{} has already been provided", type_name::<TestService>());
 
-    //     let result = i
-    //         .provide_type_old(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
-    //         .await;
+        i.provide_type::<TestService>(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
-    //     if let Err(err) = result {
-    //         assert_eq!(
-    //             format!("{} has already been provided", type_name::<TestService>()),
-    //             err.to_string()
-    //         );
-    //     } else {
-    //         panic!("did not return Err as expected")
-    //     }
+        let result = i
+            .provide_type::<TestService>(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .await;
 
-    //     Ok(())
-    // }
+        if let Err(err) = result {
+            assert_eq!(err.to_string(), expected);
+        } else {
+            panic!("did not return Err as expected")
+        }
 
-    // #[tokio::test]
-    // async fn test_replace_with_success() -> Result<()> {
-    //     let mut i = Inject::default();
+        Ok(())
+    }
 
-    //     let expected: String = fake::uuid::UUIDv4.fake();
+    #[tokio::test]
+    async fn test_replace_with_success() -> Result<()> {
+        let i = Inject::default();
 
-    //     i.provide_type_old(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
-    //         .await?;
+        let expected: String = fake::uuid::UUIDv4.fake();
 
-    //     // Override the instance that was injected the first time
-    //     i.replace_type_with_old(TestServiceProvider::new(expected.clone()))
-    //         .await?;
+        i.provide_type::<TestService>(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
-    //     let result = i.get_type::<TestService>()?;
+        // Override the instance that was injected the first time
+        i.replace_type_with::<TestService>(TestServiceProvider::new(expected.clone()))
+            .await?;
 
-    //     assert_eq!(expected, result.id);
+        let result = i.get_type::<TestService>().await?;
 
-    //     Ok(())
-    // }
+        assert_eq!(result.id, expected);
 
-    // #[tokio::test]
-    // async fn test_replace_with_not_found() -> Result<()> {
-    //     let mut i = Inject::default();
+        Ok(())
+    }
 
-    //     i.provide_type_old(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
-    //         .await?;
+    #[tokio::test]
+    async fn test_replace_with_not_found() -> Result<()> {
+        let i = Inject::default();
 
-    //     // Override a type that doesn't have any instances yet
-    //     let result = i
-    //         .replace_type_with_old::<OtherService, _>(OtherServiceProvider::new(
-    //             fake::uuid::UUIDv4.fake(),
-    //         ))
-    //         .await;
+        let expected = format!(
+            "{} was not found\n\nAvailable:\n - {}",
+            type_name::<OtherService>(),
+            type_name::<TestService>()
+        );
 
-    //     if let Err(err) = result {
-    //         assert_eq!(
-    //             format!(
-    //                 "{} was not found\n\nAvailable:\n - {}",
-    //                 type_name::<OtherService>(),
-    //                 type_name::<TestService>()
-    //             ),
-    //             err.to_string()
-    //         );
-    //     } else {
-    //         panic!("did not return Err as expected")
-    //     }
+        i.provide_type::<TestService>(TestServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .await?;
 
-    //     Ok(())
-    // }
+        // Override a type that doesn't have any instances yet
+        let result = i
+            .replace_type_with::<OtherService>(OtherServiceProvider::new(fake::uuid::UUIDv4.fake()))
+            .await;
 
-    // #[tokio::test]
-    // async fn test_provide_tag_success() -> Result<()> {
-    //     let mut i = Inject::default();
+        if let Err(err) = result {
+            assert_eq!(err.to_string(), expected);
+        } else {
+            panic!("did not return Err as expected")
+        }
 
-    //     i.provide_old(
-    //         &SERVICE_TAG,
-    //         TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
-    //     )
-    //     .await?;
+        Ok(())
+    }
 
-    //     assert!(
-    //         i.0.contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
-    //         "key does not exist in injection container"
-    //     );
+    #[tokio::test]
+    async fn test_provide_tag_success() -> Result<()> {
+        let i = Inject::default();
 
-    //     Ok(())
-    // }
+        let expected: String = fake::uuid::UUIDv4.fake();
 
-    // #[tokio::test]
-    // async fn test_provide_tag_dyn_success() -> Result<()> {
-    //     let mut i = Inject::default();
+        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+            .await?;
 
-    //     i.provide_old(&DYN_TAG, TestServiceHasIdProvider::default())
-    //         .await?;
+        assert!(
+            i.0.read()
+                .await
+                .contains_key(&Key::from_tag::<TestService>(&SERVICE_TAG)),
+            "key does not exist in injection container"
+        );
 
-    //     assert!(
-    //         i.0.contains_key(&Key::from_tag::<Arc<dyn HasId>>(&DYN_TAG)),
-    //         "key does not exist in injection container"
-    //     );
+        let result = i.get(&SERVICE_TAG).await?;
 
-    //     Ok(())
-    // }
+        assert_eq!(result.id, expected);
 
-    // #[tokio::test]
-    // async fn test_provide_tag_occupied() -> Result<()> {
-    //     let mut i = Inject::default();
+        Ok(())
+    }
 
-    //     i.provide_old(
-    //         &SERVICE_TAG,
-    //         TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
-    //     )
-    //     .await?;
+    #[tokio::test]
+    async fn test_provide_tag_dyn_success() -> Result<()> {
+        let i = Inject::default();
 
-    //     let result = i
-    //         .provide_old(
-    //             &SERVICE_TAG,
-    //             TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
-    //         )
-    //         .await;
+        i.provide(&DYN_TAG, HasIdProvider::default()).await?;
 
-    //     if let Err(err) = result {
-    //         assert_eq!(
-    //             format!("{} has already been provided", SERVICE_TAG),
-    //             err.to_string()
-    //         );
-    //     } else {
-    //         panic!("did not return Err as expected")
-    //     }
+        assert!(
+            i.0.read()
+                .await
+                .contains_key(&Key::from_tag::<Box<dyn HasId>>(&DYN_TAG)),
+            "key does not exist in injection container"
+        );
 
-    //     Ok(())
-    // }
+        let result = i.get(&DYN_TAG).await?;
 
-    // #[tokio::test]
-    // async fn test_replace_tag_with_success() -> Result<()> {
-    //     let mut i = Inject::default();
+        assert_eq!(result.get_id(), "test-service");
 
-    //     let expected: String = fake::uuid::UUIDv4.fake();
+        Ok(())
+    }
 
-    //     i.provide_old(
-    //         &SERVICE_TAG,
-    //         TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
-    //     )
-    //     .await?;
+    #[tokio::test]
+    async fn test_provide_tag_occupied() -> Result<()> {
+        let i = Inject::default();
 
-    //     // Override the instance that was injected the first time
-    //     i.replace_with_old(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
-    //         .await?;
+        let expected = format!("{} has already been provided", SERVICE_TAG);
 
-    //     let result = i.get(&SERVICE_TAG)?;
+        i.provide(
+            &SERVICE_TAG,
+            TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
+        )
+        .await?;
 
-    //     assert_eq!(expected, result.id);
+        let result = i
+            .provide(
+                &SERVICE_TAG,
+                TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
+            )
+            .await;
 
-    //     Ok(())
-    // }
+        if let Err(err) = result {
+            assert_eq!(err.to_string(), expected);
+        } else {
+            panic!("did not return Err as expected")
+        }
 
-    // #[tokio::test]
-    // async fn test_replace_tag_with_not_found() -> Result<()> {
-    //     let mut i = Inject::default();
+        Ok(())
+    }
 
-    //     i.provide_old(
-    //         &SERVICE_TAG,
-    //         TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
-    //     )
-    //     .await?;
+    #[tokio::test]
+    async fn test_replace_tag_with_success() -> Result<()> {
+        let i = Inject::default();
 
-    //     // Override a type that doesn't have any instances yet
-    //     let result = i
-    //         .replace_with_old(
-    //             &OTHER_TAG,
-    //             OtherServiceProvider::new(fake::uuid::UUIDv4.fake()),
-    //         )
-    //         .await;
+        let expected: String = fake::uuid::UUIDv4.fake();
 
-    //     if let Err(err) = result {
-    //         assert_eq!(
-    //             format!(
-    //                 "{} was not found\n\nAvailable:\n - {}",
-    //                 OTHER_TAG, SERVICE_TAG
-    //             ),
-    //             err.to_string()
-    //         );
-    //     } else {
-    //         panic!("did not return Err as expected")
-    //     }
+        i.provide(
+            &SERVICE_TAG,
+            TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
+        )
+        .await?;
 
-    //     Ok(())
-    // }
+        // Override the instance that was injected the first time
+        i.replace_with(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+            .await?;
+
+        let result = i.get(&SERVICE_TAG).await?;
+
+        assert_eq!(expected, result.id);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_replace_tag_with_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let expected = format!(
+            "{} was not found\n\nAvailable:\n - {}",
+            OTHER_TAG, SERVICE_TAG
+        );
+
+        i.provide(
+            &SERVICE_TAG,
+            TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
+        )
+        .await?;
+
+        // Override a type that doesn't have any instances yet
+        let result = i
+            .replace_with(
+                &OTHER_TAG,
+                OtherServiceProvider::new(fake::uuid::UUIDv4.fake()),
+            )
+            .await;
+
+        if let Err(err) = result {
+            assert_eq!(err.to_string(), expected);
+        } else {
+            panic!("did not return Err as expected")
+        }
+
+        Ok(())
+    }
 }

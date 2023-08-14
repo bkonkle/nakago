@@ -1,6 +1,6 @@
 use std::{any::Any, sync::Arc};
 
-use super::{container::ProvideAny, Inject, Key, Provider, Result};
+use super::{Inject, Key, Provider, Result};
 
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
@@ -26,17 +26,18 @@ impl Inject {
     /// Register a Provider for a type-id dependency
     pub async fn provide_type<T: Any + Send + Sync + ?Sized>(
         &self,
-        provider: impl Provider<T> + ProvideAny + 'static,
+        provider: impl Provider + 'static,
     ) -> Result<()> {
-        self.provide_key(Key::from_type_id::<T>(), provider).await
+        self.provide_key::<T>(Key::from_type_id::<T>(), provider)
+            .await
     }
 
     /// Replace an existing Provider for a type-id dependency
     pub async fn replace_type_with<T: Any + Send + Sync>(
         &self,
-        provider: impl Provider<T> + ProvideAny + 'static,
+        provider: impl Provider + 'static,
     ) -> Result<()> {
-        self.replace_key_with(Key::from_type_id::<T>(), provider)
+        self.replace_key_with::<T>(Key::from_type_id::<T>(), provider)
             .await
     }
 }

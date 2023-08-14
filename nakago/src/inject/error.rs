@@ -28,13 +28,10 @@ pub enum Error {
     Provider(#[from] Arc<anyhow::Error>),
 
     /// An error thrown when an Any type cannot be downcast to the given concrete type
-    TypeMismatch {
+    TypeMismatch(
         /// The Key of the entity that was not found
-        key: Key,
-
-        /// The expected type name
-        type_name: String,
-    },
+        Key,
+    ),
 }
 
 /// A Dependency Injection Result
@@ -61,8 +58,8 @@ impl Display for Error {
                 write!(f, "{missing} was not found\n\nAvailable:{avail_lines}")
             }
             Self::Provider(_) => write!(f, "provider failure"),
-            Self::TypeMismatch { key, type_name } => {
-                write!(f, "{key} was not able to be downcast to {type_name}")
+            Self::TypeMismatch(key) => {
+                write!(f, "{key} was not able to be downcast to {0}", key.type_name)
             }
         }
     }
