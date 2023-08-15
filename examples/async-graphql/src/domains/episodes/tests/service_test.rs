@@ -35,7 +35,7 @@ async fn setup(db: MockDatabase) -> InjectResult<Inject> {
 }
 
 #[tokio::test]
-async fn test_episodes_service_get() -> Result<()> {
+async fn test_episodes_service_get_success() -> Result<()> {
     let mut show: Show = Faker.fake();
     show.title = "Test Show".to_string();
 
@@ -49,7 +49,7 @@ async fn test_episodes_service_get() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&EPISODES_SERVICE).await?;
+    let service = i.consume(&EPISODES_SERVICE).await?;
 
     let result = service.get(&episode.id, &false).await?;
 
