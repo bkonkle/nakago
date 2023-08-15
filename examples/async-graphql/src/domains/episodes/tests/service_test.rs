@@ -1,6 +1,8 @@
 use anyhow::Result;
 use async_graphql::MaybeUndefined::Undefined;
 use fake::{Fake, Faker};
+use nakago::{Inject, InjectResult};
+use nakago_sea_orm::{connection::ProvideMockConnection, DATABASE_CONNECTION};
 use pretty_assertions::assert_eq;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction, Value};
 use std::sync::Arc;
@@ -11,12 +13,26 @@ use crate::{
             model::Episode,
             mutations::{CreateEpisodeInput, UpdateEpisodeInput},
             queries::{EpisodeCondition, EpisodesOrderBy},
-            service::{DefaultEpisodesService, EpisodesService},
+            service::{
+                DefaultEpisodesService, EpisodesService, ProvideEpisodesService, EPISODES_SERVICE,
+            },
         },
         shows::model::Show,
     },
     utils::pagination::ManyResponse,
 };
+
+async fn setup(db: MockDatabase) -> InjectResult<Inject> {
+    let i = Inject::default();
+
+    i.provide(&DATABASE_CONNECTION, ProvideMockConnection::new(db))
+        .await?;
+
+    i.provide(&EPISODES_SERVICE, ProvideEpisodesService::default())
+        .await?;
+
+    Ok(i)
+}
 
 #[tokio::test]
 async fn test_episodes_service_get() -> Result<()> {
@@ -27,20 +43,20 @@ async fn test_episodes_service_get() -> Result<()> {
     episode.title = "Test Episode".to_string();
     episode.show = None;
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![episode.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![episode.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     let result = service.get(&episode.id, &false).await?;
 
-    // Destroy the service to clean up the reference count
+    // Destroy the service to clean up the DB reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.consume(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, Some(episode.clone()));
 

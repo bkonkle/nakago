@@ -24,7 +24,7 @@ impl Inject {
     }
 
     /// Register a Provider for a type-id dependency
-    pub async fn provide_type<T: Any + Send + Sync + ?Sized>(
+    pub async fn provide_type<T: Any + Send + Sync>(
         &self,
         provider: impl Provider + 'static,
     ) -> Result<()> {
@@ -39,6 +39,21 @@ impl Inject {
     ) -> Result<()> {
         self.replace_key_with::<T>(Key::from_type_id::<T>(), provider)
             .await
+    }
+
+    /// Consume a tagged dependency, removing it from the container, returning an error if not found
+    pub async fn consume_type<T: Any + Send + Sync>(&self) -> Result<T> {
+        self.consume_key(Key::from_type_id::<T>()).await
+    }
+
+    /// Consume a tagged dependency, removing it from the container
+    pub async fn consume_type_opt<T: Any + Send + Sync>(&self) -> Result<Option<T>> {
+        self.consume_key_opt(Key::from_type_id::<T>()).await
+    }
+
+    /// Remove a tagged dependency from the container, returning an error if not found
+    pub async fn remove_type<T: Any + Send + Sync>(&self) -> Result<()> {
+        self.remove_key::<T>(Key::from_type_id::<T>()).await
     }
 }
 

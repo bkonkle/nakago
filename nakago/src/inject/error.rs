@@ -32,6 +32,13 @@ pub enum Error {
         /// The Key of the entity that was not found
         Key,
     ),
+
+    /// An error thrown when a Key cannot be consumed and removed from the container, usually
+    /// because there are still active refs to the Arc containing the dependency.
+    CannotConsume(
+        /// The Key of the entity that cannot be consumed
+        Key,
+    ),
 }
 
 /// A Dependency Injection Result
@@ -61,6 +68,7 @@ impl Display for Error {
             Self::TypeMismatch(key) => {
                 write!(f, "{key} was not able to be downcast to {0}", key.type_name)
             }
+            Self::CannotConsume(key) => write!(f, "{key} cannot be consumed"),
         }
     }
 }

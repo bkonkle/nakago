@@ -82,14 +82,14 @@ impl Injector {
 impl Inject {
     /// Retrieve a reference to a dependency if it exists, and return an error otherwise
     pub(crate) async fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<Arc<T>> {
+        let available = self.get_available_keys().await;
+
         if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
             Ok(dep)
         } else {
-            let container = self.0.read().await;
-
             Err(Error::NotFound {
                 missing: key,
-                available: container.keys().cloned().collect(),
+                available,
             })
         }
     }
@@ -99,9 +99,7 @@ impl Inject {
         &self,
         key: Key,
     ) -> Result<Option<Arc<T>>> {
-        let container = self.0.read().await;
-
-        if let Some(injector) = container.get(&key) {
+        if let Some(injector) = self.0.read().await.get(&key) {
             let pending = injector.request(self.clone()).await;
             let value = pending.await?;
 
@@ -116,9 +114,7 @@ impl Inject {
 
     /// Provide a dependency directly
     pub(crate) async fn inject_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
-        let mut container = self.0.write().await;
-
-        match container.entry(key.clone()) {
+        match self.0.write().await.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
                 let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
@@ -135,9 +131,9 @@ impl Inject {
 
     /// Replace an existing dependency directly
     pub(crate) async fn replace_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
-        let mut container = self.0.write().await;
+        let available = self.get_available_keys().await;
 
-        match container.entry(key.clone()) {
+        match self.0.write().await.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
                 let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
                     Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
@@ -150,20 +146,18 @@ impl Inject {
             }
             Entry::Vacant(_) => Err(Error::NotFound {
                 missing: key,
-                available: container.keys().cloned().collect(),
+                available,
             }),
         }
     }
 
     #[allow(clippy::extra_unused_type_parameters)]
-    pub(crate) async fn provide_key<T: Any + Send + Sync + ?Sized>(
+    pub(crate) async fn provide_key<T: Any + Send + Sync>(
         &self,
         key: Key,
         provider: impl Provider + 'static,
     ) -> Result<()> {
-        let mut container = self.0.write().await;
-
-        match container.entry(key.clone()) {
+        match self.0.write().await.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
                 let _ = entry.insert(Injector::from_provider(provider));
@@ -174,16 +168,69 @@ impl Inject {
     }
 
     #[allow(clippy::extra_unused_type_parameters)]
-    pub(crate) async fn replace_key_with<T: Any + Send + Sync + ?Sized>(
+    pub(crate) async fn replace_key_with<T: Any + Send + Sync>(
         &self,
         key: Key,
         provider: impl Provider + 'static,
     ) -> Result<()> {
+        let available = self.get_available_keys().await;
+
+        match self.0.write().await.entry(key.clone()) {
+            Entry::Occupied(mut entry) => {
+                let _ = entry.insert(Injector::from_provider(provider));
+
+                Ok(())
+            }
+            Entry::Vacant(_) => Err(Error::NotFound {
+                missing: key,
+                available,
+            }),
+        }
+    }
+
+    pub(crate) async fn consume_key<T: Any + Send + Sync>(&self, key: Key) -> Result<T> {
+        let available = self.get_available_keys().await;
+
+        self.consume_key_opt(key.clone())
+            .await?
+            .ok_or(Error::NotFound {
+                missing: key,
+                available,
+            })
+    }
+
+    pub(crate) async fn consume_key_opt<T: Any + Send + Sync>(
+        &self,
+        key: Key,
+    ) -> Result<Option<T>> {
+        match self.0.write().await.entry(key.clone()) {
+            Entry::Occupied(entry) => {
+                // Don't remove the value until we're sure it's the correct type
+                let pending = entry.get().request(self.clone()).await;
+                let value = pending.await?;
+
+                if let Ok(dep) = value.downcast::<T>() {
+                    // Now that the downcast succeeded, we can go ahead and remove the entry
+                    let _ = entry.remove();
+
+                    Arc::try_unwrap(dep)
+                        .map(Some)
+                        .map_err(|_arc| Error::CannotConsume(key))
+                } else {
+                    Err(Error::TypeMismatch(key))
+                }
+            }
+            Entry::Vacant(_) => Ok(None),
+        }
+    }
+
+    #[allow(clippy::extra_unused_type_parameters)]
+    pub(crate) async fn remove_key<T: Any + Send + Sync>(&self, key: Key) -> Result<()> {
         let mut container = self.0.write().await;
 
         match container.entry(key.clone()) {
-            Entry::Occupied(mut entry) => {
-                let _ = entry.insert(Injector::from_provider(provider));
+            Entry::Occupied(entry) => {
+                let _ = entry.remove();
 
                 Ok(())
             }
@@ -192,6 +239,12 @@ impl Inject {
                 available: container.keys().cloned().collect(),
             }),
         }
+    }
+
+    async fn get_available_keys(&self) -> Vec<Key> {
+        let container = self.0.read().await;
+
+        container.keys().cloned().collect()
     }
 }
 

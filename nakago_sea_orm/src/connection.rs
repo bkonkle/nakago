@@ -1,9 +1,12 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::{
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
 
 use async_trait::async_trait;
 use axum::extract::FromRef;
 use nakago::{to_provider_error, Config, Dependency, Inject, InjectResult, Provider, Tag};
-use sea_orm::DatabaseConnection;
+use sea_orm::{DatabaseBackend, DatabaseConnection, MockDatabase, MockDatabaseTrait};
 
 use crate::config::DatabaseConfig;
 
@@ -35,5 +38,46 @@ where
                 .await
                 .map_err(to_provider_error)?,
         ))
+    }
+}
+
+/// Provide a Mock Database Connection for use in unit testing
+///
+/// **Provides:** `Arc<DatabaseConnection>`
+pub struct ProvideMockConnection {
+    db: Mutex<MockDatabase>,
+}
+
+impl ProvideMockConnection {
+    /// Initialize a new Mock DB connection
+    pub fn new(db: MockDatabase) -> Self {
+        Self { db: Mutex::new(db) }
+    }
+
+    /// Replace the MockDatabase instance inside the Provider, returning the original
+    pub fn replace(&self, db: MockDatabase) -> MockDatabase {
+        let mut existing = self.db.lock().expect("Could not lock MockDatabase Mutex");
+
+        // Replace the current Mock Database with the given one
+        std::mem::replace(&mut *existing, db)
+    }
+}
+
+impl Default for ProvideMockConnection {
+    fn default() -> Self {
+        Self::new(MockDatabase::new(DatabaseBackend::Sqlite))
+    }
+}
+
+#[async_trait]
+impl Provider for ProvideMockConnection {
+    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Dependency>> {
+        let existing = self.db.lock().expect("Could not lock MockDatabase Mutex");
+        let backend = existing.get_database_backend();
+        drop(existing);
+
+        let db = self.replace(MockDatabase::new(backend));
+
+        Ok(Arc::new(db.into_connection()))
     }
 }

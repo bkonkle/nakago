@@ -79,6 +79,24 @@ impl Inject {
         self.replace_key_with::<T>(Key::from_tag::<T>(tag.tag), provider)
             .await
     }
+
+    /// Consume a tagged dependency, removing it from the container, returning an error if not found
+    pub async fn consume<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<T> {
+        self.consume_key(Key::from_tag::<T>(tag.tag)).await
+    }
+
+    /// Consume a tagged dependency, removing it from the container
+    pub async fn consume_opt<T: Any + Send + Sync>(
+        &self,
+        tag: &'static Tag<T>,
+    ) -> Result<Option<T>> {
+        self.consume_key_opt(Key::from_tag::<T>(tag.tag)).await
+    }
+
+    /// Remove a tagged dependency from the container, returning an error if not found
+    pub async fn remove<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<()> {
+        self.remove_key::<T>(Key::from_tag::<T>(tag.tag)).await
+    }
 }
 
 #[cfg(test)]
