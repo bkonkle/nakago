@@ -16,10 +16,14 @@ use super::{Error, Key, Result};
 #[derive(Default, Clone)]
 pub struct Inject(pub(crate) Arc<RwLock<HashMap<Key, Injector>>>);
 
+// An Injector holds a locked value that can be either a Provider or a Pending Future. The
+// Injector is responsible for providing a Pending Future to the container when requested, and
+// updating the value to a Pending Shared Future if it is a Provider.
 pub(crate) struct Injector {
     value: RwLock<Value>,
 }
 
+// The value of an Injector can be either a Provider or a Pending Shared Future.
 #[derive(Clone)]
 enum Value {
     Provider(Arc<dyn Provider>),
@@ -40,18 +44,22 @@ pub trait Provider: Send + Sync {
 }
 
 impl Injector {
+    // Create a new Injector from a value that is already Pending
     fn from_pending(pending: Shared<Pending>) -> Self {
         Self {
             value: RwLock::new(Value::Pending(pending)),
         }
     }
 
-    pub(crate) fn from_provider(provider: impl Provider + 'static) -> Self {
+    // Create a new Injector from a Provider
+    fn from_provider(provider: impl Provider + 'static) -> Self {
         Self {
             value: RwLock::new(Value::Provider(Arc::new(provider))),
         }
     }
 
+    // Request a Pending Future from the Injector. If the value is a Provider, it will be
+    // replaced with a Pending Future that will resolve to the provided Dependency.
     async fn request(&self, inject: Inject) -> Shared<Pending> {
         let value = self.value.read().await;
         if let Value::Pending(pending) = &*value {
@@ -77,9 +85,13 @@ impl Injector {
     }
 }
 
-// The base methods powering both the Tag and TypeId modes
+// The Inject container is responsible for providing access to Dependencies and Providers. It
+// holds a map of Keys to Injectors, and provides methods for retrieving, injecting, and removing
+// Dependencies and Providers. This base implementation provides internal methods that are used by
+// the Tag and TypeId public interfaces.
 impl Inject {
-    /// Retrieve a reference to a dependency if it exists, and return an error otherwise
+    /// Retrieve a reference to a Dependency if it exists. Return a NotFound error if the Key isn't
+    /// present.
     pub(crate) async fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<Arc<T>> {
         let available = self.get_available_keys().await;
 
@@ -93,7 +105,7 @@ impl Inject {
         }
     }
 
-    /// Retrieve a reference to a dependency if it exists in the map
+    /// Retrieve a reference to a Dependency if it exists.
     pub(crate) async fn get_key_opt<T: Any + Send + Sync>(
         &self,
         key: Key,
@@ -111,7 +123,8 @@ impl Inject {
         Ok(None)
     }
 
-    /// Provide a dependency directly
+    /// Provide a Dependency directly, using core::future::ready to wrap it in an immediately
+    /// resolving Pending Future.
     pub(crate) async fn inject_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
         match self.0.write().await.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
@@ -128,7 +141,8 @@ impl Inject {
         }
     }
 
-    /// Replace an existing dependency directly
+    /// Replace an existing Dependency directly, using core::future::ready to wrap it in an
+    /// immediately resolving Pending Future. Return a NotFound error if the Key isn't present.
     pub(crate) async fn replace_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
         let available = self.get_available_keys().await;
 
@@ -150,6 +164,7 @@ impl Inject {
         }
     }
 
+    /// Inject a Dependency Provider
     pub(crate) async fn provide_key(
         &self,
         key: Key,
@@ -165,6 +180,7 @@ impl Inject {
         }
     }
 
+    /// Inject a replacement Dependency Provider if the Key is present
     pub(crate) async fn replace_key_with(
         &self,
         key: Key,
@@ -185,6 +201,10 @@ impl Inject {
         }
     }
 
+    /// Remove a Dependency from the container and try to unwrap it from the Arc, which will only
+    /// succeed if there are no other strong pointers to the value. Any Arcs handed out will still
+    /// be valid, but the container will no longer hold a reference. Return a NotFound error if the
+    /// Key isn't present.
     pub(crate) async fn consume_key<T: Any + Send + Sync>(&self, key: Key) -> Result<T> {
         let available = self.get_available_keys().await;
 
@@ -196,6 +216,9 @@ impl Inject {
             })
     }
 
+    /// Remove a Dependency from the container and try to unwrap it from the Arc, which will only
+    /// succeed if there are no other strong pointers to the value. Any Arcs handed out will still
+    /// be valid, but the container will no longer hold a reference.
     pub(crate) async fn consume_key_opt<T: Any + Send + Sync>(
         &self,
         key: Key,
@@ -218,6 +241,8 @@ impl Inject {
         Ok(None)
     }
 
+    /// Discard a Dependency from the container. Any Arcs handed out will still be valid, but
+    /// the container will no longer hold a reference.
     pub(crate) async fn remove_key(&self, key: Key) -> Result<()> {
         let available = self.get_available_keys().await;
 
@@ -234,6 +259,21 @@ impl Inject {
         }
     }
 
+    /// Destroy the container and discard all Dependencies except for the given Key. Any Arcs handed
+    /// out will still be valid, but the container will be fully unloaded and all references will be
+    /// dropped. Return a NotFound error if the Key isn't present.
+    pub(crate) async fn eject_key<T: Any + Send + Sync>(self, key: Key) -> Result<T> {
+        self.consume_key(key).await
+    }
+
+    /// Destroy the container and discard all Dependencies except for the given Key. Any Arcs handed
+    /// out will still be valid, but the container will be fully unloaded and all references will be
+    /// dropped.
+    pub(crate) async fn eject_key_opt<T: Any + Send + Sync>(self, key: Key) -> Result<Option<T>> {
+        self.consume_key_opt(key).await
+    }
+
+    /// Get all available Keys in the container.
     async fn get_available_keys(&self) -> Vec<Key> {
         let container = self.0.read().await;
 

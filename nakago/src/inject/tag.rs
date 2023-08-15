@@ -37,12 +37,13 @@ impl<T> Deref for Tag<T> {
 }
 
 impl Inject {
-    /// Retrieve a reference to a tagged dependency if it exists, and return an error otherwise
+    /// Retrieve a reference to a Tagged Dependency if it exists. Return a NotFound error if the Tag
+    /// isn't present.
     pub async fn get<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<Arc<T>> {
         self.get_key(Key::from_tag(tag)).await
     }
 
-    /// Retrieve a reference to a tagged dependency if it exists in the map
+    /// Retrieve a reference to a Tagged Dependency if it exists.
     pub async fn get_opt<T: Any + Send + Sync>(
         &self,
         tag: &'static Tag<T>,
@@ -50,17 +51,19 @@ impl Inject {
         self.get_key_opt(Key::from_tag(tag)).await
     }
 
-    /// Provide a tagged dependency directly
+    /// Provide a Tagged Dependency directly, using core::future::ready to wrap it in an immediately
+    /// resolving Pending Future.
     pub async fn inject<T: Any + Sync + Send>(&self, tag: &'static Tag<T>, dep: T) -> Result<()> {
         self.inject_key(Key::from_tag(tag), dep).await
     }
 
-    /// Replace an existing tagged dependency directly
+    /// Replace an existing Tagged Dependency directly, using core::future::ready to wrap it in an
+    /// immediately resolving Pending Future. Return a NotFound error if the Key isn't present.
     pub async fn replace<T: Any + Sync + Send>(&self, tag: &'static Tag<T>, dep: T) -> Result<()> {
         self.replace_key(Key::from_tag(tag), dep).await
     }
 
-    /// Register a Provider for a tagged dependency
+    /// Inject a Dependency Provider for a Tag
     pub async fn provide<T: Any + Sync + Send>(
         &self,
         tag: &'static Tag<T>,
@@ -69,7 +72,7 @@ impl Inject {
         self.provide_key(Key::from_tag(tag), provider).await
     }
 
-    /// Replace an existing Provider for a tagged dependency
+    /// Inject a replacement Dependency Provider if the Tag is present
     pub async fn replace_with<T: Any + Sync + Send>(
         &self,
         tag: &'static Tag<T>,
@@ -78,12 +81,17 @@ impl Inject {
         self.replace_key_with(Key::from_tag(tag), provider).await
     }
 
-    /// Consume a tagged dependency, removing it from the container, returning an error if not found
+    /// Remove a Tagged Dependency from the container and try to unwrap it from the Arc, which will
+    /// only succeed if there are no other strong pointers to the value. Any Arcs handed out will
+    /// still be valid, but the container will no longer hold a reference. Return a NotFound error
+    /// if the Tag isn't present.
     pub async fn consume<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<T> {
         self.consume_key(Key::from_tag(tag)).await
     }
 
-    /// Consume a tagged dependency, removing it from the container
+    /// Remove a Tagged Dependency from the container and try to unwrap it from the Arc, which will
+    /// only succeed if there are no other strong pointers to the value. Any Arcs handed out will
+    /// still be valid, but the container will no longer hold a reference.
     pub async fn consume_opt<T: Any + Send + Sync>(
         &self,
         tag: &'static Tag<T>,
@@ -91,9 +99,24 @@ impl Inject {
         self.consume_key_opt(Key::from_tag(tag)).await
     }
 
-    /// Remove a tagged dependency from the container, returning an error if not found
+    /// Discard a Tagged Dependency from the container. Any Arcs handed out will still be valid, but
+    /// the container will no longer hold a reference.
     pub async fn remove<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<()> {
         self.remove_key(Key::from_tag(tag)).await
+    }
+
+    /// Destroy the container and discard all Dependencies except for the given Tag. Any Arcs handed
+    /// out will still be valid, but the container will be fully unloaded and all references will be
+    /// dropped. Return a NotFound error if the Key isn't present.
+    pub async fn eject<T: Any + Send + Sync>(self, tag: &'static Tag<T>) -> Result<T> {
+        self.eject_key(Key::from_tag(tag)).await
+    }
+
+    /// Destroy the container and discard all Dependencies except for the given Tag. Any Arcs handed
+    /// out will still be valid, but the container will be fully unloaded and all references will be
+    /// dropped.
+    pub async fn eject_opt<T: Any + Send + Sync>(self, tag: &'static Tag<T>) -> Result<Option<T>> {
+        self.eject_key_opt(Key::from_tag(tag)).await
     }
 }
 
@@ -597,6 +620,43 @@ pub(crate) mod test {
             !i.0.read().await.contains_key(&Key::from_tag(&SERVICE_TAG)),
             "key still exists in injection container"
         );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eject_pending_success() -> Result<()> {
+        let i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))
+            .await?;
+
+        let service = i.eject(&SERVICE_TAG).await?;
+
+        // This is commented out because it demonstrates a case prevented by the compiler - usage
+        // of the container after ejection.
+        //
+        // i.get(&SERVICE_TAG).await?;
+
+        assert_eq!(service.id, expected);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eject_provider_success() -> Result<()> {
+        let i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+            .await?;
+
+        let service = i.eject(&SERVICE_TAG).await?;
+
+        assert_eq!(service.id, expected);
 
         Ok(())
     }
