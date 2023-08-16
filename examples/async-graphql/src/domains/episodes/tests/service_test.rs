@@ -5,7 +5,6 @@ use nakago::{Inject, InjectResult};
 use nakago_sea_orm::{connection::ProvideMockConnection, DATABASE_CONNECTION};
 use pretty_assertions::assert_eq;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction, Value};
-use std::sync::Arc;
 
 use crate::{
     domains::{
@@ -13,9 +12,7 @@ use crate::{
             model::Episode,
             mutations::{CreateEpisodeInput, UpdateEpisodeInput},
             queries::{EpisodeCondition, EpisodesOrderBy},
-            service::{
-                DefaultEpisodesService, EpisodesService, ProvideEpisodesService, EPISODES_SERVICE,
-            },
+            service::{ProvideEpisodesService, EPISODES_SERVICE},
         },
         shows::model::Show,
     },
@@ -49,14 +46,14 @@ async fn test_episodes_service_get_success() -> Result<()> {
     )
     .await?;
 
-    let service = i.consume(&EPISODES_SERVICE).await?;
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     let result = service.get(&episode.id, &false).await?;
 
     // Destroy the service to clean up the DB reference count
     drop(service);
 
-    let db = i.consume(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, Some(episode.clone()));
 
@@ -82,23 +79,20 @@ async fn test_episodes_service_get_with_related() -> Result<()> {
     episode.title = "Test Episode".to_string();
     episode.show = Some(show.clone());
 
-    // let show = show_factory::create_show_with_title("Test Show");
-    // let episode = episode_factory::create_episode_for_show("Test Episode", show.clone());
-
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![(episode.clone(), show.clone())]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![(episode.clone(), show.clone())]]),
+    )
+    .await?;
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     let result = service.get(&episode.id, &true).await?;
 
-    // Destroy the service to clean up the reference count
+    // Destroy the service to clean up the DB reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, Some(episode.clone()));
 
@@ -131,13 +125,13 @@ async fn test_episodes_service_get_many() -> Result<()> {
     other_episode.title = "Test Episode 2".to_string();
     other_episode.show = None;
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![episode.clone(), other_episode.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![episode.clone(), other_episode.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     let result = service
         .get_many(
@@ -153,10 +147,10 @@ async fn test_episodes_service_get_many() -> Result<()> {
         )
         .await?;
 
-    // Destroy the service to clean up the reference count
+    // Destroy the service to clean up the DB reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(
         result,
@@ -198,16 +192,15 @@ async fn test_episodes_service_get_many_with_related() -> Result<()> {
     other_episode.title = "Test Episode 2".to_string();
     other_episode.show = Some(other_show.clone());
 
-    let db = Arc::new(
-        MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![
-                (episode.clone(), show.clone()),
-                (other_episode.clone(), other_show.clone()),
-            ]])
-            .into_connection(),
-    );
+    let i = setup(
+        MockDatabase::new(DatabaseBackend::Postgres).append_query_results(vec![vec![
+            (episode.clone(), show.clone()),
+            (other_episode.clone(), other_show.clone()),
+        ]]),
+    )
+    .await?;
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     let result = service
         .get_many(
@@ -226,7 +219,7 @@ async fn test_episodes_service_get_many_with_related() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(
         result,
@@ -283,7 +276,7 @@ async fn test_episodes_service_get_many_pagination() -> Result<()> {
         })
         .collect();
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![maplit::btreemap! {
                 // First query result
@@ -292,11 +285,11 @@ async fn test_episodes_service_get_many_pagination() -> Result<()> {
             .append_query_results(vec![
                 // Second query result
                 episodes.clone(),
-            ])
-            .into_connection(),
-    );
+            ]),
+    )
+    .await?;
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     let result = service
         .get_many(
@@ -311,7 +304,7 @@ async fn test_episodes_service_get_many_pagination() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(
         result,
@@ -375,7 +368,7 @@ async fn test_episodes_service_get_many_pagination_with_related() -> Result<()> 
         })
         .collect();
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![maplit::btreemap! {
                 // First query result
@@ -384,11 +377,11 @@ async fn test_episodes_service_get_many_pagination_with_related() -> Result<()> 
             .append_query_results(vec![
                 // Second query result
                 episodes.clone(),
-            ])
-            .into_connection(),
-    );
+            ]),
+    )
+    .await?;
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     let result = service
         .get_many(
@@ -403,7 +396,7 @@ async fn test_episodes_service_get_many_pagination_with_related() -> Result<()> 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(
         result,
@@ -449,13 +442,13 @@ async fn test_episodes_service_create() -> Result<()> {
     episode.show_id = show.id.clone();
     episode.show = None;
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![episode.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![episode.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     let result = service
         .create(
@@ -472,7 +465,7 @@ async fn test_episodes_service_create() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, episode);
 
@@ -504,14 +497,14 @@ async fn test_episodes_service_create_with_related() -> Result<()> {
     episode.show_id = show.id.clone();
     episode.show = Some(show.clone());
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![episode.clone()]])
-            .append_query_results(vec![vec![show.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![show.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     let result = service
         .create(
@@ -528,7 +521,7 @@ async fn test_episodes_service_create_with_related() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, episode);
 
@@ -571,13 +564,13 @@ async fn test_episodes_service_update() -> Result<()> {
         ..episode.clone()
     };
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![episode.clone()], vec![updated.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![episode.clone()], vec![updated.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     let result = service
         .update(
@@ -595,7 +588,7 @@ async fn test_episodes_service_update() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, updated.clone());
 
@@ -633,14 +626,14 @@ async fn test_episodes_service_update_with_related() -> Result<()> {
         ..episode.clone()
     };
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![(episode.clone(), show.clone())]])
-            .append_query_results(vec![vec![updated.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![updated.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     let result = service
         .update(
@@ -658,7 +651,7 @@ async fn test_episodes_service_update_with_related() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, updated.clone());
 
@@ -691,24 +684,24 @@ async fn test_episodes_service_delete() -> Result<()> {
     episode.title = "Test Episode".to_string();
     episode.show = None;
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![episode.clone()]])
             .append_exec_results(vec![MockExecResult {
                 last_insert_id: 0,
                 rows_affected: 1,
-            }])
-            .into_connection(),
-    );
+            }]),
+    )
+    .await?;
 
-    let service = DefaultEpisodesService::new(db.clone());
+    let service = i.get(&EPISODES_SERVICE).await?;
 
     service.delete(&episode.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     // Check the transaction log
     assert_eq!(

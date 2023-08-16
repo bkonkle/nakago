@@ -19,7 +19,7 @@ use crate::domains::{
 fn init(
     service: MockEpisodesService,
 ) -> Schema<EpisodesQuery, EpisodesMutation, EmptySubscription> {
-    let service: Arc<dyn EpisodesService> = Arc::new(service);
+    let service: Arc<Box<dyn EpisodesService>> = Arc::new(Box::new(service));
 
     let shows_service: Arc<Box<dyn ShowsService>> = Arc::new(Box::new(MockShowsService::new()));
     let show_loader = ShowLoader::new(shows_service);

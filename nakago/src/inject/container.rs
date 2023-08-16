@@ -263,14 +263,38 @@ impl Inject {
     /// out will still be valid, but the container will be fully unloaded and all references will be
     /// dropped. Return a NotFound error if the Key isn't present.
     pub(crate) async fn eject_key<T: Any + Send + Sync>(self, key: Key) -> Result<T> {
-        self.consume_key(key).await
+        let available = self.get_available_keys().await;
+
+        self.eject_key_opt(key.clone())
+            .await?
+            .ok_or(Error::NotFound {
+                missing: key,
+                available,
+            })
     }
 
     /// Destroy the container and discard all Dependencies except for the given Key. Any Arcs handed
     /// out will still be valid, but the container will be fully unloaded and all references will be
     /// dropped.
     pub(crate) async fn eject_key_opt<T: Any + Send + Sync>(self, key: Key) -> Result<Option<T>> {
-        self.consume_key_opt(key).await
+        // First get the Dependency
+        let dep = self.get_key_opt::<T>(key.clone()).await?;
+
+        // Then drop the container
+        drop(self);
+
+        if let Some(value) = dep {
+            // Now we can try to unwrap the Arc, but if there is more than 1 strong pointer, this
+            // will fail and the CannotConsume error will be returned
+            return Arc::try_unwrap(value)
+                .map(Some)
+                .map_err(|arc| Error::CannotConsume {
+                    key,
+                    strong_count: Arc::strong_count(&arc),
+                });
+        }
+
+        Ok(None)
     }
 
     /// Get all available Keys in the container.
