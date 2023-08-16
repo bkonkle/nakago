@@ -8,12 +8,11 @@ use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction};
 
 use crate::{
     domains::{
-        episodes::service::ProvideEpisodesService,
         profiles::{
             model::{Model, ProfileList},
             mutations::{CreateProfileInput, UpdateProfileInput},
             queries::{ProfileCondition, ProfilesOrderBy},
-            service::PROFILES_SERVICE,
+            service::{ProvideProfilesService, PROFILES_SERVICE},
         },
         users::model::User,
     },
@@ -26,7 +25,7 @@ async fn setup(db: MockDatabase) -> InjectResult<Inject> {
     i.provide(&DATABASE_CONNECTION, ProvideMockConnection::new(db))
         .await?;
 
-    i.provide(&PROFILES_SERVICE, ProvideEpisodesService::default())
+    i.provide(&PROFILES_SERVICE, ProvideProfilesService::default())
         .await?;
 
     Ok(i)

@@ -15,9 +15,9 @@ pub fn generate(object_args: &args::Provider) -> GeneratorResult<TokenStream> {
     let expanded = quote! {
         #[allow(clippy::all, clippy::pedantic)]
         #[#crate_name::async_trait::async_trait]
-        impl #impl_generics Provider<#crate_name::Dependency> for #ident #ty_generics #where_clause {
+        impl #impl_generics #crate_name::Provider<#crate_name::Dependency> for #ident #ty_generics #where_clause {
             async fn provide(self: Arc<Self>, i: Inject) -> #crate_name::InjectResult<Arc<#crate_name::Dependency>> {
-                let provider = self as Arc<#ident>;
+                let provider = self as Arc<#ident #ty_generics>;
 
                 Ok(provider.provide(i).await?)
             }

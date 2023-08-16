@@ -6,6 +6,7 @@ use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
 use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
 use sea_orm::{entity::*, query::*, EntityTrait};
 
@@ -213,7 +214,7 @@ impl ShowsService for DefaultShowsService {
 ///
 /// **Depends on:**
 ///   - `Tag(DatabaseConnection)`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideShowsService {}
 
 #[async_trait]
@@ -232,7 +233,7 @@ pub(crate) mod test {
     /// Provide the Mocked ShowsService for testing
     ///
     /// **Provides:** `Arc<dyn ShowsService>`
-    #[derive(Default)]
+    #[derive(Default, Provider)]
     pub struct ProvideMockShowsService {}
 
     #[async_trait]

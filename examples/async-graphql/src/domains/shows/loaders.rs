@@ -4,6 +4,7 @@ use async_graphql::{
 };
 use async_trait::async_trait;
 use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 use std::{collections::HashMap, sync::Arc};
 
 use super::{
@@ -49,7 +50,7 @@ impl Loader<String> for ShowLoader {
 ///
 /// **Depends on:**
 ///  - `Tag(ShowsService)`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideShowLoader {}
 
 #[async_trait]

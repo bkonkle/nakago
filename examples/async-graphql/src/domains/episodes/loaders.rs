@@ -6,6 +6,7 @@ use async_graphql::{
 };
 use async_trait::async_trait;
 use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 
 use super::{
     model::Episode,
@@ -50,7 +51,7 @@ impl Loader<String> for EpisodeLoader {
 ///
 /// **Depends on:**
 ///  - `Tag(EpisodesService)`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideEpisodeLoader {}
 
 #[async_trait]

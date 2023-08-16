@@ -3,6 +3,7 @@ use std::sync::Arc;
 use async_graphql::{EmptySubscription, MergedObject, Schema};
 use async_trait::async_trait;
 use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 
 use crate::{
     config::AppConfig,
@@ -61,7 +62,7 @@ pub const GRAPHQL_SCHEMA: Tag<GraphQLSchema> = Tag::new("GraphQLSchema");
 ///  - `Tag(ShowLoader)`
 ///  - `Tag(EpisodesService)`
 ///  - `Tag(EpisodeLoader)`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideGraphQLSchema {}
 
 #[async_trait]

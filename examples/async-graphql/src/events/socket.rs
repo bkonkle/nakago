@@ -6,6 +6,7 @@ use axum::extract::ws::WebSocket;
 use futures::{SinkExt, StreamExt, TryFutureExt};
 use log::error;
 use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
@@ -119,7 +120,7 @@ impl SocketHandler {
 /// **Depends on:**
 ///   - `Tag(Connections)`
 ///   - `Tag(CommandsController)`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideSocket {}
 
 #[async_trait]

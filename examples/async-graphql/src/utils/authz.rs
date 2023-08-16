@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use nakago::{to_provider_error, Hook, Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 use oso::Oso;
 use oso::PolarClass;
 
@@ -18,7 +19,7 @@ pub const OSO: Tag<Oso> = Tag::new("Oso");
 /// Provide an Oso authorization instance
 ///
 /// **Provides:** `Oso`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideOso {}
 
 #[async_trait]

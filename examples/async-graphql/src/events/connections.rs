@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 use axum::extract::ws::Message;
 use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{
     mpsc::{self, UnboundedSender},
@@ -109,7 +110,7 @@ impl Session {
 /// Provide the default Connections implementation
 ///
 /// **Provides:** `Arc<Connections>`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideConnections {}
 
 #[async_trait]

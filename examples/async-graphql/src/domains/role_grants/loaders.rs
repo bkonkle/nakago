@@ -6,6 +6,7 @@ use async_graphql::{
 };
 use async_trait::async_trait;
 use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 
 use super::{
     model::RoleGrant,
@@ -50,7 +51,7 @@ impl Loader<String> for RoleGrantLoader {
 ///
 /// **Depends on:**
 ///  - `Tag(RoleGrantsService)`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideRoleGrantLoader {}
 
 #[async_trait]

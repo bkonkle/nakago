@@ -8,6 +8,7 @@ use nakago_axum::{
     auth::{authenticate::AuthState, AUTH_STATE},
     InitRoute, Route,
 };
+use nakago_derive::Provider;
 
 use crate::{
     domains::users::service::USERS_SERVICE, events::SOCKET_HANDLER, graphql::GRAPHQL_SCHEMA,
@@ -66,7 +67,7 @@ pub fn init_events_route() -> InitRoute<AppState> {
 ///   - `Tag(UsersService)`
 ///   - `Tag(SocketHandler)`
 ///   - `Tag(GraphQLSchema)`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideAppState {}
 
 #[async_trait]

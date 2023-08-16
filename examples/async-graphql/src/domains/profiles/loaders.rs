@@ -6,6 +6,7 @@ use async_graphql::{
 };
 use async_trait::async_trait;
 use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 
 use super::{
     model::Profile,
@@ -50,7 +51,7 @@ impl Loader<String> for ProfileLoader {
 ///
 /// **Depends on:**
 ///  - `Tag(ProfilesService)`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideProfileLoader {}
 
 #[async_trait]

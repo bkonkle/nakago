@@ -6,6 +6,7 @@ use std::{
 use async_trait::async_trait;
 use axum::extract::FromRef;
 use nakago::{to_provider_error, Config, Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 use sea_orm::{DatabaseBackend, DatabaseConnection, MockDatabase, MockDatabaseTrait};
 
 use crate::config::DatabaseConfig;
@@ -19,7 +20,7 @@ pub const DATABASE_CONNECTION: Tag<DatabaseConnection> = Tag::new("SeaORM:Databa
 ///
 /// **Depends on:**
 ///   - `<C: Config>` - requires that `C` fulfills the `DatabaseConfig: FromRef<C>` constraint
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideConnection<C: Config> {
     _phantom: PhantomData<C>,
 }
@@ -44,6 +45,7 @@ where
 /// Provide a Mock Database Connection for use in unit testing
 ///
 /// **Provides:** `Arc<DatabaseConnection>`
+#[derive(Provider)]
 pub struct ProvideMockConnection {
     db: Mutex<MockDatabase>,
 }

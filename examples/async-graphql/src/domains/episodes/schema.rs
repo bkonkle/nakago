@@ -1,6 +1,7 @@
 use async_graphql::{dataloader::DataLoader, EmptySubscription, Schema};
 use async_trait::async_trait;
 use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 use std::sync::Arc;
 
 use crate::domains::{
@@ -13,7 +14,7 @@ use crate::domains::{
 
 /// Tag(EpisodesSchema)
 #[allow(dead_code)]
-pub const EPISODES_SCHEMA: Tag<Box<EpisodesSchema>> = Tag::new("EpisodesSchema");
+pub const EPISODES_SCHEMA: Tag<EpisodesSchema> = Tag::new("EpisodesSchema");
 
 /// The EpisodesSchema, covering just the Episodes domain
 pub type EpisodesSchema = Schema<EpisodesQuery, EpisodesMutation, EmptySubscription>;
@@ -25,7 +26,7 @@ pub type EpisodesSchema = Schema<EpisodesQuery, EpisodesMutation, EmptySubscript
 /// **Depends on:**
 ///   - `Tag(EpisodesService)`
 ///   - `Tag(ShowLoader)`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideEpisodesSchema {}
 
 #[async_trait]
