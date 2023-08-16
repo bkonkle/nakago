@@ -3,7 +3,7 @@ use async_graphql::{
     FieldError,
 };
 use async_trait::async_trait;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
+use nakago::{Inject, InjectResult, Provider, Tag};
 use std::{collections::HashMap, sync::Arc};
 
 use super::{
@@ -13,27 +13,6 @@ use super::{
 
 /// Tag(ShowLoader)
 pub const SHOW_LOADER: Tag<DataLoader<ShowLoader>> = Tag::new("ShowLoader");
-
-/// Provide the ShowLoader
-///
-/// **Provides:** `ShowLoader`
-///
-/// **Depends on:**
-///  - `Tag(ShowsService)`
-#[derive(Default)]
-pub struct ProvideShowLoader {}
-
-#[async_trait]
-impl Provider for ProvideShowLoader {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
-        let shows_service = i.get(&SHOWS_SERVICE).await?;
-
-        Ok(Arc::new(DataLoader::new(
-            ShowLoader::new(shows_service.clone()),
-            tokio::spawn,
-        )))
-    }
-}
 
 /// A dataloader for `Show` instances
 pub struct ShowLoader {
@@ -61,5 +40,26 @@ impl Loader<String> for ShowLoader {
             .into_iter()
             .map(|show| (show.id.clone(), show))
             .collect())
+    }
+}
+
+/// Provide the ShowLoader
+///
+/// **Provides:** `ShowLoader`
+///
+/// **Depends on:**
+///  - `Tag(ShowsService)`
+#[derive(Default)]
+pub struct ProvideShowLoader {}
+
+#[async_trait]
+impl Provider<DataLoader<ShowLoader>> for ProvideShowLoader {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DataLoader<ShowLoader>>> {
+        let shows_service = i.get(&SHOWS_SERVICE).await?;
+
+        Ok(Arc::new(DataLoader::new(
+            ShowLoader::new(shows_service.clone()),
+            tokio::spawn,
+        )))
     }
 }

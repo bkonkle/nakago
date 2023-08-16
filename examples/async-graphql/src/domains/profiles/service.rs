@@ -5,7 +5,8 @@ use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
+use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
 use sea_orm::{entity::*, query::*, EntityTrait};
 
@@ -355,16 +356,14 @@ impl ProfilesService for DefaultProfilesService {
 ///
 /// **Depends on:**
 ///   - `Tag(DatabaseConnection)`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideProfilesService {}
 
 #[async_trait]
-impl Provider for ProvideProfilesService {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<Box<dyn ProfilesService>> for ProvideProfilesService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn ProfilesService>>> {
         let db = i.get(&DATABASE_CONNECTION).await?;
 
-        let service: Box<dyn ProfilesService> = Box::new(DefaultProfilesService::new(db));
-
-        Ok(Arc::new(service))
+        Ok(Arc::new(Box::new(DefaultProfilesService::new(db))))
     }
 }

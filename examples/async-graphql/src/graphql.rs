@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_graphql::{EmptySubscription, MergedObject, Schema};
 use async_trait::async_trait;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
+use nakago::{Inject, InjectResult, Provider, Tag};
 
 use crate::{
     config::AppConfig,
@@ -65,8 +65,8 @@ pub const GRAPHQL_SCHEMA: Tag<GraphQLSchema> = Tag::new("GraphQLSchema");
 pub struct ProvideGraphQLSchema {}
 
 #[async_trait]
-impl Provider for ProvideGraphQLSchema {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<GraphQLSchema> for ProvideGraphQLSchema {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<GraphQLSchema>> {
         let user_loader = i.get(&USER_LOADER).await?;
         let profile_loader = i.get(&PROFILE_LOADER).await?;
         let role_grant_loader = i.get(&ROLE_GRANT_LOADER).await?;

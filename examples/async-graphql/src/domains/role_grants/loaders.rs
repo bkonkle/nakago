@@ -5,7 +5,7 @@ use async_graphql::{
     FieldError,
 };
 use async_trait::async_trait;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
+use nakago::{Inject, InjectResult, Provider, Tag};
 
 use super::{
     model::RoleGrant,
@@ -54,8 +54,8 @@ impl Loader<String> for RoleGrantLoader {
 pub struct ProvideRoleGrantLoader {}
 
 #[async_trait]
-impl Provider for ProvideRoleGrantLoader {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<DataLoader<RoleGrantLoader>> for ProvideRoleGrantLoader {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DataLoader<RoleGrantLoader>>> {
         let role_grants_service = i.get(&ROLE_GRANTS_SERVICE).await?;
 
         Ok(Arc::new(DataLoader::new(

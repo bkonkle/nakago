@@ -5,7 +5,7 @@ use std::{
 
 use async_trait::async_trait;
 use axum::extract::FromRef;
-use nakago::{to_provider_error, Config, Dependency, Inject, InjectResult, Provider, Tag};
+use nakago::{to_provider_error, Config, Inject, InjectResult, Provider, Tag};
 use sea_orm::{DatabaseBackend, DatabaseConnection, MockDatabase, MockDatabaseTrait};
 
 use crate::config::DatabaseConfig;
@@ -25,11 +25,11 @@ pub struct ProvideConnection<C: Config> {
 }
 
 #[async_trait]
-impl<C: Config> Provider for ProvideConnection<C>
+impl<C: Config> Provider<DatabaseConnection> for ProvideConnection<C>
 where
     DatabaseConfig: FromRef<C>,
 {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DatabaseConnection>> {
         let config = i.get_type::<C>().await?;
         let database = DatabaseConfig::from_ref(&*config);
 
@@ -70,8 +70,8 @@ impl Default for ProvideMockConnection {
 }
 
 #[async_trait]
-impl Provider for ProvideMockConnection {
-    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<DatabaseConnection> for ProvideMockConnection {
+    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<DatabaseConnection>> {
         let existing = self.db.lock().expect("Could not lock MockDatabase Mutex");
         let backend = existing.get_database_backend();
         drop(existing);

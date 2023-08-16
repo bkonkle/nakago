@@ -4,7 +4,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
+use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
 use sea_orm::{entity::*, query::*, EntityTrait};
 
@@ -171,16 +172,14 @@ impl UsersService for DefaultUsersService {
 ///
 /// **Depends on:**
 ///   - `Tag(DatabaseConnection)`
-#[derive(Default)]
+#[derive(Default, Provider)]
 pub struct ProvideUsersService {}
 
 #[async_trait]
-impl Provider for ProvideUsersService {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<Box<dyn UsersService>> for ProvideUsersService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn UsersService>>> {
         let db = i.get(&DATABASE_CONNECTION).await?;
 
-        let service: Box<dyn UsersService> = Box::new(DefaultUsersService::new(db));
-
-        Ok(Arc::new(service))
+        Ok(Arc::new(Box::new(DefaultUsersService::new(db))))
     }
 }

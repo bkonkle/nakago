@@ -16,6 +16,9 @@ pub mod mutations;
 /// GraphQL Resolver
 pub mod resolver;
 
+/// GraphQL Schema
+pub mod schema;
+
 /// DataLoaders
 pub mod loaders;
 

@@ -26,7 +26,7 @@ pub(crate) struct Injector {
 // The value of an Injector can be either a Provider or a Pending Shared Future.
 #[derive(Clone)]
 enum Value {
-    Provider(Arc<dyn Provider>),
+    Provider(Arc<dyn Provider<Dependency>>),
     Pending(Shared<Pending>),
 }
 
@@ -38,9 +38,9 @@ pub type Pending = Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>>
 
 /// A trait for async injection Providers
 #[async_trait]
-pub trait Provider: Send + Sync {
+pub trait Provider<T: ?Sized>: Send + Sync {
     /// Provide a dependency for the container
-    async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>>;
+    async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<T>>;
 }
 
 impl Injector {
@@ -52,7 +52,9 @@ impl Injector {
     }
 
     // Create a new Injector from a Provider
-    fn from_provider(provider: impl Provider + 'static) -> Self {
+    fn from_provider<T: Any + Send + Sync>(
+        provider: impl Provider<T> + Provider<Dependency> + 'static,
+    ) -> Self {
         Self {
             value: RwLock::new(Value::Provider(Arc::new(provider))),
         }
@@ -87,12 +89,12 @@ impl Injector {
 
 // The Inject container is responsible for providing access to Dependencies and Providers. It
 // holds a map of Keys to Injectors, and provides methods for retrieving, injecting, and removing
-// Dependencies and Providers. This base implementation provides internal methods that are used by
-// the Tag and TypeId public interfaces.
+// Dependencies and Providers. This base implementation provides general methods that are used by
+// the Tag and TypeId specific interfaces.
 impl Inject {
     /// Retrieve a reference to a Dependency if it exists. Return a NotFound error if the Key isn't
     /// present.
-    pub(crate) async fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<Arc<T>> {
+    pub async fn get_key<T: Any + Send + Sync>(&self, key: Key) -> Result<Arc<T>> {
         let available = self.get_available_keys().await;
 
         if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
@@ -106,10 +108,7 @@ impl Inject {
     }
 
     /// Retrieve a reference to a Dependency if it exists.
-    pub(crate) async fn get_key_opt<T: Any + Send + Sync>(
-        &self,
-        key: Key,
-    ) -> Result<Option<Arc<T>>> {
+    pub async fn get_key_opt<T: Any + Send + Sync>(&self, key: Key) -> Result<Option<Arc<T>>> {
         if let Some(injector) = self.0.read().await.get(&key) {
             let pending = injector.request(self.clone()).await;
             let value = pending.await?;
@@ -125,7 +124,7 @@ impl Inject {
 
     /// Provide a Dependency directly, using core::future::ready to wrap it in an immediately
     /// resolving Pending Future.
-    pub(crate) async fn inject_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
+    pub async fn inject_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
         match self.0.write().await.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
@@ -143,7 +142,7 @@ impl Inject {
 
     /// Replace an existing Dependency directly, using core::future::ready to wrap it in an
     /// immediately resolving Pending Future. Return a NotFound error if the Key isn't present.
-    pub(crate) async fn replace_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
+    pub async fn replace_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
         let available = self.get_available_keys().await;
 
         match self.0.write().await.entry(key.clone()) {
@@ -165,15 +164,15 @@ impl Inject {
     }
 
     /// Inject a Dependency Provider
-    pub(crate) async fn provide_key(
+    pub async fn provide_key<T: Any + Send + Sync>(
         &self,
         key: Key,
-        provider: impl Provider + 'static,
+        provider: impl Provider<T> + Provider<Dependency> + 'static,
     ) -> Result<()> {
         match self.0.write().await.entry(key.clone()) {
             Entry::Occupied(_) => Err(Error::Occupied(key)),
             Entry::Vacant(entry) => {
-                let _ = entry.insert(Injector::from_provider(provider));
+                let _ = entry.insert(Injector::from_provider::<T>(provider));
 
                 Ok(())
             }
@@ -181,16 +180,16 @@ impl Inject {
     }
 
     /// Inject a replacement Dependency Provider if the Key is present
-    pub(crate) async fn replace_key_with(
+    pub async fn replace_key_with<T: Any + Send + Sync>(
         &self,
         key: Key,
-        provider: impl Provider + 'static,
+        provider: impl Provider<T> + Provider<Dependency> + 'static,
     ) -> Result<()> {
         let available = self.get_available_keys().await;
 
         match self.0.write().await.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                let _ = entry.insert(Injector::from_provider(provider));
+                let _ = entry.insert(Injector::from_provider::<T>(provider));
 
                 Ok(())
             }
@@ -205,7 +204,7 @@ impl Inject {
     /// succeed if there are no other strong pointers to the value. Any Arcs handed out will still
     /// be valid, but the container will no longer hold a reference. Return a NotFound error if the
     /// Key isn't present.
-    pub(crate) async fn consume_key<T: Any + Send + Sync>(&self, key: Key) -> Result<T> {
+    pub async fn consume_key<T: Any + Send + Sync>(&self, key: Key) -> Result<T> {
         let available = self.get_available_keys().await;
 
         self.consume_key_opt(key.clone())
@@ -219,10 +218,7 @@ impl Inject {
     /// Remove a Dependency from the container and try to unwrap it from the Arc, which will only
     /// succeed if there are no other strong pointers to the value. Any Arcs handed out will still
     /// be valid, but the container will no longer hold a reference.
-    pub(crate) async fn consume_key_opt<T: Any + Send + Sync>(
-        &self,
-        key: Key,
-    ) -> Result<Option<T>> {
+    pub async fn consume_key_opt<T: Any + Send + Sync>(&self, key: Key) -> Result<Option<T>> {
         if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
             // Since we have a reference to the dependency, we can remove it from the container and
             // drop the reference it holds
@@ -243,7 +239,7 @@ impl Inject {
 
     /// Discard a Dependency from the container. Any Arcs handed out will still be valid, but
     /// the container will no longer hold a reference.
-    pub(crate) async fn remove_key(&self, key: Key) -> Result<()> {
+    pub async fn remove_key(&self, key: Key) -> Result<()> {
         let available = self.get_available_keys().await;
 
         match self.0.write().await.entry(key.clone()) {
@@ -262,7 +258,7 @@ impl Inject {
     /// Destroy the container and discard all Dependencies except for the given Key. Any Arcs handed
     /// out will still be valid, but the container will be fully unloaded and all references will be
     /// dropped. Return a NotFound error if the Key isn't present.
-    pub(crate) async fn eject_key<T: Any + Send + Sync>(self, key: Key) -> Result<T> {
+    pub async fn eject_key<T: Any + Send + Sync>(self, key: Key) -> Result<T> {
         let available = self.get_available_keys().await;
 
         self.eject_key_opt(key.clone())
@@ -276,7 +272,7 @@ impl Inject {
     /// Destroy the container and discard all Dependencies except for the given Key. Any Arcs handed
     /// out will still be valid, but the container will be fully unloaded and all references will be
     /// dropped.
-    pub(crate) async fn eject_key_opt<T: Any + Send + Sync>(self, key: Key) -> Result<Option<T>> {
+    pub async fn eject_key_opt<T: Any + Send + Sync>(self, key: Key) -> Result<Option<T>> {
         // First get the Dependency
         let dep = self.get_key_opt::<T>(key.clone()).await?;
 
@@ -298,7 +294,7 @@ impl Inject {
     }
 
     /// Get all available Keys in the container.
-    async fn get_available_keys(&self) -> Vec<Key> {
+    pub async fn get_available_keys(&self) -> Vec<Key> {
         let container = self.0.read().await;
 
         container.keys().cloned().collect()
@@ -316,6 +312,8 @@ where
 #[cfg(test)]
 pub(crate) mod test {
     use std::sync::Arc;
+
+    use nakago_derive::Provider;
 
     use super::*;
 
@@ -359,6 +357,8 @@ pub(crate) mod test {
         }
     }
 
+    #[derive(Provider)]
+    #[inject(internal)]
     pub struct TestServiceProvider {
         id: String,
     }
@@ -371,8 +371,8 @@ pub(crate) mod test {
     }
 
     #[async_trait]
-    impl Provider for TestServiceProvider {
-        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>> {
+    impl Provider<TestService> for TestServiceProvider {
+        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<TestService>> {
             // Attempt to retrieve a dependency inside the Provider to test for deadlocks
             i.get_type_opt::<String>().await?;
 
@@ -380,6 +380,8 @@ pub(crate) mod test {
         }
     }
 
+    #[derive(Provider)]
+    #[inject(internal)]
     pub struct OtherServiceProvider {
         id: String,
     }
@@ -392,20 +394,21 @@ pub(crate) mod test {
     }
 
     #[async_trait]
-    impl Provider for OtherServiceProvider {
-        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>> {
+    impl Provider<OtherService> for OtherServiceProvider {
+        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<OtherService>> {
             i.get_type_opt::<String>().await?;
 
             Ok(Arc::new(OtherService::new(self.id.clone())))
         }
     }
 
-    #[derive(Default)]
+    #[derive(Default, Provider)]
+    #[inject(internal)]
     pub struct HasIdProvider {}
 
     #[async_trait]
-    impl Provider for HasIdProvider {
-        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Dependency>> {
+    impl Provider<Box<dyn HasId>> for HasIdProvider {
+        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Box<dyn HasId>>> {
             i.get_type_opt::<String>().await?;
 
             let dep: Box<dyn HasId> = Box::new(OtherService::new("test-service".to_string()));

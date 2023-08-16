@@ -5,7 +5,7 @@ use async_graphql::{
     FieldError,
 };
 use async_trait::async_trait;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
+use nakago::{Inject, InjectResult, Provider, Tag};
 
 use super::{
     model::Episode,
@@ -54,8 +54,8 @@ impl Loader<String> for EpisodeLoader {
 pub struct ProvideEpisodeLoader {}
 
 #[async_trait]
-impl Provider for ProvideEpisodeLoader {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<DataLoader<EpisodeLoader>> for ProvideEpisodeLoader {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DataLoader<EpisodeLoader>>> {
         let episodes_service = i.get(&EPISODES_SERVICE).await?;
 
         Ok(Arc::new(DataLoader::new(

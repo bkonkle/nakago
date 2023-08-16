@@ -1,5 +1,7 @@
 use std::{any::Any, fmt::Display, marker::PhantomData, ops::Deref, sync::Arc};
 
+use crate::Dependency;
+
 use super::{Inject, Key, Provider, Result};
 
 /// A dependency injection Tag representing a specific type
@@ -67,18 +69,19 @@ impl Inject {
     pub async fn provide<T: Any + Sync + Send>(
         &self,
         tag: &'static Tag<T>,
-        provider: impl Provider + 'static,
+        provider: impl Provider<T> + Provider<Dependency> + 'static,
     ) -> Result<()> {
-        self.provide_key(Key::from_tag(tag), provider).await
+        self.provide_key::<T>(Key::from_tag(tag), provider).await
     }
 
     /// Inject a replacement Dependency Provider if the Tag is present
     pub async fn replace_with<T: Any + Sync + Send>(
         &self,
         tag: &'static Tag<T>,
-        provider: impl Provider + 'static,
+        provider: impl Provider<T> + Provider<Dependency> + 'static,
     ) -> Result<()> {
-        self.replace_key_with(Key::from_tag(tag), provider).await
+        self.replace_key_with::<T>(Key::from_tag(tag), provider)
+            .await
     }
 
     /// Remove a Tagged Dependency from the container and try to unwrap it from the Arc, which will

@@ -1,22 +1,36 @@
 use anyhow::Result;
 use async_graphql::MaybeUndefined::Undefined;
 use fake::{Fake, Faker};
+use nakago::{Inject, InjectResult};
+use nakago_sea_orm::{connection::ProvideMockConnection, DATABASE_CONNECTION};
 use pretty_assertions::assert_eq;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction};
-use std::sync::Arc;
 
 use crate::{
     domains::{
+        episodes::service::ProvideEpisodesService,
         profiles::{
             model::{Model, ProfileList},
             mutations::{CreateProfileInput, UpdateProfileInput},
             queries::{ProfileCondition, ProfilesOrderBy},
-            service::{DefaultProfilesService, ProfilesService},
+            service::PROFILES_SERVICE,
         },
         users::model::User,
     },
     utils::pagination::ManyResponse,
 };
+
+async fn setup(db: MockDatabase) -> InjectResult<Inject> {
+    let i = Inject::default();
+
+    i.provide(&DATABASE_CONNECTION, ProvideMockConnection::new(db))
+        .await?;
+
+    i.provide(&PROFILES_SERVICE, ProvideEpisodesService::default())
+        .await?;
+
+    Ok(i)
+}
 
 #[tokio::test]
 async fn test_profiles_service_get() -> Result<()> {
@@ -28,20 +42,20 @@ async fn test_profiles_service_get() -> Result<()> {
     profile.user_id = Some(user.id.clone());
     profile.email = "test@profile.com".to_string();
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![profile.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![profile.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = i.get(&PROFILES_SERVICE).await?;
 
     let result = service.get(&profile.id, &false).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, Some(profile.clone().into()));
 
@@ -68,20 +82,20 @@ async fn test_profiles_service_get_with_related() -> Result<()> {
     profile.user_id = Some(user.id.clone());
     profile.email = "test@profile.com".to_string();
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![(profile.clone(), user.clone())]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![(profile.clone(), user.clone())]]),
+    )
+    .await?;
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = i.get(&PROFILES_SERVICE).await?;
 
     let result = service.get(&profile.id, &true).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, Some(profile.clone().into_profile_with_user(user)));
 
@@ -116,13 +130,13 @@ async fn test_profiles_service_get_many() -> Result<()> {
     other_profile.user_id = Some(user.id.clone());
     other_profile.email = "test+2@profile.com".to_string();
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![profile.clone(), other_profile.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![profile.clone(), other_profile.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = i.get(&PROFILES_SERVICE).await?;
 
     let result = service
         .get_many(
@@ -144,7 +158,7 @@ async fn test_profiles_service_get_many() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(
         result,
@@ -188,16 +202,15 @@ async fn test_profiles_service_get_many_with_related() -> Result<()> {
     other_profile.user_id = Some(other_user.id.clone());
     other_profile.email = "test+2@profile.com".to_string();
 
-    let db = Arc::new(
-        MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![
-                (profile.clone(), user.clone()),
-                (other_profile.clone(), other_user.clone()),
-            ]])
-            .into_connection(),
-    );
+    let i = setup(
+        MockDatabase::new(DatabaseBackend::Postgres).append_query_results(vec![vec![
+            (profile.clone(), user.clone()),
+            (other_profile.clone(), other_user.clone()),
+        ]]),
+    )
+    .await?;
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = i.get(&PROFILES_SERVICE).await?;
 
     let result = service
         .get_many(
@@ -219,7 +232,7 @@ async fn test_profiles_service_get_many_with_related() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(
         result,
@@ -284,7 +297,7 @@ async fn test_profiles_service_get_many_pagination() -> Result<()> {
         })
         .collect();
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![maplit::btreemap! {
                 // First query result
@@ -293,11 +306,11 @@ async fn test_profiles_service_get_many_pagination() -> Result<()> {
             .append_query_results(vec![
                 // Second query result
                 profiles.clone(),
-            ])
-            .into_connection(),
-    );
+            ]),
+    )
+    .await?;
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = i.get(&PROFILES_SERVICE).await?;
 
     let result = service
         .get_many(
@@ -312,7 +325,7 @@ async fn test_profiles_service_get_many_pagination() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     let data: ProfileList = profiles.into();
 
@@ -383,7 +396,7 @@ async fn test_profiles_service_get_many_pagination_with_related() -> Result<()> 
         })
         .collect();
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![maplit::btreemap! {
                 // First query result
@@ -392,11 +405,11 @@ async fn test_profiles_service_get_many_pagination_with_related() -> Result<()> 
             .append_query_results(vec![
                 // Second query result
                 profiles.clone(),
-            ])
-            .into_connection(),
-    );
+            ]),
+    )
+    .await?;
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = i.get(&PROFILES_SERVICE).await?;
 
     let result = service
         .get_many(
@@ -411,7 +424,7 @@ async fn test_profiles_service_get_many_pagination_with_related() -> Result<()> 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(
         result,
@@ -457,13 +470,13 @@ async fn test_profiles_service_create() -> Result<()> {
     profile.user_id = Some(user.id.clone());
     profile.email = "test@profile.com".to_string();
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![profile.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![profile.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = i.get(&PROFILES_SERVICE).await?;
 
     let result = service
         .create(
@@ -482,7 +495,7 @@ async fn test_profiles_service_create() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, profile.clone().into());
 
@@ -516,14 +529,14 @@ async fn test_profiles_service_create_with_related() -> Result<()> {
     profile.user_id = Some(user.id.clone());
     profile.email = "test@profile.com".to_string();
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![profile.clone()]])
-            .append_query_results(vec![vec![user.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![user.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = i.get(&PROFILES_SERVICE).await?;
 
     let result = service
         .create(
@@ -542,7 +555,7 @@ async fn test_profiles_service_create_with_related() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, profile.clone().into_profile_with_user(user.clone()));
 
@@ -588,13 +601,13 @@ async fn test_profiles_service_update() -> Result<()> {
         ..profile.clone()
     };
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![profile.clone()], vec![updated.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![profile.clone()], vec![updated.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = i.get(&PROFILES_SERVICE).await?;
 
     let result = service
         .update(
@@ -614,7 +627,7 @@ async fn test_profiles_service_update() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, updated.clone().into());
 
@@ -653,14 +666,14 @@ async fn test_profiles_service_update_with_related() -> Result<()> {
         ..profile.clone()
     };
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![(profile.clone(), user.clone())]])
-            .append_query_results(vec![vec![updated.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![updated.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = i.get(&PROFILES_SERVICE).await?;
 
     let result = service
         .update(
@@ -680,7 +693,7 @@ async fn test_profiles_service_update_with_related() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, updated.clone().into_profile_with_user(user.clone()));
 
@@ -714,24 +727,24 @@ async fn test_profiles_service_delete() -> Result<()> {
     profile.user_id = Some(user.id.clone());
     profile.email = "test@profile.com".to_string();
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![profile.clone()]])
             .append_exec_results(vec![MockExecResult {
                 last_insert_id: 0,
                 rows_affected: 1,
-            }])
-            .into_connection(),
-    );
+            }]),
+    )
+    .await?;
 
-    let service = DefaultProfilesService::new(db.clone());
+    let service = i.get(&PROFILES_SERVICE).await?;
 
     service.delete(&profile.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     // Check the transaction log
     assert_eq!(

@@ -5,7 +5,7 @@ use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
+use nakago::{Inject, InjectResult, Provider, Tag};
 use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
 use sea_orm::{entity::*, query::*, EntityTrait};
 
@@ -217,12 +217,28 @@ impl ShowsService for DefaultShowsService {
 pub struct ProvideShowsService {}
 
 #[async_trait]
-impl Provider for ProvideShowsService {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<Box<dyn ShowsService>> for ProvideShowsService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn ShowsService>>> {
         let db = i.get(&DATABASE_CONNECTION).await?;
 
-        let service: Box<dyn ShowsService> = Box::new(DefaultShowsService::new(db));
+        Ok(Arc::new(Box::new(DefaultShowsService::new(db))))
+    }
+}
 
-        Ok(Arc::new(service))
+#[cfg(test)]
+pub(crate) mod test {
+    use super::*;
+
+    /// Provide the Mocked ShowsService for testing
+    ///
+    /// **Provides:** `Arc<dyn ShowsService>`
+    #[derive(Default)]
+    pub struct ProvideMockShowsService {}
+
+    #[async_trait]
+    impl Provider<Box<dyn ShowsService>> for ProvideMockShowsService {
+        async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Box<dyn ShowsService>>> {
+            Ok(Arc::new(Box::<MockShowsService>::default()))
+        }
     }
 }

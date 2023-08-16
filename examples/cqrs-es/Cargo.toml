@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A lightweight Rust framework for sharp services 😎"
+documentation = "https://docs.rs/nakago/"
+homepage = "https://github.com/bkonkle/nakago"
 repository = "https://github.com/bkonkle/nakago"
 license = "MIT"
 

@@ -34,7 +34,9 @@ impl EpisodesQuery {
         ctx: &Context<'_>,
         #[graphql(desc = "The Episode id")] id: String,
     ) -> Result<Option<Episode>> {
+        println!(">------ resolving EpisodesService ------<");
         let episodes = ctx.data_unchecked::<Arc<Box<dyn EpisodesService>>>();
+        println!(">------ resolving EpisodesService ------<");
 
         // Check to see if the associated Show is selected
         let with_show = ctx.look_ahead().field("show").exists();

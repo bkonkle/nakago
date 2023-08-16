@@ -4,6 +4,8 @@ version = "0.8.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A SeaORM integration for Nakago"
+documentation = "https://docs.rs/nakago/"
+homepage = "https://github.com/bkonkle/nakago"
 repository = "https://github.com/bkonkle/nakago"
 license = "MIT"
 

@@ -1,5 +1,7 @@
 use std::{any::Any, sync::Arc};
 
+use crate::Dependency;
+
 use super::{Inject, Key, Provider, Result};
 
 impl Inject {
@@ -29,17 +31,18 @@ impl Inject {
     /// Inject a Dependency Provider
     pub async fn provide_type<T: Any + Send + Sync>(
         &self,
-        provider: impl Provider + 'static,
+        provider: impl Provider<T> + Provider<Dependency> + 'static,
     ) -> Result<()> {
-        self.provide_key(Key::from_type_id::<T>(), provider).await
+        self.provide_key::<T>(Key::from_type_id::<T>(), provider)
+            .await
     }
 
     /// Inject a replacement Dependency Provider if the TypeId is present
     pub async fn replace_type_with<T: Any + Send + Sync>(
         &self,
-        provider: impl Provider + 'static,
+        provider: impl Provider<T> + Provider<Dependency> + 'static,
     ) -> Result<()> {
-        self.replace_key_with(Key::from_type_id::<T>(), provider)
+        self.replace_key_with::<T>(Key::from_type_id::<T>(), provider)
             .await
     }
 
