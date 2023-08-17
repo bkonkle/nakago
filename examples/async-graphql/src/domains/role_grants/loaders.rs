@@ -51,9 +51,10 @@ impl Loader<String> for RoleGrantLoader {
 ///
 /// **Depends on:**
 ///  - `Tag(RoleGrantsService)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideRoleGrantLoader {}
 
+#[Provider]
 #[async_trait]
 impl Provider<DataLoader<RoleGrantLoader>> for ProvideRoleGrantLoader {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DataLoader<RoleGrantLoader>>> {

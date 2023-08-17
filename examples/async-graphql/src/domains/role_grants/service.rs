@@ -104,9 +104,10 @@ impl RoleGrantsService for DefaultRoleGrantsService {
 ///
 /// **Depends on:**
 ///   - `Tag(DatabaseConnection)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideRoleGrantsService {}
 
+#[Provider]
 #[async_trait]
 impl Provider<Box<dyn RoleGrantsService>> for ProvideRoleGrantsService {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn RoleGrantsService>>> {

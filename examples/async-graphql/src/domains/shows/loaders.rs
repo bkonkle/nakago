@@ -50,9 +50,10 @@ impl Loader<String> for ShowLoader {
 ///
 /// **Depends on:**
 ///  - `Tag(ShowsService)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideShowLoader {}
 
+#[Provider]
 #[async_trait]
 impl Provider<DataLoader<ShowLoader>> for ProvideShowLoader {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DataLoader<ShowLoader>>> {

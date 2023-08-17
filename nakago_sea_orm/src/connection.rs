@@ -20,11 +20,12 @@ pub const DATABASE_CONNECTION: Tag<DatabaseConnection> = Tag::new("SeaORM:Databa
 ///
 /// **Depends on:**
 ///   - `<C: Config>` - requires that `C` fulfills the `DatabaseConfig: FromRef<C>` constraint
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideConnection<C: Config> {
     _phantom: PhantomData<C>,
 }
 
+#[Provider]
 #[async_trait]
 impl<C: Config> Provider<DatabaseConnection> for ProvideConnection<C>
 where
@@ -45,7 +46,6 @@ where
 /// Provide a Mock Database Connection for use in unit testing
 ///
 /// **Provides:** `Arc<DatabaseConnection>`
-#[derive(Provider)]
 pub struct ProvideMockConnection {
     db: Mutex<MockDatabase>,
 }
@@ -71,6 +71,7 @@ impl Default for ProvideMockConnection {
     }
 }
 
+#[Provider]
 #[async_trait]
 impl Provider<DatabaseConnection> for ProvideMockConnection {
     async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<DatabaseConnection>> {

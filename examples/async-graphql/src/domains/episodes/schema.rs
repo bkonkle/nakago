@@ -26,9 +26,10 @@ pub type EpisodesSchema = Schema<EpisodesQuery, EpisodesMutation, EmptySubscript
 /// **Depends on:**
 ///   - `Tag(EpisodesService)`
 ///   - `Tag(ShowLoader)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideEpisodesSchema {}
 
+#[Provider]
 #[async_trait]
 impl Provider<EpisodesSchema> for ProvideEpisodesSchema {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<EpisodesSchema>> {

@@ -51,9 +51,10 @@ impl Loader<String> for UserLoader {
 ///
 /// **Depends on:**
 ///  - `Tag(UsersService)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideUserLoader {}
 
+#[Provider]
 #[async_trait]
 impl Provider<DataLoader<UserLoader>> for ProvideUserLoader {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DataLoader<UserLoader>>> {

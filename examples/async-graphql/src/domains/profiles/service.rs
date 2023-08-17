@@ -356,9 +356,10 @@ impl ProfilesService for DefaultProfilesService {
 ///
 /// **Depends on:**
 ///   - `Tag(DatabaseConnection)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideProfilesService {}
 
+#[Provider]
 #[async_trait]
 impl Provider<Box<dyn ProfilesService>> for ProvideProfilesService {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn ProfilesService>>> {

@@ -62,9 +62,10 @@ pub const GRAPHQL_SCHEMA: Tag<GraphQLSchema> = Tag::new("GraphQLSchema");
 ///  - `Tag(ShowLoader)`
 ///  - `Tag(EpisodesService)`
 ///  - `Tag(EpisodeLoader)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideGraphQLSchema {}
 
+#[Provider]
 #[async_trait]
 impl Provider<GraphQLSchema> for ProvideGraphQLSchema {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<GraphQLSchema>> {

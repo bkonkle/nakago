@@ -122,9 +122,10 @@ pub fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>,
 ///
 /// **Depends on:**
 ///   - `Tag(JWKS)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideAuthState {}
 
+#[Provider]
 #[async_trait]
 impl Provider<AuthState> for ProvideAuthState {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<AuthState>> {

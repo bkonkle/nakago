@@ -51,9 +51,10 @@ impl Loader<String> for ProfileLoader {
 ///
 /// **Depends on:**
 ///  - `Tag(ProfilesService)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideProfileLoader {}
 
+#[Provider]
 #[async_trait]
 impl Provider<DataLoader<ProfileLoader>> for ProvideProfileLoader {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DataLoader<ProfileLoader>>> {

@@ -357,8 +357,6 @@ pub(crate) mod test {
         }
     }
 
-    #[derive(Provider)]
-    #[inject(internal)]
     pub struct TestServiceProvider {
         id: String,
     }
@@ -370,6 +368,7 @@ pub(crate) mod test {
         }
     }
 
+    #[Provider(internal)]
     #[async_trait]
     impl Provider<TestService> for TestServiceProvider {
         async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<TestService>> {
@@ -380,8 +379,6 @@ pub(crate) mod test {
         }
     }
 
-    #[derive(Provider)]
-    #[inject(internal)]
     pub struct OtherServiceProvider {
         id: String,
     }
@@ -393,6 +390,7 @@ pub(crate) mod test {
         }
     }
 
+    #[Provider(internal)]
     #[async_trait]
     impl Provider<OtherService> for OtherServiceProvider {
         async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<OtherService>> {
@@ -402,10 +400,10 @@ pub(crate) mod test {
         }
     }
 
-    #[derive(Default, Provider)]
-    #[inject(internal)]
+    #[derive(Default)]
     pub struct HasIdProvider {}
 
+    #[Provider(internal)]
     #[async_trait]
     impl Provider<Box<dyn HasId>> for HasIdProvider {
         async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Box<dyn HasId>>> {

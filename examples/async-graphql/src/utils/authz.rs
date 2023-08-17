@@ -19,9 +19,10 @@ pub const OSO: Tag<Oso> = Tag::new("Oso");
 /// Provide an Oso authorization instance
 ///
 /// **Provides:** `Oso`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideOso {}
 
+#[Provider]
 #[async_trait]
 impl Provider<Oso> for ProvideOso {
     async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Oso>> {

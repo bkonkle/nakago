@@ -120,9 +120,10 @@ impl SocketHandler {
 /// **Depends on:**
 ///   - `Tag(Connections)`
 ///   - `Tag(CommandsController)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideSocket {}
 
+#[Provider]
 #[async_trait]
 impl Provider<SocketHandler> for ProvideSocket {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<SocketHandler>> {

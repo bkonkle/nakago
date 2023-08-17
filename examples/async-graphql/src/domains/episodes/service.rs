@@ -286,9 +286,10 @@ impl EpisodesService for DefaultEpisodesService {
 ///
 /// **Depends on:**
 ///   - `Tag(DatabaseConnection)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideEpisodesService {}
 
+#[Provider]
 #[async_trait]
 impl Provider<Box<dyn EpisodesService>> for ProvideEpisodesService {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn EpisodesService>>> {
@@ -305,9 +306,10 @@ pub(crate) mod test {
     /// Provide the Mocked EpisodesService for testing
     ///
     /// **Provides:** `Arc<dyn EpisodesService>`
-    #[derive(Default, Provider)]
+    #[derive(Default)]
     pub struct ProvideMockEpisodesService {}
 
+    #[Provider]
     #[async_trait]
     impl Provider<Box<dyn EpisodesService>> for ProvideMockEpisodesService {
         async fn provide(

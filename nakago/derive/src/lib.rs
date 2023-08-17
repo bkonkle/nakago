@@ -1,21 +1,37 @@
 //! # Derive
-use darling::FromDeriveInput;
+use darling::FromMeta;
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{parse_macro_input, ItemImpl};
 
 mod args;
 mod provider;
 mod utils;
 
-/// Derive the `Provider<Dependency>` trait.
-#[proc_macro_derive(Provider, attributes(inject))]
-pub fn derive_any_provider_impl(input: TokenStream) -> TokenStream {
-    let object_args =
-        match args::Provider::from_derive_input(&parse_macro_input!(input as DeriveInput)) {
+macro_rules! parse_nested_meta {
+    ($ty:ty, $args:expr) => {{
+        let meta = match darling::ast::NestedMeta::parse_meta_list(proc_macro2::TokenStream::from(
+            $args,
+        )) {
+            Ok(v) => v,
+            Err(e) => {
+                return TokenStream::from(darling::Error::from(e).write_errors());
+            }
+        };
+
+        match <$ty>::from_list(&meta) {
             Ok(object_args) => object_args,
             Err(err) => return TokenStream::from(err.write_errors()),
-        };
-    match provider::generate(&object_args) {
+        }
+    }};
+}
+
+/// Derive `Provider` trait for a struct.
+#[proc_macro_attribute]
+#[allow(non_snake_case)]
+pub fn Provider(args: TokenStream, input: TokenStream) -> TokenStream {
+    let object_args = parse_nested_meta!(args::Provider, args);
+    let mut item_impl = parse_macro_input!(input as ItemImpl);
+    match provider::generate(&object_args, &mut item_impl) {
         Ok(expanded) => expanded,
         Err(err) => err.write_errors().into(),
     }

@@ -111,11 +111,12 @@ pub async fn init(config: AuthConfig) -> JWKSet<Empty> {
 ///
 /// **Depends on:**
 ///   - `<C: Config>` - requires that `C` fulfills the `AuthConfig: FromRef<C>` constraint
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideJwks<C: Config> {
     _phantom: PhantomData<C>,
 }
 
+#[Provider]
 #[async_trait]
 impl<C: Config> Provider<JWKSet<Empty>> for ProvideJwks<C>
 where

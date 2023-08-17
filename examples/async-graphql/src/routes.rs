@@ -67,9 +67,10 @@ pub fn init_events_route() -> InitRoute<AppState> {
 ///   - `Tag(UsersService)`
 ///   - `Tag(SocketHandler)`
 ///   - `Tag(GraphQLSchema)`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideAppState {}
 
+#[Provider]
 #[async_trait]
 impl Provider<AppState> for ProvideAppState {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<AppState>> {

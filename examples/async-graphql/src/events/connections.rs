@@ -110,9 +110,10 @@ impl Session {
 /// Provide the default Connections implementation
 ///
 /// **Provides:** `Arc<Connections>`
-#[derive(Default, Provider)]
+#[derive(Default)]
 pub struct ProvideConnections {}
 
+#[Provider]
 #[async_trait]
 impl Provider<Connections> for ProvideConnections {
     async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Connections>> {
