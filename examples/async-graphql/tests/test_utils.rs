@@ -14,7 +14,7 @@ use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
 use hyper::{client::HttpConnector, Body, Client, Method, Request};
 use hyper_tls::HttpsConnector;
-use nakago::{Dependency, EventType, Inject, InjectResult, Provider};
+use nakago::{EventType, Inject, InjectResult, Provider};
 use nakago_axum::{auth::config::AuthConfig, AxumApplication};
 use nakago_examples_async_graphql::{
     config::AppConfig,
@@ -72,8 +72,11 @@ pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
 struct HttpClientProvider {}
 
 #[async_trait]
-impl Provider for HttpClientProvider {
-    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<Client<HttpsConnector<HttpConnector>>> for HttpClientProvider {
+    async fn provide(
+        self: Arc<Self>,
+        _i: Inject,
+    ) -> InjectResult<Arc<Client<HttpsConnector<HttpConnector>>>> {
         Ok(Arc::new(
             Client::builder().build::<_, Body>(HttpsConnector::new()),
         ))

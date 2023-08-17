@@ -13,7 +13,6 @@ use routes::AppState;
 use crate::{domains::InitDomains, init::InitApp, utils::authz::InitAuthz};
 
 mod config;
-mod db;
 mod domains;
 mod events;
 mod graphql;

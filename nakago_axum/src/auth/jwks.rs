@@ -9,7 +9,8 @@ use biscuit::{
 };
 use hyper::{body::to_bytes, client::HttpConnector, Body, Client, Method, Request};
 use hyper_tls::HttpsConnector;
-use nakago::{Config, Dependency, Inject, InjectResult, Provider, Tag};
+use nakago::{Config, Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 use thiserror::Error;
 
 use super::config::AuthConfig;
@@ -115,12 +116,13 @@ pub struct ProvideJwks<C: Config> {
     _phantom: PhantomData<C>,
 }
 
+#[Provider]
 #[async_trait]
-impl<C: Config> Provider for ProvideJwks<C>
+impl<C: Config> Provider<JWKSet<Empty>> for ProvideJwks<C>
 where
     AuthConfig: FromRef<C>,
 {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<JWKSet<Empty>>> {
         let config = i.get_type::<C>().await?;
         let auth = AuthConfig::from_ref(&*config);
         let key_set = init(auth).await;

@@ -1,10 +1,18 @@
 [workspace]
-members = ["nakago", "nakago_axum", "examples/*"]
-default-members = ["nakago", "nakago_axum"]
+members = [
+    "nakago",
+    "nakago/derive",
+    "nakago_axum",
+    "nakago_sea_orm",
+    "examples/*",
+]
+default-members = ["nakago", "nakago/derive", "nakago_axum", "nakago_sea_orm"]
 
 [patch.crates-io]
 nakago = { path = "./nakago" }
 nakago-axum = { path = "./nakago_axum" }
+nakago-derive = { path = "./nakago/derive" }
+nakago-sea-orm = { path = "./nakago_sea_orm" }
 
 [profile.release]
 strip = true      # Automatically strip symbols from the binary.

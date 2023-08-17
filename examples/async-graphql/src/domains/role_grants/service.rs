@@ -4,10 +4,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
-use sea_orm::{entity::*, query::*, Condition, DatabaseConnection, EntityTrait};
-
-use crate::db::DATABASE_CONNECTION;
+use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
+use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
+use sea_orm::{entity::*, query::*, Condition, EntityTrait};
 
 use super::model::{self, CreateRoleGrantInput, RoleGrant};
 
@@ -107,13 +107,12 @@ impl RoleGrantsService for DefaultRoleGrantsService {
 #[derive(Default)]
 pub struct ProvideRoleGrantsService {}
 
+#[Provider]
 #[async_trait]
-impl Provider for ProvideRoleGrantsService {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<Box<dyn RoleGrantsService>> for ProvideRoleGrantsService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn RoleGrantsService>>> {
         let db = i.get(&DATABASE_CONNECTION).await?;
 
-        let service: Box<dyn RoleGrantsService> = Box::new(DefaultRoleGrantsService::new(db));
-
-        Ok(Arc::new(service))
+        Ok(Arc::new(Box::new(DefaultRoleGrantsService::new(db))))
     }
 }

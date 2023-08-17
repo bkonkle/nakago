@@ -1,10 +1,9 @@
 use axum::extract::FromRef;
-use figment::providers::Env;
-use nakago::ConfigLoader;
 use nakago_axum::{
     auth::config::{AuthClientConfig, AuthConfig},
     config::HttpConfig,
 };
+use nakago_sea_orm::config::{DatabaseConfig, DatabasePool};
 use serde::Serialize;
 use serde_derive::Deserialize;
 
@@ -18,45 +17,7 @@ pub struct AppConfig {
     pub auth: AuthConfig,
 
     /// Database config
-    pub database: Database,
-}
-
-/// Database pool config
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct DbPool {
-    /// Database pool min
-    pub min: Option<i16>,
-
-    /// Database pool max
-    pub max: Option<i16>,
-}
-
-/// Database config
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Database {
-    /// Database hostname/IP
-    pub hostname: String,
-
-    /// Database username
-    pub username: String,
-
-    /// Database password
-    pub password: String,
-
-    /// Database name
-    pub name: String,
-
-    /// Database port
-    pub port: u16,
-
-    /// Full database url
-    pub url: String,
-
-    /// Database debug logging
-    pub debug: bool,
-
-    /// Database pool config
-    pub pool: DbPool,
+    pub database: DatabaseConfig,
 }
 
 impl Default for AppConfig {
@@ -71,7 +32,7 @@ impl Default for AppConfig {
                 audience: "localhost".to_string(),
                 client: AuthClientConfig::default(),
             },
-            database: Database {
+            database: DatabaseConfig {
                 hostname: "localhost".to_string(),
                 username: "async-graphql".to_string(),
                 password: "async-graphql".to_string(),
@@ -80,26 +41,10 @@ impl Default for AppConfig {
                 url: "postgresql://async-graphql:async-graphql@localhost:1701/async-graphql"
                     .to_string(),
                 debug: false,
-                pool: DbPool::default(),
+                pool: DatabasePool::default(),
             },
         }
     }
 }
 
 impl nakago::Config for AppConfig {}
-
-/// The Database Config Loader
-#[derive(Default)]
-pub struct DatabaseConfigLoader {}
-
-impl ConfigLoader for DatabaseConfigLoader {
-    fn load_env(&self, env: Env) -> Env {
-        // Split the Database variables
-        env.map(|key| {
-            key.as_str()
-                .replace("DATABASE_POOL_", "DATABASE.POOL.")
-                .into()
-        })
-        .map(|key| key.as_str().replace("DATABASE_", "DATABASE.").into())
-    }
-}

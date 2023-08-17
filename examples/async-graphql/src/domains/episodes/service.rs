@@ -5,8 +5,10 @@ use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
-use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
+use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
+use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
+use sea_orm::{entity::*, query::*, EntityTrait};
 
 use super::{
     model::{self, Episode, EpisodeList, EpisodeOption},
@@ -14,7 +16,6 @@ use super::{
     queries::{EpisodeCondition, EpisodesOrderBy},
 };
 use crate::{
-    db::DATABASE_CONNECTION,
     domains::shows::model as show_model,
     utils::{ordering::Ordering, pagination::ManyResponse},
 };
@@ -288,13 +289,34 @@ impl EpisodesService for DefaultEpisodesService {
 #[derive(Default)]
 pub struct ProvideEpisodesService {}
 
+#[Provider]
 #[async_trait]
-impl Provider for ProvideEpisodesService {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<Box<dyn EpisodesService>> for ProvideEpisodesService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn EpisodesService>>> {
         let db = i.get(&DATABASE_CONNECTION).await?;
 
-        let service: Box<dyn EpisodesService> = Box::new(DefaultEpisodesService::new(db));
+        Ok(Arc::new(Box::new(DefaultEpisodesService::new(db))))
+    }
+}
 
-        Ok(Arc::new(service))
+#[cfg(test)]
+pub(crate) mod test {
+    use super::*;
+
+    /// Provide the Mocked EpisodesService for testing
+    ///
+    /// **Provides:** `Arc<dyn EpisodesService>`
+    #[derive(Default)]
+    pub struct ProvideMockEpisodesService {}
+
+    #[Provider]
+    #[async_trait]
+    impl Provider<Box<dyn EpisodesService>> for ProvideMockEpisodesService {
+        async fn provide(
+            self: Arc<Self>,
+            _i: Inject,
+        ) -> InjectResult<Arc<Box<dyn EpisodesService>>> {
+            Ok(Arc::new(Box::<MockEpisodesService>::default()))
+        }
     }
 }

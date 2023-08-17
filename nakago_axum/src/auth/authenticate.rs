@@ -8,10 +8,8 @@ use axum::{
 };
 use biscuit::{jwa::SignatureAlgorithm, jwk::JWKSet, jws::Header, Empty, JWT};
 use http::{header::AUTHORIZATION, request::Parts, HeaderMap, HeaderValue};
-use nakago::{
-    inject::{self, container::Dependency},
-    Tag,
-};
+use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 
 use super::{
     errors::AuthError::{self, InvalidAuthHeaderError},
@@ -127,9 +125,10 @@ pub fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>,
 #[derive(Default)]
 pub struct ProvideAuthState {}
 
+#[Provider]
 #[async_trait]
-impl inject::Provider for ProvideAuthState {
-    async fn provide(self: Arc<Self>, i: inject::Inject) -> inject::Result<Arc<Dependency>> {
+impl Provider<AuthState> for ProvideAuthState {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<AuthState>> {
         let jwks = i.get(&JWKS).await?;
         let auth_state = AuthState::new(jwks);
 

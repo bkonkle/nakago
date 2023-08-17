@@ -20,3 +20,6 @@ pub use inject::{
     Result as InjectResult, Tag,
 };
 pub use lifecycle::EventType;
+
+#[doc(hidden)]
+pub use async_trait;

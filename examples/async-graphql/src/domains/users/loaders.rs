@@ -5,7 +5,8 @@ use async_graphql::{
     FieldError,
 };
 use async_trait::async_trait;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
+use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 
 use super::{
     model::User,
@@ -53,9 +54,10 @@ impl Loader<String> for UserLoader {
 #[derive(Default)]
 pub struct ProvideUserLoader {}
 
+#[Provider]
 #[async_trait]
-impl Provider for ProvideUserLoader {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<DataLoader<UserLoader>> for ProvideUserLoader {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DataLoader<UserLoader>>> {
         let users_service = i.get(&USERS_SERVICE).await?;
 
         Ok(Arc::new(DataLoader::new(

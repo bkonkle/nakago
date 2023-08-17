@@ -1,14 +1,27 @@
 use anyhow::Result;
 use fake::{Fake, Faker};
+use nakago::{Inject, InjectResult};
+use nakago_sea_orm::{connection::ProvideMockConnection, DATABASE_CONNECTION};
 use pretty_assertions::assert_eq;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction};
-use std::sync::Arc;
 
 use crate::domains::users::{
     model::User,
     mutations::UpdateUserInput,
-    service::{DefaultUsersService, UsersService},
+    service::{ProvideUsersService, USERS_SERVICE},
 };
+
+async fn setup(db: MockDatabase) -> InjectResult<Inject> {
+    let i = Inject::default();
+
+    i.provide(&DATABASE_CONNECTION, ProvideMockConnection::new(db))
+        .await?;
+
+    i.provide(&USERS_SERVICE, ProvideUsersService::default())
+        .await?;
+
+    Ok(i)
+}
 
 #[tokio::test]
 async fn test_users_service_get() -> Result<()> {
@@ -16,20 +29,19 @@ async fn test_users_service_get() -> Result<()> {
     user.roles = vec![];
     user.username = "test-username".to_string();
 
-    let db = Arc::new(
-        MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![user.clone()]])
-            .into_connection(),
-    );
+    let i = setup(
+        MockDatabase::new(DatabaseBackend::Postgres).append_query_results(vec![vec![user.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultUsersService::new(db.clone());
+    let service = i.get(&USERS_SERVICE).await?;
 
     let result = service.get(&user.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, Some(user.clone()));
 
@@ -52,20 +64,19 @@ async fn test_users_service_get_by_username() -> Result<()> {
     user.roles = vec![];
     user.username = "test-username".to_string();
 
-    let db = Arc::new(
-        MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![user.clone()]])
-            .into_connection(),
-    );
+    let i = setup(
+        MockDatabase::new(DatabaseBackend::Postgres).append_query_results(vec![vec![user.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultUsersService::new(db.clone());
+    let service = i.get(&USERS_SERVICE).await?;
 
     let result = service.get_by_username(&user.username, &false).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, Some(user));
 
@@ -90,20 +101,19 @@ async fn test_users_service_create() -> Result<()> {
     user.roles = vec![];
     user.username = "test-username".to_string();
 
-    let db = Arc::new(
-        MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![user.clone()]])
-            .into_connection(),
-    );
+    let i = setup(
+        MockDatabase::new(DatabaseBackend::Postgres).append_query_results(vec![vec![user.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultUsersService::new(db.clone());
+    let service = i.get(&USERS_SERVICE).await?;
 
     let result = service.create(&user.username).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, user);
 
@@ -131,13 +141,13 @@ async fn test_users_service_update() -> Result<()> {
         ..user.clone()
     };
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![user.clone()], vec![updated.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![user.clone()], vec![updated.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultUsersService::new(db.clone());
+    let service = i.get(&USERS_SERVICE).await?;
 
     let result = service
         .update(
@@ -153,7 +163,7 @@ async fn test_users_service_update() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, updated.clone());
 
@@ -184,24 +194,24 @@ async fn test_users_service_delete() -> Result<()> {
     let mut user: User = Faker.fake();
     user.username = "test-username".to_string();
 
-    let db = Arc::new(
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![user.clone()]])
             .append_exec_results(vec![MockExecResult {
                 last_insert_id: 0,
                 rows_affected: 1,
-            }])
-            .into_connection(),
-    );
+            }]),
+    )
+    .await?;
 
-    let service = DefaultUsersService::new(db.clone());
+    let service = i.get(&USERS_SERVICE).await?;
 
     service.delete(&user.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     // Check the transaction log
     assert_eq!(

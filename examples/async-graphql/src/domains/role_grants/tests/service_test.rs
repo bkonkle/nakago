@@ -1,35 +1,56 @@
 use anyhow::Result;
+use fake::{Fake, Faker};
+use nakago::{Inject, InjectResult};
+use nakago_sea_orm::{connection::ProvideMockConnection, DATABASE_CONNECTION};
 use pretty_assertions::assert_eq;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction};
-use std::sync::Arc;
 
-use crate::{
-    role_grant_factory,
-    role_grant_model::CreateRoleGrantInput,
-    role_grants_service::{DefaultRoleGrantsService, RoleGrantsService},
-    user_factory,
+use crate::domains::{
+    role_grants::{
+        model::{CreateRoleGrantInput, RoleGrant},
+        service::{ProvideRoleGrantsService, ROLE_GRANTS_SERVICE},
+    },
+    users::model::User,
 };
+
+async fn setup(db: MockDatabase) -> InjectResult<Inject> {
+    let i = Inject::default();
+
+    i.provide(&DATABASE_CONNECTION, ProvideMockConnection::new(db))
+        .await?;
+
+    i.provide(&ROLE_GRANTS_SERVICE, ProvideRoleGrantsService::default())
+        .await?;
+
+    Ok(i)
+}
 
 #[tokio::test]
 async fn test_role_grants_service_get() -> Result<()> {
-    let user = user_factory::create_user_with_username("test-username");
-    let grant =
-        role_grant_factory::create_role_grant_for_user("profiles", "profile-id", user.clone());
+    let mut user: User = Faker.fake();
+    user.roles = vec![];
+    user.username = "test-username".to_string();
 
-    let db = Arc::new(
+    let mut grant: RoleGrant = Faker.fake();
+    grant.id = format!("{}-{}", user.id, "profile-id");
+    grant.user_id = user.id.clone();
+    grant.resource_table = "profiles".to_string();
+    grant.resource_id = "profile-id".to_string();
+
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![grant.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![grant.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultRoleGrantsService::new(&db);
+    let service = i.get(&ROLE_GRANTS_SERVICE).await?;
 
     let result = service.get(&grant.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, Some(grant));
 
@@ -48,17 +69,23 @@ async fn test_role_grants_service_get() -> Result<()> {
 
 #[tokio::test]
 async fn test_role_grants_service_create() -> Result<()> {
-    let user = user_factory::create_user_with_username("test-username");
-    let grant =
-        role_grant_factory::create_role_grant_for_user("profiles", "profile-id", user.clone());
+    let mut user: User = Faker.fake();
+    user.roles = vec![];
+    user.username = "test-username".to_string();
 
-    let db = Arc::new(
+    let mut grant: RoleGrant = Faker.fake();
+    grant.id = format!("{}-{}", user.id, "profile-id");
+    grant.user_id = user.id.clone();
+    grant.resource_table = "profiles".to_string();
+    grant.resource_id = "profile-id".to_string();
+
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results(vec![vec![grant.clone()]])
-            .into_connection(),
-    );
+            .append_query_results(vec![vec![grant.clone()]]),
+    )
+    .await?;
 
-    let service = DefaultRoleGrantsService::new(&db);
+    let service = i.get(&ROLE_GRANTS_SERVICE).await?;
 
     let result = service
         .create(&CreateRoleGrantInput {
@@ -72,7 +99,7 @@ async fn test_role_grants_service_create() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     assert_eq!(result, grant);
 
@@ -96,28 +123,34 @@ async fn test_role_grants_service_create() -> Result<()> {
 
 #[tokio::test]
 async fn test_role_grants_service_delete() -> Result<()> {
-    let user = user_factory::create_user_with_username("test-username");
-    let grant =
-        role_grant_factory::create_role_grant_for_user("profiles", "profile-id", user.clone());
+    let mut user: User = Faker.fake();
+    user.roles = vec![];
+    user.username = "test-username".to_string();
 
-    let db = Arc::new(
+    let mut grant: RoleGrant = Faker.fake();
+    grant.id = format!("{}-{}", user.id, "profile-id");
+    grant.user_id = user.id;
+    grant.resource_table = "profiles".to_string();
+    grant.resource_id = "profile-id".to_string();
+
+    let i = setup(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results(vec![vec![grant.clone()]])
             .append_exec_results(vec![MockExecResult {
                 last_insert_id: 0,
                 rows_affected: 1,
-            }])
-            .into_connection(),
-    );
+            }]),
+    )
+    .await?;
 
-    let service = DefaultRoleGrantsService::new(&db);
+    let service = i.get(&ROLE_GRANTS_SERVICE).await?;
 
     service.delete(&grant.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = Arc::try_unwrap(db).expect("Unable to unwrap the DatabaseConnection");
+    let db = i.eject(&DATABASE_CONNECTION).await?;
 
     // Check the transaction log
     assert_eq!(

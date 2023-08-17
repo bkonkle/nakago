@@ -4,14 +4,16 @@ use anyhow::Result;
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
-use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
+use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
+use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
+use sea_orm::{entity::*, query::*, EntityTrait};
 
 use super::{
     model::{self, User, UserOption},
     mutations::UpdateUserInput,
 };
-use crate::{db::DATABASE_CONNECTION, domains::role_grants::model as role_grant_model};
+use crate::domains::role_grants::model as role_grant_model;
 
 /// Tag(UsersService)
 pub const USERS_SERVICE: Tag<Box<dyn UsersService>> = Tag::new("UsersService");
@@ -173,13 +175,12 @@ impl UsersService for DefaultUsersService {
 #[derive(Default)]
 pub struct ProvideUsersService {}
 
+#[Provider]
 #[async_trait]
-impl Provider for ProvideUsersService {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<Box<dyn UsersService>> for ProvideUsersService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn UsersService>>> {
         let db = i.get(&DATABASE_CONNECTION).await?;
 
-        let service: Box<dyn UsersService> = Box::new(DefaultUsersService::new(db));
-
-        Ok(Arc::new(service))
+        Ok(Arc::new(Box::new(DefaultUsersService::new(db))))
     }
 }

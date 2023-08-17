@@ -1,37 +1,39 @@
 use anyhow::Result;
-use async_graphql::{dataloader::DataLoader, EmptySubscription, Request, Schema, Variables};
+use async_graphql::{Request, Variables};
 use fake::{Fake, Faker};
 use mockall::predicate::*;
+use nakago::Inject;
 use pretty_assertions::assert_eq;
 use serde_json::json;
-use std::sync::Arc;
 
 use crate::domains::{
     episodes::{
         model::Episode,
-        resolver::{EpisodesMutation, EpisodesQuery},
-        service::{EpisodesService, MockEpisodesService},
+        schema::{ProvideEpisodesSchema, EPISODES_SCHEMA},
+        service::{MockEpisodesService, EPISODES_SERVICE},
     },
-    shows::loaders::ShowLoader,
-    shows::service::{MockShowsService, ShowsService},
+    shows::service::SHOWS_SERVICE,
+    shows::{
+        loaders::{ProvideShowLoader, SHOW_LOADER},
+        service::test::ProvideMockShowsService,
+    },
 };
 
-fn init(
-    service: MockEpisodesService,
-) -> Schema<EpisodesQuery, EpisodesMutation, EmptySubscription> {
-    let service: Arc<dyn EpisodesService> = Arc::new(service);
+async fn setup(service: MockEpisodesService) -> Result<Inject> {
+    let i = Inject::default();
 
-    let shows_service: Arc<Box<dyn ShowsService>> = Arc::new(Box::new(MockShowsService::new()));
-    let show_loader = ShowLoader::new(shows_service);
+    i.inject(&EPISODES_SERVICE, Box::new(service)).await?;
 
-    Schema::build(
-        EpisodesQuery::default(),
-        EpisodesMutation::default(),
-        EmptySubscription,
-    )
-    .data(service)
-    .data(DataLoader::new(show_loader, tokio::spawn))
-    .finish()
+    i.provide(&SHOWS_SERVICE, ProvideMockShowsService::default())
+        .await?;
+
+    i.provide(&SHOW_LOADER, ProvideShowLoader::default())
+        .await?;
+
+    i.provide(&EPISODES_SCHEMA, ProvideEpisodesSchema::default())
+        .await?;
+
+    Ok(i)
 }
 
 /***
@@ -62,14 +64,16 @@ async fn test_episodes_resolver_get_simple() -> Result<()> {
     episode.title = episode_title.to_string();
     episode.show = Some(Faker.fake());
 
-    let mut service = MockEpisodesService::new();
+    let mut service = MockEpisodesService::default();
     service
         .expect_get()
         .with(eq(episode_id), eq(&true))
         .times(1)
         .returning(move |_, _| Ok(Some(episode.clone())));
 
-    let schema = init(service);
+    let i = setup(service).await?;
+
+    let schema = i.get(&EPISODES_SCHEMA).await?;
 
     let result = schema
         .execute(

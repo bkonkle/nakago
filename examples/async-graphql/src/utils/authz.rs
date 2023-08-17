@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use nakago::{to_provider_error, Dependency, Hook, Inject, InjectResult, Provider, Tag};
+use nakago::{to_provider_error, Hook, Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
 use oso::Oso;
 use oso::PolarClass;
 
@@ -21,9 +22,10 @@ pub const OSO: Tag<Oso> = Tag::new("Oso");
 #[derive(Default)]
 pub struct ProvideOso {}
 
+#[Provider]
 #[async_trait]
-impl Provider for ProvideOso {
-    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<Oso> for ProvideOso {
+    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Oso>> {
         Ok(Arc::new(Oso::new()))
     }
 }

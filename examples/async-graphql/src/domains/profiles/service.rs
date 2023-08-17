@@ -5,8 +5,10 @@ use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
-use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
+use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago_derive::Provider;
+use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
+use sea_orm::{entity::*, query::*, EntityTrait};
 
 use super::{
     model::{self, Profile, ProfileList, ProfileOption},
@@ -14,7 +16,6 @@ use super::{
     queries::{ProfileCondition, ProfilesOrderBy},
 };
 use crate::{
-    db::DATABASE_CONNECTION,
     domains::users::model as user_model,
     utils::{ordering::Ordering, pagination::ManyResponse},
 };
@@ -358,13 +359,12 @@ impl ProfilesService for DefaultProfilesService {
 #[derive(Default)]
 pub struct ProvideProfilesService {}
 
+#[Provider]
 #[async_trait]
-impl Provider for ProvideProfilesService {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<Box<dyn ProfilesService>> for ProvideProfilesService {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn ProfilesService>>> {
         let db = i.get(&DATABASE_CONNECTION).await?;
 
-        let service: Box<dyn ProfilesService> = Box::new(DefaultProfilesService::new(db));
-
-        Ok(Arc::new(service))
+        Ok(Arc::new(Box::new(DefaultProfilesService::new(db))))
     }
 }

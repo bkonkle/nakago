@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use axum::{extract::FromRef, routing::get, Router};
-use nakago::{Dependency, Inject, InjectResult, Provider};
+use nakago::{Inject, InjectResult, Provider};
 use nakago_axum::{
     app::State,
     auth::{authenticate::AuthState, AUTH_STATE},
     InitRoute, Route,
 };
+use nakago_derive::Provider;
 
 use crate::{
     domains::users::service::USERS_SERVICE, events::SOCKET_HANDLER, graphql::GRAPHQL_SCHEMA,
@@ -65,12 +66,14 @@ pub fn init_events_route() -> InitRoute<AppState> {
 ///   - `Tag(AuthState)`
 ///   - `Tag(UsersService)`
 ///   - `Tag(SocketHandler)`
+///   - `Tag(GraphQLSchema)`
 #[derive(Default)]
 pub struct ProvideAppState {}
 
+#[Provider]
 #[async_trait]
-impl Provider for ProvideAppState {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+impl Provider<AppState> for ProvideAppState {
+    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<AppState>> {
         let auth = i.get(&AUTH_STATE).await?;
         let users = i.get(&USERS_SERVICE).await?;
         let handler = i.get(&SOCKET_HANDLER).await?;

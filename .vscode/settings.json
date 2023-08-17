@@ -1,0 +1,3 @@
+{
+    "rust-analyzer.linkedProjects": ["./nakago/derive/Cargo.toml"]
+}

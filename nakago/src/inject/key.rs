@@ -3,6 +3,8 @@ use std::{
     fmt::Display,
 };
 
+use crate::Tag;
+
 /// A type key for the map
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Key {
@@ -28,9 +30,9 @@ impl Key {
         }
     }
 
-    pub(crate) fn from_tag<T: Any + ?Sized>(tag: &'static str) -> Self {
+    pub(crate) fn from_tag<T: Any + ?Sized>(tag: &Tag<T>) -> Self {
         Self {
-            id: Id::Tag(tag),
+            id: Id::Tag(tag.tag),
             type_name: type_name::<T>().to_string(),
         }
     }
