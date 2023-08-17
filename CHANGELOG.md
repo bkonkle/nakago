@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0]
+
+### Added
+
+- Added the `nakago-sea-orm` library with an initial implementation of SeaORM Configs, Connections, and Mocked tools for testing.
+- Added the `eject` operation, mostly used in testing when you want to unload the container and take ownership of referenced dependencies.
+- Added a `#[Provider]` proc macro for trait implementations to automatically provide the necessary `impl Provider<Dependency>` needed for the Provider to be injected into the container.
+
+### Changed
+
+- Re-introduced the `<T>` type parameter to Providers, allowing various container methods to warn you before you pass a `Provider` that provides the wrong type.
+- Updated tests in the Async-GraphQL package to incorporate the dependency injection system, and polished up the init flow a bit more.
+
 ## [0.7.2] - 2023-08-13
 
 ### Changed
@@ -110,6 +123,7 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
+[0.8.0]: https://github.com/bkonkle/nakago/compare/0.7.2...0.8.0
 [0.7.2]: https://github.com/bkonkle/nakago/compare/0.7.1...0.7.2
 [0.7.1]: https://github.com/bkonkle/nakago/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/bkonkle/nakago/compare/0.6.0...0.7.0

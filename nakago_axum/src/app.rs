@@ -15,6 +15,15 @@ use crate::{add_http_config_loaders, config::HttpConfig, Route};
 /// State must be clonable and able to be stored in the Inject container
 pub trait State: Clone + Any + Send + Sync {}
 
+/// An Axum HTTP Application
+#[derive(Default)]
+pub struct AxumApplication<C>
+where
+    C: Config + Debug,
+{
+    app: Application<C>,
+}
+
 impl<C> Deref for AxumApplication<C>
 where
     C: Config + Debug,
@@ -33,15 +42,6 @@ where
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.app
     }
-}
-
-/// An Axum HTTP Application
-#[derive(Default)]
-pub struct AxumApplication<C>
-where
-    C: Config + Debug,
-{
-    app: Application<C>,
 }
 
 impl<C> AxumApplication<C>

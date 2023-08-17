@@ -1,31 +1,64 @@
 # Applications
 
-ℹ️ - This documentation is a work in progress. Stay tuned for more details!
+To manage the lifecycle of an application, the top-level `nakago::Application` struct provides Init and Startup hooks and a system to trigger them. More hooks - like a Shutdown hook - are coming soon.
 
-## System
+Applications are currently very simple:
 
-To manage the lifecycle of an application, the top-level `nakago::System` struct provides Init and Startup hooks. More hooks, like a Shutdown hook, are coming soon.
+```rust
+pub struct Application<C: Config> {
+    events: Events,
+    i: inject::Inject,
+    _phantom: PhantomData<C>,
+}
+```
 
-### Lifecycle Hooks
+First, they carry a PhantomData reference to the custom `Config` type that your project uses. This Config borrows [Axum](https://github.com/tokio-rs/axum)'s [FromRef](https://docs.rs/axum/latest/axum/extract/trait.FromRef.html) strategy to allow the framework to find pieces of the config it needs embedded in the custom structure that works best for your program.
 
-**Init**
+```rust
+/// Server Config
+#[derive(Debug, Serialize, Deserialize, Clone, FromRef)]
+pub struct AppConfig {
+    /// HTTP config
+    pub http: HttpConfig,
 
-The `init` Hook is invoked before the Config Loaders tag is consumed and the loaders are used to initialize the Config.
+    /// HTTP Auth Config
+    pub auth: AuthConfig,
 
-**Startup**
+    /// Database config
+    pub database: DatabaseConfig,
+}
+```
 
-The `startup` Hook is invoked after the Config is loaded, but before the Application is run.
+## Lifecycle Hooks
 
-## HTTP Applications
+Hooks are invoked when a [lifecycle event](https://github.com/bkonkle/nakago/blob/main/nakago/src/lifecycle.rs) is triggered.
 
-The `nakago-axum` crate defines `HttpApplication`, which wraps `System` and provides a way to Run an HTTP application.
+### Init
 
-### HTTP Application Lifecycle
+The `Init` Hook is invoked before the Config Loaders are requested from the container and the loaders are used to initialize the Config. Anything that is needed to initialize your application's Config should go here. Each Hook is triggered in order when a lifecycle event is triggered.
 
-**Init**
+### Startup
 
-The `init` Hook for an HTTP Application automatically adds the `HttpConfig` and `AuthConfig` Config Loaders before the user-provided hook is invoked and the Config is generated.
+The `Startup` Hook is invoked after the Config is loaded, but before the Application is run.
 
-**Startup**
+## Starting the Application
 
-The `startup` Hook for an HTTP Application uses the State with the provided Router, allowing the flow of the application to proceed through the Axum request handlers.
+To start your application, pass in your top-level Config type and create an instance. Attach Hooks in the order that they should be executed:
+
+```rust
+let mut app = AxumApplication::<AppConfig>::default();
+app.on(&EventType::Init, InitDomains::default());
+app.on(&EventType::Init, InitApp::default());
+app.on(&EventType::Startup, InitAuthz::default());
+```
+
+Then, use the underlying server library - Axum in this example - to start listening:
+
+```rust
+let server = app.run::<AppState>(args.config_path).await?;
+let addr = server.local_addr();
+
+info!("Started on port: {port}", port = addr.port());
+
+server.await?;
+```
