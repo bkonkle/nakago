@@ -8,3 +8,7 @@ pub mod model;
 
 /// DataLoaders
 pub mod loaders;
+
+/// Tests
+#[cfg(test)]
+mod tests;
