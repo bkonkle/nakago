@@ -2,10 +2,10 @@
 
   <img src="https://raw.githubusercontent.com/bkonkle/nakago/main/docs/images/katana.png" width="400" alt="A katana leaning on a stand"/>
 
-  <h1>Nakago (中子) SeaORM</h1>
+  <h1>Nakago (中子) Async-GraphQL</h1>
 
   <p>
-    <strong>A SeaORM integration for the Nakago Rust framework</strong>
+    <strong>An Async-GraphQL integration for the Nakago Rust framework</strong>
   </p>
 
   [![Crates.io](https://img.shields.io/crates/v/nakago-axum.svg)](https://crates.io/crates/nakago-axum)
