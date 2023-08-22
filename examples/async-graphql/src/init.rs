@@ -21,7 +21,7 @@ pub struct InitApp {}
 
 #[async_trait]
 impl Hook for InitApp {
-    async fn handle(&self, i: &Inject) -> InjectResult<()> {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
         // First add some final providers
         i.provide(&JWKS, ProvideJwks::<AppConfig>::default())
             .await?;
@@ -48,10 +48,12 @@ impl Hook for InitApp {
             .await?;
 
         // Then, immediately execute some dependent init hooks
-        nakago_sea_orm::init_config_loaders().handle(i).await?;
-        init_health_route().handle(i).await?;
-        init_graphql_route().handle(i).await?;
-        init_events_route().handle(i).await?;
+        nakago_sea_orm::init_config_loaders()
+            .handle(i.clone())
+            .await?;
+        init_health_route().handle(i.clone()).await?;
+        init_graphql_route().handle(i.clone()).await?;
+        init_events_route().handle(i.clone()).await?;
 
         Ok(())
     }

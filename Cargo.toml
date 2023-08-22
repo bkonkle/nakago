@@ -4,15 +4,23 @@ members = [
     "nakago/derive",
     "nakago_axum",
     "nakago_sea_orm",
+    "nakago_async_graphql",
     "examples/*",
 ]
-default-members = ["nakago", "nakago/derive", "nakago_axum", "nakago_sea_orm"]
+default-members = [
+    "nakago",
+    "nakago/derive",
+    "nakago_axum",
+    "nakago_sea_orm",
+    "nakago_async_graphql",
+]
 
 [patch.crates-io]
 nakago = { path = "./nakago" }
 nakago-axum = { path = "./nakago_axum" }
 nakago-derive = { path = "./nakago/derive" }
 nakago-sea-orm = { path = "./nakago_sea_orm" }
+nakago-async-graphql = { path = "./nakago_async_graphql" }
 
 [profile.release]
 strip = true      # Automatically strip symbols from the binary.

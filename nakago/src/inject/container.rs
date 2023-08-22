@@ -122,29 +122,9 @@ impl Inject {
         Ok(None)
     }
 
-    /// Provide a Dependency directly, using core::future::ready to wrap it in an immediately
-    /// resolving Pending Future.
-    pub async fn inject_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
-        match self.0.write().await.entry(key.clone()) {
-            Entry::Occupied(_) => Err(Error::Occupied(key)),
-            Entry::Vacant(entry) => {
-                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
-                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
-                        dep,
-                    ))));
-
-                let _ = entry.insert(Injector::from_pending(pending.shared()));
-
-                Ok(())
-            }
-        }
-    }
-
-    /// Replace an existing Dependency directly, using core::future::ready to wrap it in an
-    /// immediately resolving Pending Future. Return a NotFound error if the Key isn't present.
-    pub async fn replace_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
-        let available = self.get_available_keys().await;
-
+    /// Override an existing Dependency directly, using core::future::ready to wrap it in an
+    /// immediately resolving Pending Future. Return true if the Key was already present.
+    pub async fn override_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<bool> {
         match self.0.write().await.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
                 let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
@@ -154,12 +134,47 @@ impl Inject {
 
                 let _ = entry.insert(Injector::from_pending(pending.shared()));
 
-                Ok(())
+                Ok(true)
             }
-            Entry::Vacant(_) => Err(Error::NotFound {
+            Entry::Vacant(entry) => {
+                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
+                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
+                        dep,
+                    ))));
+
+                let _ = entry.insert(Injector::from_pending(pending.shared()));
+
+                Ok(false)
+            }
+        }
+    }
+
+    /// Provide a Dependency directly, using core::future::ready to wrap it in an immediately
+    /// resolving Pending Future.
+    pub async fn inject_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
+        if self.0.read().await.contains_key(&key) {
+            Err(Error::Occupied(key))
+        } else {
+            let _ = self.override_key(key, dep).await?;
+
+            Ok(())
+        }
+    }
+
+    /// Replace an existing Dependency directly, using core::future::ready to wrap it in an
+    /// immediately resolving Pending Future. Return a NotFound error if the Key isn't present.
+    pub async fn replace_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
+        let available = self.get_available_keys().await;
+
+        if self.0.read().await.contains_key(&key) {
+            let _ = self.override_key(key, dep).await?;
+
+            Ok(())
+        } else {
+            Err(Error::NotFound {
                 missing: key,
                 available,
-            }),
+            })
         }
     }
 

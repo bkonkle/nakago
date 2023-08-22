@@ -16,6 +16,12 @@ impl Inject {
         self.get_key_opt(Key::from_type_id::<T>()).await
     }
 
+    /// Override an existing Dependency directly, using core::future::ready to wrap it in an
+    /// immediately resolving Pending Future. Return true if the Key was already present.
+    pub async fn override_type<T: Any + Send + Sync>(&self, dep: T) -> Result<bool> {
+        self.override_key(Key::from_type_id::<T>(), dep).await
+    }
+
     /// Provide a Dependency directly, using core::future::ready to wrap it in an immediately
     /// resolving Pending Future.
     pub async fn inject_type<T: Any + Send + Sync>(&self, dep: T) -> Result<()> {

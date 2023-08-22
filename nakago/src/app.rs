@@ -11,15 +11,15 @@ use tracing_subscriber::prelude::*;
 
 use crate::{
     config::{Config, InitConfig},
-    inject::{self, Hook},
+    inject::{Hook, Inject},
     lifecycle::Events,
-    EventType,
+    EventType, InjectResult,
 };
 
 /// The top-level Application struct
 pub struct Application<C: Config> {
     events: Events,
-    i: inject::Inject,
+    i: Inject,
     _phantom: PhantomData<C>,
 }
 
@@ -27,7 +27,7 @@ impl<C: Config> Default for Application<C> {
     fn default() -> Self {
         Self {
             events: Events::default(),
-            i: inject::Inject::default(),
+            i: Inject::default(),
             _phantom: PhantomData,
         }
     }
@@ -37,7 +37,7 @@ impl<C> Deref for Application<C>
 where
     C: Config,
 {
-    type Target = inject::Inject;
+    type Target = Inject;
 
     fn deref(&self) -> &Self::Target {
         &self.i
@@ -63,15 +63,15 @@ where
     }
 
     /// Trigger the given lifecycle event
-    pub async fn trigger(&mut self, event: &EventType) -> inject::Result<()> {
-        self.events.trigger(event, &self.i).await
+    pub async fn trigger(&mut self, event: &EventType) -> InjectResult<()> {
+        self.events.trigger(event, self.i.clone()).await
     }
 
     /// Initialize the App
     ///
     /// **Provides:**
     ///   - `C: Config`
-    pub async fn init(&self, config_path: Option<PathBuf>) -> inject::Result<()> {
+    pub async fn init(&self, config_path: Option<PathBuf>) -> InjectResult<()> {
         tracing_subscriber::registry()
             .with(tracing_subscriber::EnvFilter::new(
                 std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()),
@@ -83,26 +83,34 @@ where
         panic::set_hook(Box::new(handle_panic));
 
         // Trigger the Init lifecycle event
-        self.events.trigger(&EventType::Init, &self.i).await?;
+        self.events
+            .trigger(&EventType::Init, self.i.clone())
+            .await?;
 
         // Initialize the Config using the given path
-        InitConfig::<C>::new(config_path).handle(&self.i).await?;
+        InitConfig::<C>::new(config_path)
+            .handle(self.i.clone())
+            .await?;
 
         Ok(())
     }
 
     /// Run the Application by starting the listener
-    pub async fn start(&self) -> inject::Result<()> {
+    pub async fn start(&self) -> InjectResult<()> {
         // Trigger the Start lifecycle event
-        self.events.trigger(&EventType::Startup, &self.i).await?;
+        self.events
+            .trigger(&EventType::Startup, self.i.clone())
+            .await?;
 
         Ok(())
     }
 
     /// Shut down the Application by stopping the listener
-    pub async fn stop(&self) -> inject::Result<()> {
+    pub async fn stop(&self) -> InjectResult<()> {
         // Trigger the Stop lifecycle event
-        self.events.trigger(&EventType::Shutdown, &self.i).await?;
+        self.events
+            .trigger(&EventType::Shutdown, self.i.clone())
+            .await?;
 
         Ok(())
     }

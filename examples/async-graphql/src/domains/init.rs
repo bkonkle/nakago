@@ -35,7 +35,7 @@ pub struct InitDomains {}
 
 #[async_trait]
 impl Hook for InitDomains {
-    async fn handle(&self, i: &Inject) -> InjectResult<()> {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
         i.provide(&USERS_SERVICE, ProvideUsersService::default())
             .await?;
 

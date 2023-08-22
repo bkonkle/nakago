@@ -39,7 +39,7 @@ pub struct InitAuthz {}
 
 #[async_trait]
 impl Hook for InitAuthz {
-    async fn handle(&self, i: &Inject) -> InjectResult<()> {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
         // Set up authorization
         let mut oso = (*i.get(&OSO).await?).clone();
 
