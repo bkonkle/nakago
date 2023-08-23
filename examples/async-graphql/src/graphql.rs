@@ -1,8 +1,11 @@
-use std::sync::Arc;
+use std::{any::Any, marker::PhantomData, sync::Arc};
 
-use async_graphql::{EmptySubscription, MergedObject, Schema};
+use async_graphql::{
+    EmptySubscription, MergedObject, ObjectType, Schema, SchemaBuilder, SubscriptionType,
+};
 use async_trait::async_trait;
-use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago::{Hook, Inject, InjectResult, Provider, Tag};
+use nakago_async_graphql::schema::SchemaBuilderProvider;
 use nakago_derive::Provider;
 
 use crate::{
@@ -44,59 +47,87 @@ pub type GraphQLSchema = Schema<Query, Mutation, EmptySubscription>;
 /// Tag(GraphQLSchema)
 pub const GRAPHQL_SCHEMA: Tag<GraphQLSchema> = Tag::new("GraphQLSchema");
 
-/// Initialize all necessary dependencies to create a `GraphQLSchema`. Very simple dependency
-/// injection based on async-graphql's `.data()` calls.
-///
-/// **Provides:** `GraphQLSchema`
-///
-/// **Depends on:**
-///  - `Tag(AppConfig)`
-///  - `Tag(Oso)`
-///  - `Tag(UsersService)`
-///  - `Tag(UserLoader)`
-///  - `Tag(ProfilesService)`
-///  - `Tag(ProfileLoader)`
-///  - `Tag(RoleGrantsService)`
-///  - `Tag(RoleGrantLoader)`
-///  - `Tag(ShowsService)`
-///  - `Tag(ShowLoader)`
-///  - `Tag(EpisodesService)`
-///  - `Tag(EpisodeLoader)`
+/// Tag(GraphQLSchemaBuilder)
+pub const GRAPHQL_SCHEMA_BUILDER: Tag<SchemaBuilder<Query, Mutation, EmptySubscription>> =
+    Tag::new("GraphQLSchemaBuilder");
+
+pub fn provide_schema_builder() -> SchemaBuilderProvider<Query, Mutation, EmptySubscription> {
+    SchemaBuilderProvider::default()
+        .with_builder_tag(&GRAPHQL_SCHEMA_BUILDER)
+        .with_schema_tag(&GRAPHQL_SCHEMA)
+}
+
 #[derive(Default)]
-pub struct ProvideGraphQLSchema {}
+pub struct InitGraphQLAuth {}
 
-#[Provider]
 #[async_trait]
-impl Provider<GraphQLSchema> for ProvideGraphQLSchema {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<GraphQLSchema>> {
-        let user_loader = i.get(&USER_LOADER).await?;
-        let profile_loader = i.get(&PROFILE_LOADER).await?;
-        let role_grant_loader = i.get(&ROLE_GRANT_LOADER).await?;
-        let show_loader = i.get(&SHOW_LOADER).await?;
-        let episode_loader = i.get(&EPISODE_LOADER).await?;
-        let config = i.get_type::<AppConfig>().await?;
+impl Hook for InitGraphQLAuth {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
         let oso = i.get(&OSO).await?;
-        let users = i.get(&USERS_SERVICE).await?;
-        let profiles = i.get(&PROFILES_SERVICE).await?;
-        let role_grants = i.get(&ROLE_GRANTS_SERVICE).await?;
-        let shows = i.get(&SHOWS_SERVICE).await?;
-        let episodes = i.get(&EPISODES_SERVICE).await?;
+        let schema_builder = i.get(&GRAPHQL_SCHEMA_BUILDER).await?;
 
-        Ok(Arc::new(
-            Schema::build(Query::default(), Mutation::default(), EmptySubscription)
-                .data(config.clone())
-                .data((*oso).clone())
-                .data(users.clone())
-                .data(user_loader.clone())
-                .data(profile_loader.clone())
-                .data(role_grant_loader.clone())
-                .data(profiles.clone())
-                .data(role_grants.clone())
-                .data(shows.clone())
-                .data(episodes.clone())
-                .data(show_loader.clone())
-                .data(episode_loader.clone())
-                .finish(),
-        ))
+        schema_builder.data((*oso).clone());
+
+        Ok(())
     }
 }
+
+#[derive(Default)]
+pub struct InitGraphQLAuth {}
+
+// /// Initialize all necessary dependencies to create a `GraphQLSchema`. Very simple dependency
+// /// injection based on async-graphql's `.data()` calls.
+// ///
+// /// **Provides:** `GraphQLSchema`
+// ///
+// /// **Depends on:**
+// ///  - `Tag(AppConfig)`
+// ///  - `Tag(Oso)`
+// ///  - `Tag(UsersService)`
+// ///  - `Tag(UserLoader)`
+// ///  - `Tag(ProfilesService)`
+// ///  - `Tag(ProfileLoader)`
+// ///  - `Tag(RoleGrantsService)`
+// ///  - `Tag(RoleGrantLoader)`
+// ///  - `Tag(ShowsService)`
+// ///  - `Tag(ShowLoader)`
+// ///  - `Tag(EpisodesService)`
+// ///  - `Tag(EpisodeLoader)`
+// #[derive(Default)]
+// pub struct ProvideGraphQLSchema {}
+
+// #[Provider]
+// #[async_trait]
+// impl Provider<GraphQLSchema> for ProvideGraphQLSchema {
+//     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<GraphQLSchema>> {
+//         let user_loader = i.get(&USER_LOADER).await?;
+//         let profile_loader = i.get(&PROFILE_LOADER).await?;
+//         let role_grant_loader = i.get(&ROLE_GRANT_LOADER).await?;
+//         let show_loader = i.get(&SHOW_LOADER).await?;
+//         let episode_loader = i.get(&EPISODE_LOADER).await?;
+//         let config = i.get_type::<AppConfig>().await?;
+//         let oso = i.get(&OSO).await?;
+//         let users = i.get(&USERS_SERVICE).await?;
+//         let profiles = i.get(&PROFILES_SERVICE).await?;
+//         let role_grants = i.get(&ROLE_GRANTS_SERVICE).await?;
+//         let shows = i.get(&SHOWS_SERVICE).await?;
+//         let episodes = i.get(&EPISODES_SERVICE).await?;
+
+//         Ok(Arc::new(
+//             Schema::build(Query::default(), Mutation::default(), EmptySubscription)
+//                 .data(config.clone())
+//                 .data((*oso).clone())
+//                 .data(users.clone())
+//                 .data(user_loader.clone())
+//                 .data(profile_loader.clone())
+//                 .data(role_grant_loader.clone())
+//                 .data(profiles.clone())
+//                 .data(role_grants.clone())
+//                 .data(shows.clone())
+//                 .data(episodes.clone())
+//                 .data(show_loader.clone())
+//                 .data(episode_loader.clone())
+//                 .finish(),
+//         ))
+//     }
+// }
