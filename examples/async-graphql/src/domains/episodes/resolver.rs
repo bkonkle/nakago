@@ -1,5 +1,7 @@
 use async_graphql::{dataloader::DataLoader, ComplexObject, Context, Object, Result};
+use async_trait::async_trait;
 use hyper::StatusCode;
+use nakago::{Hook, Inject, InjectResult};
 use oso::Oso;
 use std::sync::Arc;
 
@@ -7,13 +9,16 @@ use super::{
     model::Episode,
     mutations::{CreateEpisodeInput, MutateEpisodeResult, UpdateEpisodeInput},
     queries::{EpisodeCondition, EpisodesOrderBy, EpisodesPage},
-    service::EpisodesService,
+    service::{EpisodesService, EPISODES_SERVICE},
 };
 use crate::{
     domains::{
-        shows::loaders::ShowLoader, shows::model::Show, shows::service::ShowsService,
+        shows::loaders::{ShowLoader, SHOW_LOADER},
+        shows::model::Show,
+        shows::service::{ShowsService, SHOWS_SERVICE},
         users::model::User,
     },
+    graphql::GRAPHQL_SCHEMA_BUILDER,
     utils::graphql::{as_graphql_error, graphql_error},
 };
 
@@ -228,5 +233,31 @@ impl Episode {
         let show = loader.load_one(self.show_id.clone()).await?;
 
         Ok(show)
+    }
+}
+
+/// The hook for initializing the Episodes resolver
+#[derive(Default)]
+pub struct InitGraphQLEpisodes {}
+
+#[async_trait]
+impl Hook for InitGraphQLEpisodes {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
+        let shows = i.get(&SHOWS_SERVICE).await?;
+        let show_loader = i.get(&SHOW_LOADER).await?;
+        let episodes = i.get(&EPISODES_SERVICE).await?;
+
+        let builder = i.consume(&GRAPHQL_SCHEMA_BUILDER).await?;
+
+        i.inject(
+            &GRAPHQL_SCHEMA_BUILDER,
+            builder
+                .data(shows.clone())
+                .data(show_loader.clone())
+                .data(episodes.clone()),
+        )
+        .await?;
+
+        Ok(())
     }
 }

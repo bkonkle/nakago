@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use nakago::{Hook, Inject, InjectResult};
+use nakago_async_graphql::schema::{InitSchema, SchemaBuilderProvider};
 use nakago_axum::auth::{
     ProvideAuthState, ProvideJwks, {AUTH_STATE, JWKS},
 };
@@ -10,7 +11,7 @@ use crate::{
     events::{
         ProvideConnections, ProvideSocket, {CONNECTIONS, SOCKET_HANDLER},
     },
-    graphql::{ProvideGraphQLSchema, GRAPHQL_SCHEMA},
+    graphql::{GRAPHQL_SCHEMA, GRAPHQL_SCHEMA_BUILDER},
     routes::{init_events_route, init_graphql_route, init_health_route, AppState, ProvideAppState},
     utils::authz::{ProvideOso, OSO},
 };
@@ -41,7 +42,7 @@ impl Hook for InitApp {
 
         i.provide(&AUTH_STATE, ProvideAuthState::default()).await?;
 
-        i.provide(&GRAPHQL_SCHEMA, ProvideGraphQLSchema::default())
+        i.provide(&GRAPHQL_SCHEMA_BUILDER, SchemaBuilderProvider::default())
             .await?;
 
         i.provide_type::<AppState>(ProvideAppState::default())
@@ -51,6 +52,14 @@ impl Hook for InitApp {
         nakago_sea_orm::init_config_loaders()
             .handle(i.clone())
             .await?;
+
+        // Initialize the GraphQL Schema
+        InitSchema::default()
+            .with_builder_tag(&GRAPHQL_SCHEMA_BUILDER)
+            .with_schema_tag(&GRAPHQL_SCHEMA)
+            .handle(i.clone())
+            .await?;
+
         init_health_route().handle(i.clone()).await?;
         init_graphql_route().handle(i.clone()).await?;
         init_events_route().handle(i.clone()).await?;

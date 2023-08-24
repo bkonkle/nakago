@@ -1,15 +1,21 @@
 use async_graphql::{Context, Object, Result};
+use async_trait::async_trait;
 use hyper::StatusCode;
+use nakago::{Hook, Inject, InjectResult};
 use nakago_axum::auth::Subject;
 use std::sync::Arc;
 
 use super::{
     model::User,
     mutations::{CreateUserInput, MutateUserResult, UpdateUserInput},
-    service::UsersService,
+    service::{UsersService, USERS_SERVICE},
 };
 use crate::{
-    domains::profiles::{mutations::CreateProfileInput, service::ProfilesService},
+    domains::profiles::{
+        mutations::CreateProfileInput,
+        service::{ProfilesService, PROFILES_SERVICE},
+    },
+    graphql::GRAPHQL_SCHEMA_BUILDER,
     utils::graphql::{as_graphql_error, graphql_error},
 };
 
@@ -112,5 +118,27 @@ impl UsersMutation {
         }
 
         Err(graphql_error("Unauthorized", StatusCode::UNAUTHORIZED))
+    }
+}
+
+/// The Hook for initializing the Users resolver
+#[derive(Default)]
+pub struct InitGraphQLUsers {}
+
+#[async_trait]
+impl Hook for InitGraphQLUsers {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
+        let users = i.get(&USERS_SERVICE).await?;
+        let profiles = i.get(&PROFILES_SERVICE).await?;
+
+        let builder = i.consume(&GRAPHQL_SCHEMA_BUILDER).await?;
+
+        i.inject(
+            &GRAPHQL_SCHEMA_BUILDER,
+            builder.data(users.clone()).data(profiles.clone()),
+        )
+        .await?;
+
+        Ok(())
     }
 }

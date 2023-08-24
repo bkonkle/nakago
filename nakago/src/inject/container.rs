@@ -6,86 +6,17 @@ use std::{
     sync::Arc,
 };
 
-use async_trait::async_trait;
-use futures::{future::Shared, Future, FutureExt};
+use futures::{Future, FutureExt};
 use tokio::sync::RwLock;
 
-use super::{Error, Key, Result};
+use super::{
+    injector::{Dependency, Injector},
+    Error, Key, Result,
+};
 
 /// The injection Container
 #[derive(Default, Clone)]
 pub struct Inject(pub(crate) Arc<RwLock<HashMap<Key, Injector>>>);
-
-// An Injector holds a locked value that can be either a Provider or a Pending Future. The
-// Injector is responsible for providing a Pending Future to the container when requested, and
-// updating the value to a Pending Shared Future if it is a Provider.
-pub(crate) struct Injector {
-    value: RwLock<Value>,
-}
-
-// The value of an Injector can be either a Provider or a Pending Shared Future.
-#[derive(Clone)]
-enum Value {
-    Provider(Arc<dyn Provider<Dependency>>),
-    Pending(Shared<Pending>),
-}
-
-/// A Dependency that can be injected into the container
-pub type Dependency = dyn Any + Send + Sync;
-
-/// A Future that will resolve to a Dependency
-pub type Pending = Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>>;
-
-/// A trait for async injection Providers
-#[async_trait]
-pub trait Provider<T: ?Sized>: Send + Sync {
-    /// Provide a dependency for the container
-    async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<T>>;
-}
-
-impl Injector {
-    // Create a new Injector from a value that is already Pending
-    fn from_pending(pending: Shared<Pending>) -> Self {
-        Self {
-            value: RwLock::new(Value::Pending(pending)),
-        }
-    }
-
-    // Create a new Injector from a Provider
-    fn from_provider<T: Any + Send + Sync>(
-        provider: impl Provider<T> + Provider<Dependency> + 'static,
-    ) -> Self {
-        Self {
-            value: RwLock::new(Value::Provider(Arc::new(provider))),
-        }
-    }
-
-    // Request a Pending Future from the Injector. If the value is a Provider, it will be
-    // replaced with a Pending Future that will resolve to the provided Dependency.
-    async fn request(&self, inject: Inject) -> Shared<Pending> {
-        let value = self.value.read().await;
-        if let Value::Pending(pending) = &*value {
-            return pending.clone();
-        }
-
-        drop(value);
-
-        let mut value = self.value.write().await;
-
-        *value = Value::Pending(match value.clone() {
-            Value::Pending(pending) => pending,
-            Value::Provider(provider) => provider.provide(inject).shared(),
-        });
-
-        if let Value::Pending(pending) = &*value {
-            pending.clone()
-        } else {
-            // We still hold the lock and the above operation is guaranteed to return a pending
-            // value, so this should not be reachable.
-            unreachable!()
-        }
-    }
-}
 
 // The Inject container is responsible for providing access to Dependencies and Providers. It
 // holds a map of Keys to Injectors, and provides methods for retrieving, injecting, and removing
@@ -122,33 +53,6 @@ impl Inject {
         Ok(None)
     }
 
-    /// Override an existing Dependency directly, using core::future::ready to wrap it in an
-    /// immediately resolving Pending Future. Return true if the Key was already present.
-    pub async fn override_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<bool> {
-        match self.0.write().await.entry(key.clone()) {
-            Entry::Occupied(mut entry) => {
-                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
-                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
-                        dep,
-                    ))));
-
-                let _ = entry.insert(Injector::from_pending(pending.shared()));
-
-                Ok(true)
-            }
-            Entry::Vacant(entry) => {
-                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
-                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
-                        dep,
-                    ))));
-
-                let _ = entry.insert(Injector::from_pending(pending.shared()));
-
-                Ok(false)
-            }
-        }
-    }
-
     /// Provide a Dependency directly, using core::future::ready to wrap it in an immediately
     /// resolving Pending Future.
     pub async fn inject_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<()> {
@@ -178,40 +82,30 @@ impl Inject {
         }
     }
 
-    /// Inject a Dependency Provider
-    pub async fn provide_key<T: Any + Send + Sync>(
-        &self,
-        key: Key,
-        provider: impl Provider<T> + Provider<Dependency> + 'static,
-    ) -> Result<()> {
-        match self.0.write().await.entry(key.clone()) {
-            Entry::Occupied(_) => Err(Error::Occupied(key)),
-            Entry::Vacant(entry) => {
-                let _ = entry.insert(Injector::from_provider::<T>(provider));
-
-                Ok(())
-            }
-        }
-    }
-
-    /// Inject a replacement Dependency Provider if the Key is present
-    pub async fn replace_key_with<T: Any + Send + Sync>(
-        &self,
-        key: Key,
-        provider: impl Provider<T> + Provider<Dependency> + 'static,
-    ) -> Result<()> {
-        let available = self.get_available_keys().await;
-
+    /// Override an existing Dependency directly, using core::future::ready to wrap it in an
+    /// immediately resolving Pending Future. Return true if the Key was already present.
+    pub async fn override_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<bool> {
         match self.0.write().await.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                let _ = entry.insert(Injector::from_provider::<T>(provider));
+                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
+                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
+                        dep,
+                    ))));
 
-                Ok(())
+                let _ = entry.insert(Injector::from_pending(pending.shared()));
+
+                Ok(true)
             }
-            Entry::Vacant(_) => Err(Error::NotFound {
-                missing: key,
-                available,
-            }),
+            Entry::Vacant(entry) => {
+                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
+                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
+                        dep,
+                    ))));
+
+                let _ = entry.insert(Injector::from_pending(pending.shared()));
+
+                Ok(false)
+            }
         }
     }
 
@@ -316,22 +210,8 @@ impl Inject {
     }
 }
 
-/// Wrap an error that can be converted into an Anyhow error with an inject Provider error
-pub fn to_provider_error<E>(e: E) -> Error
-where
-    anyhow::Error: From<E>,
-{
-    Error::Provider(Arc::new(e.into()))
-}
-
 #[cfg(test)]
 pub(crate) mod test {
-    use std::sync::Arc;
-
-    use nakago_derive::Provider;
-
-    use super::*;
-
     // Mock Dependencies
     // -----------------
 
@@ -369,64 +249,6 @@ pub(crate) mod test {
     impl HasId for OtherService {
         fn get_id(&self) -> String {
             self.other_id.clone()
-        }
-    }
-
-    pub struct TestServiceProvider {
-        id: String,
-    }
-
-    impl TestServiceProvider {
-        /// Create a new TestServiceProvider instance
-        pub fn new(id: String) -> Self {
-            Self { id }
-        }
-    }
-
-    #[Provider(internal)]
-    #[async_trait]
-    impl Provider<TestService> for TestServiceProvider {
-        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<TestService>> {
-            // Attempt to retrieve a dependency inside the Provider to test for deadlocks
-            i.get_type_opt::<String>().await?;
-
-            Ok(Arc::new(TestService::new(self.id.clone())))
-        }
-    }
-
-    pub struct OtherServiceProvider {
-        id: String,
-    }
-
-    impl OtherServiceProvider {
-        /// Create a new OtherServiceProvider instance
-        pub fn new(id: String) -> Self {
-            Self { id }
-        }
-    }
-
-    #[Provider(internal)]
-    #[async_trait]
-    impl Provider<OtherService> for OtherServiceProvider {
-        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<OtherService>> {
-            i.get_type_opt::<String>().await?;
-
-            Ok(Arc::new(OtherService::new(self.id.clone())))
-        }
-    }
-
-    #[derive(Default)]
-    pub struct HasIdProvider {}
-
-    #[Provider(internal)]
-    #[async_trait]
-    impl Provider<Box<dyn HasId>> for HasIdProvider {
-        async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Box<dyn HasId>>> {
-            i.get_type_opt::<String>().await?;
-
-            let dep: Box<dyn HasId> = Box::new(OtherService::new("test-service".to_string()));
-
-            Ok(Arc::new(dep))
         }
     }
 }
