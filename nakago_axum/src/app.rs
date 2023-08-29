@@ -76,8 +76,6 @@ where
     where
         HttpConfig: FromRef<C>,
     {
-        println!(">------ AxumApplication::run ------<");
-
         self.load(config_path).await?;
         self.init().await?;
         self.start().await?;

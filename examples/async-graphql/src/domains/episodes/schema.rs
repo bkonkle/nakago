@@ -22,8 +22,6 @@ pub struct InitGraphQLEpisodes {}
 #[async_trait]
 impl Hook for InitGraphQLEpisodes {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
-        println!(">------ InitGraphQLEpisodes ------<");
-
         let episodes = i.get(&EPISODES_SERVICE).await?;
         let shows = i.get(&SHOWS_SERVICE).await?;
         let show_loader = i.get(&SHOW_LOADER).await?;

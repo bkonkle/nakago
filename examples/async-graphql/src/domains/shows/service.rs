@@ -221,8 +221,6 @@ pub struct ProvideShowsService {}
 #[async_trait]
 impl Provider<Box<dyn ShowsService>> for ProvideShowsService {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn ShowsService>>> {
-        println!(">------ ProvideShowsService ------<");
-
         let db = i.get(&DATABASE_CONNECTION).await?;
 
         Ok(Arc::new(Box::new(DefaultShowsService::new(db))))

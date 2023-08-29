@@ -80,10 +80,7 @@ impl<C: Config> InitConfig<C> {
 #[async_trait]
 impl<C: Config> Hook for InitConfig<C> {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
-        println!(">------ InitConfig ------<");
-
         if let Ok(loaders) = i.get(&CONFIG_LOADERS).await {
-            println!(">------ Ok(loaders) ------<");
             let loader = Loader::<C>::new(loaders.to_vec());
 
             let config = loader

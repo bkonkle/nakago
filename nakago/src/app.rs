@@ -69,8 +69,6 @@ where
 
     /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
     pub async fn load(&self, config_path: Option<PathBuf>) -> InjectResult<()> {
-        println!(">------ Application::load ------<");
-
         // Trigger the Load lifecycle event
         self.events
             .trigger(&EventType::Load, self.i.clone())
@@ -92,8 +90,6 @@ where
     /// **Consumes:**
     ///   - `Tag(ConfigLoaders)`
     pub async fn init(&self) -> InjectResult<()> {
-        println!(">------ Application::init ------<");
-
         // Trigger the Init lifecycle event
         self.events
             .trigger(&EventType::Init, self.i.clone())
