@@ -1,50 +1,94 @@
-use async_graphql::{dataloader::DataLoader, EmptySubscription, Schema};
 use async_trait::async_trait;
-use nakago::{Inject, InjectResult, Provider, Tag};
-use nakago_derive::Provider;
-use std::sync::Arc;
+use nakago::{Hook, Inject, InjectResult};
 
-use crate::domains::{
-    episodes::{
-        resolver::{EpisodesMutation, EpisodesQuery},
-        service::EPISODES_SERVICE,
+use crate::{
+    domains::{
+        episodes::service::EPISODES_SERVICE,
+        shows::{loaders::SHOW_LOADER, service::SHOWS_SERVICE},
     },
-    shows::loaders::SHOW_LOADER,
+    graphql::GRAPHQL_SCHEMA_BUILDER,
 };
 
-/// Tag(EpisodesSchema)
-#[allow(dead_code)]
-pub const EPISODES_SCHEMA: Tag<EpisodesSchema> = Tag::new("EpisodesSchema");
-
-/// The EpisodesSchema, covering just the Episodes domain
-pub type EpisodesSchema = Schema<EpisodesQuery, EpisodesMutation, EmptySubscription>;
-
-/// Provide the EpisodesSchema
-///
-/// **Provides:** `Arc<EpisodesSchema>`
+/// The Hook for initializing the dependencies for the GraphQL Episodes resolver
 ///
 /// **Depends on:**
-///   - `Tag(EpisodesService)`
-///   - `Tag(ShowLoader)`
+///  - Tag(EpisodesService)
+///  - Tag(ShowsService)
+///  - Tag(ShowLoader)
+///  - Tag(GraphQLSchemaBuilder)
 #[derive(Default)]
-pub struct ProvideEpisodesSchema {}
+pub struct InitGraphQLEpisodes {}
 
-#[Provider]
 #[async_trait]
-impl Provider<EpisodesSchema> for ProvideEpisodesSchema {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<EpisodesSchema>> {
-        let service = i.get(&EPISODES_SERVICE).await?;
+impl Hook for InitGraphQLEpisodes {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
+        println!(">------ InitGraphQLEpisodes ------<");
+
+        let episodes = i.get(&EPISODES_SERVICE).await?;
+        let shows = i.get(&SHOWS_SERVICE).await?;
         let show_loader = i.get(&SHOW_LOADER).await?;
 
-        let schema: EpisodesSchema = Schema::build(
-            EpisodesQuery::default(),
-            EpisodesMutation::default(),
-            EmptySubscription,
-        )
-        .data(service)
-        .data(DataLoader::new(show_loader, tokio::spawn))
-        .finish();
+        let builder = i.consume(&GRAPHQL_SCHEMA_BUILDER).await?;
 
-        Ok(Arc::new(schema))
+        i.inject(
+            &GRAPHQL_SCHEMA_BUILDER,
+            builder
+                .data(shows.clone())
+                .data(show_loader.clone())
+                .data(episodes.clone()),
+        )
+        .await?;
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod test {
+    use std::sync::Arc;
+
+    use async_graphql::{dataloader::DataLoader, EmptySubscription, Schema};
+    use nakago::{Provider, Tag};
+    use nakago_derive::Provider;
+
+    use crate::domains::episodes::resolver::{EpisodesMutation, EpisodesQuery};
+
+    use super::*;
+
+    /// Tag(EpisodesSchema)
+    #[allow(dead_code)]
+    pub const EPISODES_SCHEMA: Tag<EpisodesSchema> = Tag::new("EpisodesSchema");
+
+    /// The EpisodesSchema, covering just the Episodes domain. Useful for testing in isolation.
+    pub type EpisodesSchema = Schema<EpisodesQuery, EpisodesMutation, EmptySubscription>;
+
+    /// Provide the EpisodesSchema
+    ///
+    /// **Provides:** `Arc<EpisodesSchema>`
+    ///
+    /// **Depends on:**
+    ///   - `Tag(EpisodesService)`
+    ///   - `Tag(ShowLoader)`
+    #[derive(Default)]
+    pub struct ProvideEpisodesSchema {}
+
+    #[Provider]
+    #[async_trait]
+    impl Provider<EpisodesSchema> for ProvideEpisodesSchema {
+        async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<EpisodesSchema>> {
+            let service = i.get(&EPISODES_SERVICE).await?;
+            let show_loader = i.get(&SHOW_LOADER).await?;
+
+            let schema: EpisodesSchema = Schema::build(
+                EpisodesQuery::default(),
+                EpisodesMutation::default(),
+                EmptySubscription,
+            )
+            .data(service)
+            .data(DataLoader::new(show_loader, tokio::spawn))
+            .finish();
+
+            Ok(Arc::new(schema))
+        }
     }
 }

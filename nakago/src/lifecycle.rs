@@ -8,13 +8,23 @@ use crate::{
 /// Lifecycle Event Types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EventType {
-    /// The application is initializing
+    /// The Application is loading dependencies and configuration. During this phase, the
+    /// Application should provide any dependencies or config loaders that are necessary to
+    /// initialize and start the App.
+    Load,
+
+    /// The Application has initialized dependencies and configuration. During this phase, the
+    /// Application should perform any initialization steps and construct anything necessary to
+    /// start the App.
     Init,
 
-    /// The application is starting up
+    /// The Application has started up and is now running. During this phase, the Application
+    /// should start any background tasks or other long-running processes necessary to keep the App
+    /// running.
     Startup,
 
-    /// The application is shutting down
+    /// The Application is shutting down. During this phase, the Application should perform any
+    /// cleanup necessary to cleanly stop the App.
     Shutdown,
 }
 

@@ -1,13 +1,13 @@
 //! # Role Grants
 
-/// Service
-pub mod service;
+/// DataLoaders
+pub mod loaders;
 
 /// Model
 pub mod model;
 
-/// DataLoaders
-pub mod loaders;
+/// Service
+pub mod service;
 
 /// Tests
 #[cfg(test)]

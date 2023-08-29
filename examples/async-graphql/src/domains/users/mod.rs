@@ -1,7 +1,7 @@
 //! # Users
 
-/// Service
-pub mod service;
+/// DataLoaders
+pub mod loaders;
 
 /// Model
 pub mod model;
@@ -12,8 +12,11 @@ pub mod mutations;
 /// GraphQL Resolver
 pub mod resolver;
 
-/// DataLoaders
-pub mod loaders;
+/// GraphQL Schema
+pub mod schema;
+
+/// Service
+pub mod service;
 
 /// Authorization rules
 pub const AUTHORIZATION: &str = include_str!("authorization.polar");

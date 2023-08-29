@@ -67,10 +67,23 @@ where
         self.events.trigger(event, self.i.clone()).await
     }
 
-    /// Initialize the App
+    /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
+    pub async fn load(&self) -> InjectResult<()> {
+        // Trigger the Load lifecycle event
+        self.events
+            .trigger(&EventType::Load, self.i.clone())
+            .await?;
+
+        Ok(())
+    }
+
+    /// Initialize the App and provide the top-level Config. Triggers the Init lifecycle event.
     ///
     /// **Provides:**
     ///   - `C: Config`
+    ///
+    /// **Consumes:**
+    ///   - `Tag(ConfigLoaders)`
     pub async fn init(&self, config_path: Option<PathBuf>) -> InjectResult<()> {
         tracing_subscriber::registry()
             .with(tracing_subscriber::EnvFilter::new(
@@ -95,9 +108,8 @@ where
         Ok(())
     }
 
-    /// Run the Application by starting the listener
+    /// Trigger the Startup lifecycle event.
     pub async fn start(&self) -> InjectResult<()> {
-        // Trigger the Start lifecycle event
         self.events
             .trigger(&EventType::Startup, self.i.clone())
             .await?;
@@ -105,9 +117,8 @@ where
         Ok(())
     }
 
-    /// Shut down the Application by stopping the listener
+    /// Trigger the Shutdown lifecycle event.
     pub async fn stop(&self) -> InjectResult<()> {
-        // Trigger the Stop lifecycle event
         self.events
             .trigger(&EventType::Shutdown, self.i.clone())
             .await?;

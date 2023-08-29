@@ -1,25 +1,19 @@
 use async_graphql::{Context, Object, Result};
-use async_trait::async_trait;
 use hyper::StatusCode;
-use nakago::{Hook, Inject, InjectResult};
 use oso::Oso;
 use std::sync::Arc;
 
 use crate::{
     domains::{
-        role_grants::{
-            model::CreateRoleGrantInput,
-            service::{RoleGrantsService, ROLE_GRANTS_SERVICE},
-        },
+        role_grants::{model::CreateRoleGrantInput, service::RoleGrantsService},
         shows::{
             model::Show,
             mutations::{CreateShowInput, MutateShowResult, UpdateShowInput},
             queries::{ShowCondition, ShowsOrderBy, ShowsPage},
-            service::{ShowsService, SHOWS_SERVICE},
+            service::ShowsService,
         },
         users::model::User,
     },
-    graphql::GRAPHQL_SCHEMA_BUILDER,
     utils::graphql::{as_graphql_error, graphql_error},
 };
 
@@ -176,27 +170,5 @@ impl ShowsMutation {
         ))?;
 
         Ok(true)
-    }
-}
-
-/// The Hook for initializing the GraphQL Shows resolver
-#[derive(Default)]
-pub struct InitGraphQLShows {}
-
-#[async_trait]
-impl Hook for InitGraphQLShows {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        let role_grants = i.get(&ROLE_GRANTS_SERVICE).await?;
-        let shows = i.get(&SHOWS_SERVICE).await?;
-
-        let builder = i.consume(&GRAPHQL_SCHEMA_BUILDER).await?;
-
-        i.inject(
-            &GRAPHQL_SCHEMA_BUILDER,
-            builder.data(role_grants.clone()).data(shows.clone()),
-        )
-        .await?;
-
-        Ok(())
     }
 }

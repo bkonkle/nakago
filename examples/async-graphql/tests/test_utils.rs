@@ -14,7 +14,7 @@ use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
 use hyper::{client::HttpConnector, Body, Client, Method, Request};
 use hyper_tls::HttpsConnector;
-use nakago::{EventType, Inject, InjectResult, Provider};
+use nakago::{Inject, InjectResult, Provider};
 use nakago_axum::{auth::config::AuthConfig, AxumApplication};
 use nakago_examples_async_graphql::{
     config::AppConfig,
@@ -23,13 +23,10 @@ use nakago_examples_async_graphql::{
         profiles::{model::Profile, mutations::CreateProfileInput, service::PROFILES_SERVICE},
         shows::{model::Show, mutations::CreateShowInput, service::SHOWS_SERVICE},
         users::{model::User, service::USERS_SERVICE},
-        InitDomains,
     },
-    init::InitApp,
+    init,
     routes::AppState,
-    utils::authz::InitAuthz,
 };
-use once_cell::sync::Lazy;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use tokio::{
@@ -42,19 +39,9 @@ use tokio_tungstenite::{
     MaybeTlsStream, WebSocketStream,
 };
 
-static HTTP_CLIENT: Lazy<Client<HttpsConnector<HttpConnector>>> = Lazy::new(http_client);
-
-/// Creates an http/https client via Hyper
-pub fn http_client() -> Client<HttpsConnector<HttpConnector>> {
-    Client::builder().build::<_, Body>(HttpsConnector::new())
-}
-
 /// Run the Application Server
 pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
-    let mut app = AxumApplication::<AppConfig>::default();
-    app.on(&EventType::Init, InitApp::default());
-    app.on(&EventType::Init, InitDomains::default());
-    app.on(&EventType::Startup, InitAuthz::default());
+    let mut app = init::app();
 
     let server = app.run::<AppState>(None).await?;
     let addr = server.local_addr();
@@ -88,7 +75,7 @@ pub struct TestUtils {
     pub app: AxumApplication<AppConfig>,
     pub auth: AuthConfig,
     pub addr: SocketAddr,
-    pub http_client: &'static Client<HttpsConnector<HttpConnector>>,
+    pub http_client: Client<HttpsConnector<HttpConnector>>,
     pub graphql: GraphQL,
 }
 
@@ -101,12 +88,12 @@ impl TestUtils {
 
         let auth = AuthConfig::from_ref(&*config);
 
+        let http_client = Client::builder().build::<_, Body>(HttpsConnector::new());
+
         let graphql = GraphQL::new(format!(
             "http://localhost:{port}/graphql",
             port = addr.port()
         ));
-
-        let http_client = &HTTP_CLIENT;
 
         Ok(TestUtils {
             app,

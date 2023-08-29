@@ -3,14 +3,9 @@
 
 use std::path::PathBuf;
 
-use config::AppConfig;
 use log::info;
-use nakago::EventType;
-use nakago_axum::AxumApplication;
 use pico_args::{Arguments, Error};
 use routes::AppState;
-
-use crate::{domains::InitDomains, init::InitApp, utils::authz::InitAuthz};
 
 mod config;
 mod domains;
@@ -51,12 +46,10 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let mut app = AxumApplication::<AppConfig>::default();
-    app.on(&EventType::Init, InitDomains::default());
-    app.on(&EventType::Init, InitApp::default());
-    app.on(&EventType::Startup, InitAuthz::default());
+    let mut app = init::app();
 
     let server = app.run::<AppState>(args.config_path).await?;
+
     let addr = server.local_addr();
 
     info!("Started on port: {port}", port = addr.port());

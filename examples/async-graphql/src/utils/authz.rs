@@ -30,15 +30,15 @@ impl Provider<Oso> for ProvideOso {
     }
 }
 
-/// Initialize the authorization system. Must be initialized before the InitGraphQLSchema hook.
+/// Load the authorization system. Must be invoked before the GraphQL Schema is initialized.
 ///
 /// **Depends on (and modifies):**
 ///   - `Tag(Oso)`
 #[derive(Default)]
-pub struct InitAuthz {}
+pub struct LoadAuthz {}
 
 #[async_trait]
-impl Hook for InitAuthz {
+impl Hook for LoadAuthz {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
         // Set up authorization
         let mut oso = (*i.get(&OSO).await?).clone();

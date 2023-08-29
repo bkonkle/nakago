@@ -1,21 +1,15 @@
 use async_graphql::{dataloader::DataLoader, ComplexObject, Context, Object, Result};
-use async_trait::async_trait;
 use hyper::StatusCode;
-use nakago::{Hook, Inject, InjectResult};
 use std::sync::Arc;
 
 use super::{
     model::Profile,
     mutations::{CreateProfileInput, MutateProfileResult, UpdateProfileInput},
     queries::{ProfileCondition, ProfilesOrderBy, ProfilesPage},
-    service::{ProfilesService, PROFILES_SERVICE},
+    service::ProfilesService,
 };
 use crate::{
-    domains::users::{
-        loaders::{UserLoader, USER_LOADER},
-        model::User,
-    },
-    graphql::GRAPHQL_SCHEMA_BUILDER,
+    domains::users::{loaders::UserLoader, model::User},
     utils::graphql::{as_graphql_error, graphql_error},
 };
 
@@ -241,27 +235,5 @@ impl Profile {
         }
 
         Ok(None)
-    }
-}
-
-/// The hook for initializing the Profiles resolver
-#[derive(Default)]
-pub struct InitGraphQLProfiles {}
-
-#[async_trait]
-impl Hook for InitGraphQLProfiles {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        let profiles = i.get(&PROFILES_SERVICE).await?;
-        let user_loader = i.get(&USER_LOADER).await?;
-
-        let builder = i.consume(&GRAPHQL_SCHEMA_BUILDER).await?;
-
-        i.inject(
-            &GRAPHQL_SCHEMA_BUILDER,
-            builder.data(profiles.clone()).data(user_loader.clone()),
-        )
-        .await?;
-
-        Ok(())
     }
 }

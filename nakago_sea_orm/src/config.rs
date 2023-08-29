@@ -1,8 +1,13 @@
 use std::sync::Arc;
 
 use figment::providers::Env;
-use nakago::config::{loader::ConfigLoader, AddConfigLoaders};
+use nakago::config::loader::ConfigLoader;
 use serde::{Deserialize, Serialize};
+
+/// Return the default Config Loaders for SeaORM
+pub fn default_config_loaders() -> Vec<Arc<dyn ConfigLoader>> {
+    vec![Arc::<DatabaseConfigLoader>::default()]
+}
 
 /// Database Config
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -56,12 +61,4 @@ impl ConfigLoader for DatabaseConfigLoader {
         })
         .map(|key| key.as_str().replace("DATABASE_", "DATABASE.").into())
     }
-}
-
-/// Add the Database Config Loader to the Application's registered loaders
-///
-/// **Provides or Modifies:**
-///   - `Tag(ConfigLoaders)`
-pub fn init_config_loaders() -> AddConfigLoaders {
-    AddConfigLoaders::new(vec![Arc::<DatabaseConfigLoader>::default()])
 }
