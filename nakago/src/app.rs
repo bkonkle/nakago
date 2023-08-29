@@ -68,10 +68,17 @@ where
     }
 
     /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
-    pub async fn load(&self) -> InjectResult<()> {
+    pub async fn load(&self, config_path: Option<PathBuf>) -> InjectResult<()> {
+        println!(">------ Application::load ------<");
+
         // Trigger the Load lifecycle event
         self.events
             .trigger(&EventType::Load, self.i.clone())
+            .await?;
+
+        // Load the Config using the given path
+        InitConfig::<C>::new(config_path)
+            .handle(self.i.clone())
             .await?;
 
         Ok(())
@@ -84,7 +91,14 @@ where
     ///
     /// **Consumes:**
     ///   - `Tag(ConfigLoaders)`
-    pub async fn init(&self, config_path: Option<PathBuf>) -> InjectResult<()> {
+    pub async fn init(&self) -> InjectResult<()> {
+        println!(">------ Application::init ------<");
+
+        // Trigger the Init lifecycle event
+        self.events
+            .trigger(&EventType::Init, self.i.clone())
+            .await?;
+
         tracing_subscriber::registry()
             .with(tracing_subscriber::EnvFilter::new(
                 std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()),
@@ -94,16 +108,6 @@ where
 
         // Process setup
         panic::set_hook(Box::new(handle_panic));
-
-        // Trigger the Init lifecycle event
-        self.events
-            .trigger(&EventType::Init, self.i.clone())
-            .await?;
-
-        // Initialize the Config using the given path
-        InitConfig::<C>::new(config_path)
-            .handle(self.i.clone())
-            .await?;
 
         Ok(())
     }

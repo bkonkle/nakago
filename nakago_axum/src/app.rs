@@ -55,12 +55,12 @@ where
     C: Config + Debug,
 {
     /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
-    pub async fn load(&mut self) -> InjectResult<()> {
+    pub async fn load(&mut self, config_path: Option<PathBuf>) -> InjectResult<()> {
         // Add the HTTP Config Initializer
         self.handle(AddConfigLoaders::new(default_http_config_loaders()))
             .await?;
 
-        self.app.load().await
+        self.app.load(config_path).await
     }
 
     /// Run the server and return the bound address and a `Future`. Triggers the Startup lifecycle
@@ -76,8 +76,10 @@ where
     where
         HttpConfig: FromRef<C>,
     {
-        self.load().await?;
-        self.init(config_path).await?;
+        println!(">------ AxumApplication::run ------<");
+
+        self.load(config_path).await?;
+        self.init().await?;
         self.start().await?;
 
         let router = self.get_router::<S>().await?;

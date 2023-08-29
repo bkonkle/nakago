@@ -40,7 +40,7 @@ use crate::{
     events::{
         ProvideConnections, ProvideSocket, {CONNECTIONS, SOCKET_HANDLER},
     },
-    graphql::{GRAPHQL_SCHEMA, GRAPHQL_SCHEMA_BUILDER},
+    graphql::{InitGraphQL, GRAPHQL_SCHEMA, GRAPHQL_SCHEMA_BUILDER},
     routes::{new_events_route, new_graphql_route, new_health_route, AppState, ProvideAppState},
     utils::authz::{LoadAuthz, ProvideOso, OSO},
 };
@@ -63,6 +63,7 @@ pub fn app() -> AxumApplication<AppConfig> {
 
     // GraphQL
 
+    app.on(&EventType::Init, InitGraphQL::default());
     app.on(&EventType::Init, InitGraphQLUsers::default());
     app.on(&EventType::Init, InitGraphQLProfiles::default());
     app.on(&EventType::Init, InitGraphQLShows::default());

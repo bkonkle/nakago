@@ -5,7 +5,7 @@ use crate::{domains::profiles::service::PROFILES_SERVICE, graphql::GRAPHQL_SCHEM
 
 use super::service::USERS_SERVICE;
 
-/// The Hook for initializing the GraphQL Users resolver
+/// The Hook for initializing the dependencies for the GraphQL Users resolver
 ///
 /// **Depends on:**
 ///  - Tag(UsersService)
