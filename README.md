@@ -28,7 +28,7 @@ NOTE: This library is in early development, and the API may shift rapidly as it 
 - [Dependency Injection](docs/dependency-injection.md)
 - [HTTP Adapter](docs/axum-http.md) using [Axum](https://github.com/tokio-rs/axum)
 - [SQL Adapter](docs/sea-orm.md) using [SeaORM](https://github.com/SeaQL/sea-orm)
-- GraphQL Adapter using [Async-GraphQL](https://github.com/async-graphql/async-graphql) (upcoming)
+- [GraphQL Adapter](docs/async-graphql.md) using [Async-GraphQL](https://github.com/async-graphql/async-graphql)
 - CQRS Adapter using [CQRS-ES](https://crates.io/crates/cqrs-es) (upcoming)
 
 As development progresses, major features will be split up into separate crates, so that developers can install only what they need.
