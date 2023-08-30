@@ -1,10 +1,29 @@
 use async_trait::async_trait;
 use nakago::{Hook, Inject, InjectResult};
 
-use crate::{
-    domains::{role_grants::service::ROLE_GRANTS_SERVICE, shows::service::SHOWS_SERVICE},
-    graphql::GRAPHQL_SCHEMA_BUILDER,
+use crate::{domains::role_grants::service::ROLE_GRANTS_SERVICE, graphql::GRAPHQL_SCHEMA_BUILDER};
+
+use super::{
+    loaders::{ProvideShowLoader, SHOW_LOADER},
+    service::{ProvideShowsService, SHOWS_SERVICE},
 };
+
+/// Provide dependencies needed for the Shows domain
+#[derive(Default)]
+pub struct LoadShows {}
+
+#[async_trait]
+impl Hook for LoadShows {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
+        i.provide(&SHOWS_SERVICE, ProvideShowsService::default())
+            .await?;
+
+        i.provide(&SHOW_LOADER, ProvideShowLoader::default())
+            .await?;
+
+        Ok(())
+    }
+}
 
 /// The Hook for initializing the dependencies for the GraphQL Shows resolver
 ///

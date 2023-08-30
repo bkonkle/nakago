@@ -2,7 +2,13 @@ use async_graphql::{EmptySubscription, MergedObject, Schema, SchemaBuilder};
 use async_trait::async_trait;
 use nakago::{Hook, Inject, InjectResult, Tag};
 
-use crate::config::AppConfig;
+use crate::{
+    config::AppConfig,
+    domains::{
+        episodes::schema::InitGraphQLEpisodes, profiles::schema::InitGraphQLProfiles,
+        shows::schema::InitGraphQLShows, users::schema::InitGraphQLUsers,
+    },
+};
 use crate::{
     domains::{
         episodes::resolver::{EpisodesMutation, EpisodesQuery},
@@ -53,6 +59,11 @@ impl Hook for InitGraphQL {
             builder.data(config.clone()).data((*oso).clone()),
         )
         .await?;
+
+        i.handle(InitGraphQLUsers::default()).await?;
+        i.handle(InitGraphQLProfiles::default()).await?;
+        i.handle(InitGraphQLShows::default()).await?;
+        i.handle(InitGraphQLEpisodes::default()).await?;
 
         Ok(())
     }

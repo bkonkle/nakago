@@ -11,32 +11,7 @@ use nakago_sea_orm::{ProvideConnection, DATABASE_CONNECTION};
 
 use crate::{
     config::AppConfig,
-    domains::{
-        episodes::{
-            loaders::{ProvideEpisodeLoader, EPISODE_LOADER},
-            schema::InitGraphQLEpisodes,
-            service::{ProvideEpisodesService, EPISODES_SERVICE},
-        },
-        profiles::{
-            loaders::{ProvideProfileLoader, PROFILE_LOADER},
-            schema::InitGraphQLProfiles,
-            service::{ProvideProfilesService, PROFILES_SERVICE},
-        },
-        role_grants::{
-            loaders::{ProvideRoleGrantLoader, ROLE_GRANT_LOADER},
-            service::{ProvideRoleGrantsService, ROLE_GRANTS_SERVICE},
-        },
-        shows::{
-            loaders::{ProvideShowLoader, SHOW_LOADER},
-            schema::InitGraphQLShows,
-            service::{ProvideShowsService, SHOWS_SERVICE},
-        },
-        users::{
-            loaders::{ProvideUserLoader, USER_LOADER},
-            schema::InitGraphQLUsers,
-            service::{ProvideUsersService, USERS_SERVICE},
-        },
-    },
+    domains::load::LoadDomains,
     events::{
         ProvideConnections, ProvideSocket, {CONNECTIONS, SOCKET_HANDLER},
     },
@@ -59,15 +34,10 @@ pub fn app() -> AxumApplication<AppConfig> {
     // Dependencies
 
     app.on(&EventType::Load, Load::default());
-    app.on(&EventType::Load, LoadAuthz::default());
 
     // GraphQL
 
     app.on(&EventType::Init, InitGraphQL::default());
-    app.on(&EventType::Init, InitGraphQLUsers::default());
-    app.on(&EventType::Init, InitGraphQLProfiles::default());
-    app.on(&EventType::Init, InitGraphQLShows::default());
-    app.on(&EventType::Init, InitGraphQLEpisodes::default());
 
     app.on(
         &EventType::Init,
@@ -92,36 +62,6 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
-        i.provide(&USERS_SERVICE, ProvideUsersService::default())
-            .await?;
-
-        i.provide(&USER_LOADER, ProvideUserLoader::default())
-            .await?;
-
-        i.provide(&PROFILES_SERVICE, ProvideProfilesService::default())
-            .await?;
-
-        i.provide(&PROFILE_LOADER, ProvideProfileLoader::default())
-            .await?;
-
-        i.provide(&ROLE_GRANTS_SERVICE, ProvideRoleGrantsService::default())
-            .await?;
-
-        i.provide(&ROLE_GRANT_LOADER, ProvideRoleGrantLoader::default())
-            .await?;
-
-        i.provide(&SHOWS_SERVICE, ProvideShowsService::default())
-            .await?;
-
-        i.provide(&SHOW_LOADER, ProvideShowLoader::default())
-            .await?;
-
-        i.provide(&EPISODES_SERVICE, ProvideEpisodesService::default())
-            .await?;
-
-        i.provide(&EPISODE_LOADER, ProvideEpisodeLoader::default())
-            .await?;
-
         i.provide(&JWKS, ProvideJwks::<AppConfig>::default())
             .await?;
 
@@ -145,6 +85,12 @@ impl Hook for Load {
 
         i.provide_type::<AppState>(ProvideAppState::default())
             .await?;
+
+        // Handle some sub-hooks to load more dependencies
+
+        i.handle(LoadDomains::default()).await?;
+
+        i.handle(LoadAuthz::default()).await?;
 
         Ok(())
     }

@@ -3,7 +3,27 @@ use nakago::{Hook, Inject, InjectResult};
 
 use crate::{domains::profiles::service::PROFILES_SERVICE, graphql::GRAPHQL_SCHEMA_BUILDER};
 
-use super::service::USERS_SERVICE;
+use super::{
+    loaders::{ProvideUserLoader, USER_LOADER},
+    service::{ProvideUsersService, USERS_SERVICE},
+};
+
+/// Provide dependencies needed for the Users domain
+#[derive(Default)]
+pub struct LoadUsers {}
+
+#[async_trait]
+impl Hook for LoadUsers {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
+        i.provide(&USERS_SERVICE, ProvideUsersService::default())
+            .await?;
+
+        i.provide(&USER_LOADER, ProvideUserLoader::default())
+            .await?;
+
+        Ok(())
+    }
+}
 
 /// The Hook for initializing the dependencies for the GraphQL Users resolver
 ///

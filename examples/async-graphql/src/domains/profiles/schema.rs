@@ -1,10 +1,29 @@
 use async_trait::async_trait;
 use nakago::{Hook, Inject, InjectResult};
 
-use crate::{
-    domains::{profiles::service::PROFILES_SERVICE, users::loaders::USER_LOADER},
-    graphql::GRAPHQL_SCHEMA_BUILDER,
+use crate::{domains::users::loaders::USER_LOADER, graphql::GRAPHQL_SCHEMA_BUILDER};
+
+use super::{
+    loaders::{ProvideProfileLoader, PROFILE_LOADER},
+    service::{ProvideProfilesService, PROFILES_SERVICE},
 };
+
+/// Provide dependencies needed for the Profiles domain
+#[derive(Default)]
+pub struct LoadProfiles {}
+
+#[async_trait]
+impl Hook for LoadProfiles {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
+        i.provide(&PROFILES_SERVICE, ProvideProfilesService::default())
+            .await?;
+
+        i.provide(&PROFILE_LOADER, ProvideProfileLoader::default())
+            .await?;
+
+        Ok(())
+    }
+}
 
 /// The Hook for initializing the dependencies for the GraphQL Profiles resolver
 ///

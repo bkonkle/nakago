@@ -2,12 +2,31 @@ use async_trait::async_trait;
 use nakago::{Hook, Inject, InjectResult};
 
 use crate::{
-    domains::{
-        episodes::service::EPISODES_SERVICE,
-        shows::{loaders::SHOW_LOADER, service::SHOWS_SERVICE},
-    },
+    domains::shows::{loaders::SHOW_LOADER, service::SHOWS_SERVICE},
     graphql::GRAPHQL_SCHEMA_BUILDER,
 };
+
+use super::{
+    loaders::{ProvideEpisodeLoader, EPISODE_LOADER},
+    service::{ProvideEpisodesService, EPISODES_SERVICE},
+};
+
+/// Provide dependencies needed for the Episodes domain
+#[derive(Default)]
+pub struct LoadEpisodes {}
+
+#[async_trait]
+impl Hook for LoadEpisodes {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
+        i.provide(&EPISODES_SERVICE, ProvideEpisodesService::default())
+            .await?;
+
+        i.provide(&EPISODE_LOADER, ProvideEpisodeLoader::default())
+            .await?;
+
+        Ok(())
+    }
+}
 
 /// The Hook for initializing the dependencies for the GraphQL Episodes resolver
 ///

@@ -68,6 +68,12 @@ where
     }
 
     /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
+    ///
+    /// **Provides:**
+    ///   - `C: Config`
+    ///
+    /// **Consumes:**
+    ///   - `Tag(ConfigLoaders)`
     pub async fn load(&self, config_path: Option<PathBuf>) -> InjectResult<()> {
         // Trigger the Load lifecycle event
         self.events
@@ -83,12 +89,6 @@ where
     }
 
     /// Initialize the App and provide the top-level Config. Triggers the Init lifecycle event.
-    ///
-    /// **Provides:**
-    ///   - `C: Config`
-    ///
-    /// **Consumes:**
-    ///   - `Tag(ConfigLoaders)`
     pub async fn init(&self) -> InjectResult<()> {
         // Trigger the Init lifecycle event
         self.events
