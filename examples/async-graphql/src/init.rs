@@ -11,7 +11,10 @@ use nakago_sea_orm::{ProvideConnection, DATABASE_CONNECTION};
 
 use crate::{
     config::AppConfig,
-    domains::load::LoadDomains,
+    domains::{
+        episodes::schema::LoadEpisodes, profiles::schema::LoadProfiles,
+        role_grants::schema::LoadRoleGrants, shows::schema::LoadShows, users::schema::LoadUsers,
+    },
     events::{
         ProvideConnections, ProvideSocket, {CONNECTIONS, SOCKET_HANDLER},
     },
@@ -88,7 +91,15 @@ impl Hook for Load {
 
         // Handle some sub-hooks to load more dependencies
 
-        i.handle(LoadDomains::default()).await?;
+        i.handle(LoadUsers::default()).await?;
+
+        i.handle(LoadRoleGrants::default()).await?;
+
+        i.handle(LoadProfiles::default()).await?;
+
+        i.handle(LoadShows::default()).await?;
+
+        i.handle(LoadEpisodes::default()).await?;
 
         i.handle(LoadAuthz::default()).await?;
 

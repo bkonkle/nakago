@@ -15,6 +15,3 @@ pub mod shows;
 
 /// Episodes
 pub mod episodes;
-
-/// Load dependencies
-pub mod load;
