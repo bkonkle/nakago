@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0]
+
+### Added
+
+- Added the `nakago-async-graphql` library with an initial implementation of schema building.
+- Added a new Lifecycle Event, `Load`, which is intended for use before the config is loaded. During this phase, an Application will typically set up all of its Providers and ConfigLoaders.
+  - The `Init` Lifecycle Event is now used for constructing anything needed to run the app. This is typically where an Application initializes things like GraphQL schemas, Axum routes, or anything else that needs to make use of Provided dependencies or the loaded Config.
+- Added the `Inject::override_tag()` and `Inject::override_type()` methods to allow for injecting a dependency whether or not it was already there, returning a boolean result to indicate whether the key already existed or not.
+
+### Changed
+
+- Re-organized the Async-GraphQL example to be more modular and easier to follow.
+- Moved the Injector and Provider code into their own files within the `inject` module.
+
 ## [0.8.0]
 
 ### Added
@@ -123,6 +137,7 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
+[0.9.0]: https://github.com/bkonkle/nakago/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/bkonkle/nakago/compare/0.7.2...0.8.0
 [0.7.2]: https://github.com/bkonkle/nakago/compare/0.7.1...0.7.2
 [0.7.1]: https://github.com/bkonkle/nakago/compare/0.7.0...0.7.1

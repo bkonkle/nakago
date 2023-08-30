@@ -1,13 +1,16 @@
 //! # Role Grants
 
-/// Service
-pub mod service;
+/// DataLoaders
+pub mod loaders;
 
 /// Model
 pub mod model;
 
-/// DataLoaders
-pub mod loaders;
+/// GraphQL Schema
+pub mod schema;
+
+/// Service
+pub mod service;
 
 /// Tests
 #[cfg(test)]

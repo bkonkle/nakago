@@ -16,8 +16,16 @@ pub mod type_id;
 /// Hooks
 pub mod hooks;
 
-pub use container::{to_provider_error, Dependency, Inject, Provider};
+/// Provider
+pub mod provider;
+
+/// Injector
+pub mod injector;
+
+pub use container::Inject;
 pub use error::{Error, Result};
 pub use hooks::Hook;
+pub use injector::{Dependency, Pending};
 pub use key::{Id, Key};
+pub use provider::{to_provider_error, Provider};
 pub use tag::Tag;

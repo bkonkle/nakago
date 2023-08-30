@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use nakago::config::AddConfigLoaders;
 use serde::{Deserialize, Serialize};
 
 use crate::auth::config::AuthConfigLoader;
@@ -15,7 +14,7 @@ pub struct HttpConfig {
     pub address: String,
 }
 
-/// Add the Config Loaders that are custom to this app
-pub fn add_http_config_loaders() -> AddConfigLoaders {
-    AddConfigLoaders::new(vec![Arc::<AuthConfigLoader>::default()])
+/// The default Axum HTTP Config Loaders
+pub fn default_http_config_loaders() -> Vec<Arc<dyn nakago::config::loader::ConfigLoader>> {
+    vec![Arc::<AuthConfigLoader>::default()]
 }

@@ -12,7 +12,7 @@ One quirk of Any is that values need to have the `'static` lifetime, meaning the
 
 Nakago's `Inject` framework is built on [Tokio](https://tokio.rs/) with [Shared Futures](https://docs.rs/futures/latest/futures/future/struct.Shared.html), allowing multiple threads to request and await the same dependency and use Arc to hold on to it across await points without worrying about lifetimes.
 
-It uses Providers that implement the async `Provider` trait and use the provider's instance for configuration or context, and the Inject container to request other dependencies you require. Providers are lazily invoked - they are stored internally but not invoked until they are requested. They are then converting into a pending Shared Future that can be polled by multiple threads at the same time. This allows multiple resources to wait for the same Provider invocation without duplicaiton.
+It uses Providers that implement the async `Provider` trait and use the provider's instance for configuration or context, and the Inject container to request other dependencies you require. Providers are lazily invoked - they are stored internally but not invoked until they are requested. They are then converted into a pending Shared Future that can be polled by multiple threads at the same time. This allows multiple resources to wait for the same Provider invocation without duplicaiton.
 
 Providers don't have to be injected in any order - they will wait inside the container until they have been requested, so you have some flexibility in your application's initialization process. They are guarded by `RwLock` wrappers for thread-safe access, and the locks are released once the `Arc<T>` is yielded.
 

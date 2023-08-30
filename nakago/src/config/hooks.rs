@@ -1,14 +1,50 @@
 use std::{marker::PhantomData, path::PathBuf, sync::Arc};
 
 use async_trait::async_trait;
-use tokio::sync::Mutex;
 
 use super::loader::{Config, ConfigLoader, Loader};
-use crate::inject;
+use crate::{Hook, Inject, InjectError, InjectResult, Tag};
 
 /// A Tag for Config loaders
-pub const CONFIG_LOADERS: inject::Tag<Mutex<Vec<Arc<dyn ConfigLoader>>>> =
-    inject::Tag::new("ConfigLoaders");
+pub const CONFIG_LOADERS: Tag<Vec<Arc<dyn ConfigLoader>>> = Tag::new("ConfigLoaders");
+
+/// Add the given Config Loaders to the stack.
+///
+/// **Provides or Modifies:**
+///   - `Tag(ConfigLoaders)`
+pub struct AddConfigLoaders {
+    loaders: Vec<Arc<dyn ConfigLoader>>,
+}
+
+impl AddConfigLoaders {
+    /// Create a new AddConfigLoaders instance
+    pub fn new(loaders: Vec<Arc<dyn ConfigLoader>>) -> Self {
+        Self { loaders }
+    }
+}
+
+#[async_trait]
+impl Hook for AddConfigLoaders {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
+        let loaders = match i.consume(&CONFIG_LOADERS).await {
+            Ok(loaders) => {
+                let mut updated = loaders.clone();
+
+                // Add the given ConfigLoaders to the stack
+                for loader in self.loaders.iter() {
+                    updated.push(loader.clone());
+                }
+
+                updated
+            }
+            Err(_) => self.loaders.clone(),
+        };
+
+        let _ = i.override_tag(&CONFIG_LOADERS, loaders).await?;
+
+        Ok(())
+    }
+}
 
 /// A Config Initializer
 ///
@@ -42,51 +78,16 @@ impl<C: Config> InitConfig<C> {
 }
 
 #[async_trait]
-impl<C: Config> inject::Hook for InitConfig<C> {
-    async fn handle(&self, i: &inject::Inject) -> inject::Result<()> {
+impl<C: Config> Hook for InitConfig<C> {
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
         if let Ok(loaders) = i.get(&CONFIG_LOADERS).await {
-            let loader = Loader::<C>::new(loaders.lock().await.clone());
+            let loader = Loader::<C>::new(loaders.to_vec());
 
             let config = loader
                 .load(self.custom_path.clone())
-                .map_err(|e| inject::Error::Provider(Arc::new(e.into())))?;
+                .map_err(|e| InjectError::Provider(Arc::new(e.into())))?;
 
             i.inject_type(config).await?;
-        }
-
-        Ok(())
-    }
-}
-
-/// Add the given Config Loaders to the stack. Injects `Tag(ConfigLoaders)` if it has not been
-/// provided yet.
-///
-/// **Provides or Modifies:**
-///   - `Tag(ConfigLoaders)`
-pub struct AddConfigLoaders {
-    loaders: Vec<Arc<dyn ConfigLoader>>,
-}
-
-impl AddConfigLoaders {
-    /// Create a new AddConfigLoaders instance
-    pub fn new(loaders: Vec<Arc<dyn ConfigLoader>>) -> Self {
-        Self { loaders }
-    }
-}
-
-#[async_trait]
-impl inject::Hook for AddConfigLoaders {
-    async fn handle(&self, i: &inject::Inject) -> inject::Result<()> {
-        if let Ok(existing) = i.get(&CONFIG_LOADERS).await {
-            let mut existing = existing.lock().await;
-
-            // Add the given ConfigLoaders to the stack
-            for loader in self.loaders.iter() {
-                existing.push(loader.clone());
-            }
-        } else {
-            i.inject(&CONFIG_LOADERS, Mutex::new(self.loaders.clone()))
-                .await?;
         }
 
         Ok(())

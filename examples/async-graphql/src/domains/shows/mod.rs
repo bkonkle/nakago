@@ -1,13 +1,10 @@
 //! # Shows
 
-/// Service
-pub mod service;
+/// DataLoaders
+pub mod loaders;
 
 /// Model
 pub mod model;
-
-/// GraphQL Queries
-pub mod queries;
 
 /// GraphQL Mutations
 pub mod mutations;
@@ -18,8 +15,11 @@ pub mod resolver;
 /// GraphQL Schema
 pub mod schema;
 
-/// DataLoaders
-pub mod loaders;
+/// Service
+pub mod service;
+
+/// GraphQL Queries
+pub mod queries;
 
 /// Authorization rules
 pub const AUTHORIZATION: &str = include_str!("authorization.polar");

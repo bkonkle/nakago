@@ -26,13 +26,13 @@ impl<S, B> Route<S, B> {
 
 /// A hook to initialize a particular route
 pub struct InitRoute<S: State> {
-    get_route: fn(&Inject) -> Route<S>,
+    get_route: fn(Inject) -> Route<S>,
     _phantom: PhantomData<S>,
 }
 
 impl<S: State> InitRoute<S> {
     /// Create a new InitRoute instance
-    pub fn new(get_route: fn(&Inject) -> Route<S>) -> Self {
+    pub fn new(get_route: fn(Inject) -> Route<S>) -> Self {
         Self {
             get_route,
             _phantom: PhantomData,
@@ -42,8 +42,8 @@ impl<S: State> InitRoute<S> {
 
 #[async_trait]
 impl<S: State> Hook for InitRoute<S> {
-    async fn handle(&self, i: &Inject) -> InjectResult<()> {
-        let route = (self.get_route)(i);
+    async fn handle(&self, i: Inject) -> InjectResult<()> {
+        let route = (self.get_route)(i.clone());
 
         if let Some(routes) = i.get_type_opt::<Mutex<Vec<Route<S>>>>().await? {
             routes.lock().await.push(route);

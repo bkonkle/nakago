@@ -9,7 +9,7 @@ use serde_json::json;
 use crate::domains::{
     episodes::{
         model::Episode,
-        schema::{ProvideEpisodesSchema, EPISODES_SCHEMA},
+        schema::test::{ProvideEpisodesSchema, EPISODES_SCHEMA},
         service::{MockEpisodesService, EPISODES_SERVICE},
     },
     shows::service::SHOWS_SERVICE,

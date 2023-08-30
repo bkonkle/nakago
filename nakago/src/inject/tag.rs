@@ -53,6 +53,16 @@ impl Inject {
         self.get_key_opt(Key::from_tag(tag)).await
     }
 
+    /// Override an existing Tagged Dependency directly, using core::future::ready to wrap it in an
+    /// immediately resolving Pending Future. Return true if the Key was already present.
+    pub async fn override_tag<T: Any + Send + Sync>(
+        &self,
+        tag: &'static Tag<T>,
+        dep: T,
+    ) -> Result<bool> {
+        self.override_key(Key::from_tag(tag), dep).await
+    }
+
     /// Provide a Tagged Dependency directly, using core::future::ready to wrap it in an immediately
     /// resolving Pending Future.
     pub async fn inject<T: Any + Sync + Send>(&self, tag: &'static Tag<T>, dep: T) -> Result<()> {
@@ -128,10 +138,8 @@ pub(crate) mod test {
     use fake::Fake;
 
     use crate::inject::{
-        container::test::{
-            HasId, HasIdProvider, OtherService, OtherServiceProvider, TestService,
-            TestServiceProvider,
-        },
+        container::test::{HasId, OtherService, TestService},
+        provider::test::{HasIdProvider, OtherServiceProvider, TestServiceProvider},
         Result,
     };
 

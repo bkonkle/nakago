@@ -7,7 +7,7 @@ use super::{Inject, Result};
 #[async_trait]
 pub trait Hook: Any + Send {
     /// Handle the event by operating on the Inject container
-    async fn handle(&self, i: &Inject) -> Result<()>;
+    async fn handle(&self, i: Inject) -> Result<()>;
 }
 
 impl Inject {
@@ -16,6 +16,6 @@ impl Inject {
     where
         H: Hook,
     {
-        hook.handle(self).await
+        hook.handle(self.clone()).await
     }
 }

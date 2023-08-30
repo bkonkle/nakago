@@ -17,5 +17,4 @@ pub mod routes;
 extern crate log;
 
 pub use app::AxumApplication;
-pub use config::add_http_config_loaders;
 pub use routes::{InitRoute, Route};

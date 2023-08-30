@@ -1,26 +1,34 @@
 [package]
-name = "nakago-examples-cqrs-es"
-version = "0.1.0"
+name = "nakago-async-graphql"
+version = "0.9.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
-description = "A lightweight Rust framework for sharp services 😎"
+description = "An Async-GraphQL integration for Nakago"
 documentation = "https://docs.rs/nakago/"
 homepage = "https://github.com/bkonkle/nakago"
 repository = "https://github.com/bkonkle/nakago"
 license = "MIT"
 
-publish = false #
-
 [dependencies]
+anyhow = "1.0"
+async-graphql = { version = "6.0", features = ["chrono", "dataloader"] }
+async-graphql-axum = "6.0"
+async-trait = "0.1"
+axum = { version = "0.6", features = ["macros"] }
+figment = { version = "0.10", features = ["env"] }
 log = "0.4"
+nakago = "0.9"
+nakago-derive = "0.8"
 pretty_env_logger = "0.5"
+rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = "1.0"
-nakago = "0.9"
+thiserror = "1.0"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
 
 [dev-dependencies]
-criterion = "0.5"
 fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 mockall = "0.11"
 pretty_assertions = "1.2"

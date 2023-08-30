@@ -1,6 +1,9 @@
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
-use nakago::{config::loader::Config, inject, Application};
+use nakago::{
+    config::{loader::Config, AddConfigLoaders},
+    Application, InjectResult,
+};
 use std::{
     any::Any,
     fmt::Debug,
@@ -10,7 +13,10 @@ use std::{
 use tokio::sync::Mutex;
 use tower_http::trace;
 
-use crate::{add_http_config_loaders, config::HttpConfig, Route};
+use crate::{
+    config::{default_http_config_loaders, HttpConfig},
+    Route,
+};
 
 /// State must be clonable and able to be stored in the Inject container
 pub trait State: Clone + Any + Send + Sync {}
@@ -48,15 +54,17 @@ impl<C> AxumApplication<C>
 where
     C: Config + Debug,
 {
-    /// Initialize the underlying App
-    pub async fn init(&mut self, config_path: Option<PathBuf>) -> inject::Result<()> {
+    /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
+    pub async fn load(&mut self, config_path: Option<PathBuf>) -> InjectResult<()> {
         // Add the HTTP Config Initializer
-        self.app.handle(add_http_config_loaders()).await?;
+        self.handle(AddConfigLoaders::new(default_http_config_loaders()))
+            .await?;
 
-        self.app.init(config_path).await
+        self.app.load(config_path).await
     }
 
-    /// Start the server and return the bound address and a `Future`.
+    /// Run the server and return the bound address and a `Future`. Triggers the Startup lifecycle
+    /// event.
     ///
     /// **Depends on:**
     ///   - `C: Config`
@@ -64,16 +72,30 @@ where
     pub async fn run<S: State>(
         &mut self,
         config_path: Option<PathBuf>,
-    ) -> inject::Result<Server<AddrIncoming, IntoMakeService<Router>>>
+    ) -> InjectResult<Server<AddrIncoming, IntoMakeService<Router>>>
     where
         HttpConfig: FromRef<C>,
     {
-        // Trigger the Init lifecycle event
-        self.init(config_path).await?;
-
-        // Trigger the Startup lifecycle event
+        self.load(config_path).await?;
+        self.init().await?;
         self.start().await?;
 
+        let router = self.get_router::<S>().await?;
+        let config = self.get_type::<C>().await?;
+
+        let http = HttpConfig::from_ref(&*config);
+
+        let server = Server::bind(
+            &format!("0.0.0.0:{}", http.port)
+                .parse()
+                .expect("Unable to parse bind address"),
+        )
+        .serve(router.into_make_service());
+
+        Ok(server)
+    }
+
+    async fn get_router<S: State>(&self) -> InjectResult<Router> {
         let mut router = Router::<S>::new();
 
         if let Some(routes) = self.app.get_type_opt::<Mutex<Vec<Route<S>>>>().await? {
@@ -85,7 +107,7 @@ where
 
         let state = (*self.app.get_type::<S>().await?).clone();
 
-        let app: Router = Router::new()
+        let router = Router::new()
             .layer(
                 trace::TraceLayer::new_for_http()
                     .make_span_with(trace::DefaultMakeSpan::new().level(tracing::Level::INFO))
@@ -93,16 +115,6 @@ where
             )
             .merge(router.with_state(state));
 
-        let config = self.app.get_type::<C>().await?;
-        let http = HttpConfig::from_ref(&*config);
-
-        let server = Server::bind(
-            &format!("0.0.0.0:{}", http.port)
-                .parse()
-                .expect("Unable to parse bind address"),
-        )
-        .serve(app.into_make_service());
-
-        Ok(server)
+        Ok(router)
     }
 }
