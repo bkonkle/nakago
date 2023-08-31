@@ -11,7 +11,7 @@ const config = {
     favicon: "img/favicon.ico",
 
     url: "https://bkonkle.github.io",
-    baseUrl: "/nakago",
+    baseUrl: "/nakago/",
 
     organizationName: "bkonkle",
     projectName: "nakago",

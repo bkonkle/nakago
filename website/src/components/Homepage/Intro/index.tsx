@@ -1,14 +1,19 @@
 import React from "react";
 import styles from "./styles.module.css";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 
 export default function Intro(): JSX.Element {
+    const { siteConfig } = useDocusaurusContext();
     return (
         <section className={styles.intro}>
             <div className="container">
                 <div className="row">
                     <div className="col col--4"></div>
                     <div className="col col--4 text--center">
-                        <img src="/img/katana.png" alt="Nakago Logo" />
+                        <img
+                            src={`${siteConfig.baseUrl}img/katana.png`}
+                            alt="Nakago Logo"
+                        />
                     </div>
                     <div className="col col--4"></div>
                 </div>
