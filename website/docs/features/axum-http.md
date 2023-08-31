@@ -1,3 +1,7 @@
+---
+sidebar_position: 3
+---
+
 # Axum HTTP Applications
 
 The `nakago-axum` crate defines `AxumApplication`, which wraps `Application` and provides a way to Run an HTTP service.

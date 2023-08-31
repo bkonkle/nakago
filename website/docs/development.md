@@ -1,3 +1,7 @@
+---
+sidebar_position: 5
+---
+
 # Development
 
 To set up a development environment to build this project, you'll need to install some helpful tools.

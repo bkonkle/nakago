@@ -1,4 +1,8 @@
-# Applications
+---
+sidebar_position: 2
+---
+
+# Application Lifecycle
 
 To manage the lifecycle of an application, the top-level `nakago::Application` struct provides Init and Startup hooks and a system to trigger them. More hooks - like a Shutdown hook - are coming soon.
 
