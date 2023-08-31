@@ -15,6 +15,7 @@ const config = {
 
     organizationName: "bkonkle",
     projectName: "nakago",
+    trailingSlash: false,
 
     onBrokenLinks: "throw",
     onBrokenMarkdownLinks: "warn",
