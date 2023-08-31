@@ -27,11 +27,11 @@ NOTE: This library is in early development, and the API may shift rapidly as it 
 
 ## Features
 
--   [Dependency Injection](https://bkonkle.github.io/nakago/docs/features/dependency-injection)
--   [HTTP Adapter](https://bkonkle.github.io/nakago/docs/features/axum-http) using [Axum](https://github.com/tokio-rs/axum)
--   [SQL Adapter](https://bkonkle.github.io/nakago/docs/features/sea-orm) using [SeaORM](https://github.com/SeaQL/sea-orm)
--   [GraphQL Adapter](https://bkonkle.github.io/nakago/docs/features/async-graphql) using [Async-GraphQL](https://github.com/async-graphql/async-graphql)
--   CQRS Adapter using [CQRS-ES](https://crates.io/crates/cqrs-es) (upcoming)
+- [Dependency Injection](https://bkonkle.github.io/nakago/docs/features/dependency-injection)
+- [HTTP Adapter](https://bkonkle.github.io/nakago/docs/features/axum-http) using [Axum](https://github.com/tokio-rs/axum)
+- [SQL Adapter](https://bkonkle.github.io/nakago/docs/features/sea-orm) using [SeaORM](https://github.com/SeaQL/sea-orm)
+- [GraphQL Adapter](https://bkonkle.github.io/nakago/docs/features/async-graphql) using [Async-GraphQL](https://github.com/async-graphql/async-graphql)
+- CQRS Adapter using [CQRS-ES](https://crates.io/crates/cqrs-es) (upcoming)
 
 As development progresses, major features will be split up into separate crates, so that developers can install only what they need.
 
@@ -39,8 +39,8 @@ As development progresses, major features will be split up into separate crates,
 
 ### Cargo
 
--   Install Rust and Cargo by following [this guide](https://www.rust-lang.org/tools/install).
--   Run `cargo install nakago`, along with `cargo install nakago-derive`, `cargo install nakago-axum`, etc. for each feature you need.
+- Install Rust and Cargo by following [this guide](https://www.rust-lang.org/tools/install).
+- Run `cargo install nakago`, along with `cargo install nakago-derive`, `cargo install nakago-axum`, etc. for each feature you need.
 
 ## Etymology
 
