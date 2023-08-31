@@ -12,16 +12,16 @@ NOTE: This library is in early development, and the API may shift rapidly as it 
 
 ## Features
 
--   [Dependency Injection](features/dependency-injection)
--   [HTTP Adapter](docs/axum-http.md) using [Axum](https://github.com/tokio-rs/axum)
--   [SQL Adapter](docs/sea-orm.md) using [SeaORM](https://github.com/SeaQL/sea-orm)
--   [GraphQL Adapter](docs/async-graphql.md) using [Async-GraphQL](https://github.com/async-graphql/async-graphql)
--   CQRS Adapter using [CQRS-ES](https://crates.io/crates/cqrs-es) (upcoming)
+- [Dependency Injection](features/dependency-injection)
+- [HTTP Adapter](features/axum-http) using [Axum](https://github.com/tokio-rs/axum)
+- [SQL Adapter](features/sea-orm) using [SeaORM](https://github.com/SeaQL/sea-orm)
+- [GraphQL Adapter](features/async-graphql) using [Async-GraphQL](https://github.com/async-graphql/async-graphql)
+- CQRS Adapter using [CQRS-ES](https://crates.io/crates/cqrs-es) (upcoming)
 
 ## Installation
 
--   Install Rust and Cargo by following [this guide](https://www.rust-lang.org/tools/install).
--   Run `cargo install nakago`, along with `cargo install nakago-derive`, `cargo install nakago-axum`, etc. for each feature you need.
+- Install Rust and Cargo by following [this guide](https://www.rust-lang.org/tools/install).
+- Run `cargo install nakago`, along with `cargo install nakago-derive`, `cargo install nakago-axum`, etc. for each feature you need.
 
 ## Tutorial
 
