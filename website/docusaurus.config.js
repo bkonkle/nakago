@@ -10,11 +10,12 @@ const config = {
     tagline: "A lightweight Rust framework for sharp services",
     favicon: "img/favicon.ico",
 
-    url: "https://nakago.dev",
+    url: "https://bkonkle.github.io/nakago",
     baseUrl: "/",
 
     organizationName: "bkonkle",
     projectName: "nakago",
+    trailingSlash: false,
 
     onBrokenLinks: "throw",
     onBrokenMarkdownLinks: "warn",
