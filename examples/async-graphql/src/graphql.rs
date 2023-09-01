@@ -52,12 +52,9 @@ impl Hook for InitGraphQL {
         let config = i.get_type::<AppConfig>().await?;
         let oso = i.get(&OSO).await?;
 
-        let builder = i.consume(&GRAPHQL_SCHEMA_BUILDER).await?;
-
-        i.inject(
-            &GRAPHQL_SCHEMA_BUILDER,
-            builder.data(config.clone()).data((*oso).clone()),
-        )
+        i.modify(&GRAPHQL_SCHEMA_BUILDER, |builder| {
+            Ok(builder.data(config.clone()).data((*oso).clone()))
+        })
         .await?;
 
         i.handle(InitGraphQLUsers::default()).await?;

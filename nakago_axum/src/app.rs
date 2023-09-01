@@ -2,7 +2,7 @@ use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
 use nakago::{
     config::{loader::Config, AddConfigLoaders},
-    Application, InjectResult,
+    Application, InjectResult, Tag,
 };
 use std::{
     any::Any,
@@ -22,17 +22,56 @@ use crate::{
 pub trait State: Clone + Any + Send + Sync {}
 
 /// An Axum HTTP Application
-#[derive(Default)]
-pub struct AxumApplication<C>
+pub struct AxumApplication<C, S>
 where
     C: Config + Debug,
+    S: State,
 {
     app: Application<C>,
+    config_tag: Option<&'static Tag<C>>,
+    state_tag: Option<&'static Tag<S>>,
 }
 
-impl<C> Deref for AxumApplication<C>
+impl<C, S> AxumApplication<C, S>
+where
+    C: Config,
+    S: State,
+{
+    /// Add a config tag for the Application to use
+    pub fn with_config_tag(self, tag: &'static Tag<C>) -> Self {
+        Self {
+            config_tag: Some(tag),
+            ..self
+        }
+    }
+
+    /// Add a state tag for the Application to use
+    pub fn with_state_tag(self, tag: &'static Tag<S>) -> Self {
+        Self {
+            state_tag: Some(tag),
+            ..self
+        }
+    }
+}
+
+impl<C, S> Default for AxumApplication<C, S>
+where
+    C: Config,
+    S: State,
+{
+    fn default() -> Self {
+        Self {
+            app: Application::default(),
+            config_tag: None,
+            state_tag: None,
+        }
+    }
+}
+
+impl<C, S> Deref for AxumApplication<C, S>
 where
     C: Config + Debug,
+    S: State,
 {
     type Target = Application<C>;
 
@@ -41,18 +80,20 @@ where
     }
 }
 
-impl<C> DerefMut for AxumApplication<C>
+impl<C, S> DerefMut for AxumApplication<C, S>
 where
     C: Config + Debug,
+    S: State,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.app
     }
 }
 
-impl<C> AxumApplication<C>
+impl<C, S> AxumApplication<C, S>
 where
     C: Config + Debug,
+    S: State,
 {
     /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
     pub async fn load(&mut self, config_path: Option<PathBuf>) -> InjectResult<()> {
@@ -69,7 +110,7 @@ where
     /// **Depends on:**
     ///   - `C: Config`
     ///   - `S: State`
-    pub async fn run<S: State>(
+    pub async fn run(
         &mut self,
         config_path: Option<PathBuf>,
     ) -> InjectResult<Server<AddrIncoming, IntoMakeService<Router>>>
@@ -80,8 +121,13 @@ where
         self.init().await?;
         self.start().await?;
 
-        let router = self.get_router::<S>().await?;
-        let config = self.get_type::<C>().await?;
+        let router = self.get_router().await?;
+
+        let config = if let Some(tag) = self.config_tag {
+            self.app.get(tag).await?
+        } else {
+            self.app.get_type::<C>().await?
+        };
 
         let http = HttpConfig::from_ref(&*config);
 
@@ -95,7 +141,7 @@ where
         Ok(server)
     }
 
-    async fn get_router<S: State>(&self) -> InjectResult<Router> {
+    async fn get_router(&self) -> InjectResult<Router> {
         let mut router = Router::<S>::new();
 
         if let Some(routes) = self.app.get_type_opt::<Mutex<Vec<Route<S>>>>().await? {
@@ -105,7 +151,11 @@ where
             }
         };
 
-        let state = (*self.app.get_type::<S>().await?).clone();
+        let state = if let Some(tag) = self.state_tag {
+            self.app.get(tag).await?
+        } else {
+            self.app.get_type::<S>().await?
+        };
 
         let router = Router::new()
             .layer(
@@ -113,7 +163,7 @@ where
                     .make_span_with(trace::DefaultMakeSpan::new().level(tracing::Level::INFO))
                     .on_response(trace::DefaultOnResponse::new().level(tracing::Level::INFO)),
             )
-            .merge(router.with_state(state));
+            .merge(router.with_state((*state).clone()));
 
         Ok(router)
     }

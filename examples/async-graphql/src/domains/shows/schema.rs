@@ -40,12 +40,9 @@ impl Hook for InitGraphQLShows {
         let role_grants = i.get(&ROLE_GRANTS_SERVICE).await?;
         let shows = i.get(&SHOWS_SERVICE).await?;
 
-        let builder = i.consume(&GRAPHQL_SCHEMA_BUILDER).await?;
-
-        i.inject(
-            &GRAPHQL_SCHEMA_BUILDER,
-            builder.data(role_grants.clone()).data(shows.clone()),
-        )
+        i.modify(&GRAPHQL_SCHEMA_BUILDER, |builder| {
+            Ok(builder.data(role_grants.clone()).data(shows.clone()))
+        })
         .await?;
 
         Ok(())

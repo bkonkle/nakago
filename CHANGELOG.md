@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Added a Config tag and a State tag to the AxumApplication struct, to prevent the need for explicit turbofish syntax when injecting those dependencies.
+- Added "modify" and "modify_type" convenience methods, making it easier to handle cases where you want to consume a dependency, modify it, and then immediately re-inject it.
+
 ## [0.9.0]
 
 ### Added

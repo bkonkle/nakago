@@ -5,7 +5,6 @@ use std::path::PathBuf;
 
 use log::info;
 use pico_args::{Arguments, Error};
-use routes::AppState;
 
 mod config;
 mod domains;
@@ -48,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut app = init::app();
 
-    let server = app.run::<AppState>(args.config_path).await?;
+    let server = app.run(args.config_path).await?;
 
     let addr = server.local_addr();
 

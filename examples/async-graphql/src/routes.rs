@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use axum::{extract::FromRef, routing::get, Router};
-use nakago::{Inject, InjectResult, Provider};
+use nakago::{Inject, InjectResult, Provider, Tag};
 use nakago_axum::{
     app::State,
     auth::{authenticate::AuthState, AUTH_STATE},
@@ -16,6 +16,9 @@ use crate::{
 };
 
 use super::handlers::{events_handler, graphiql, graphql_handler, health_handler, EventsState};
+
+/// Tag(AppState)
+pub const STATE: Tag<AppState> = Tag::new("AppState");
 
 /// The top-level Application State
 #[derive(Clone, FromRef)]

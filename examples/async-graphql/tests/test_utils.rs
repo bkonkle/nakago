@@ -40,10 +40,10 @@ use tokio_tungstenite::{
 };
 
 /// Run the Application Server
-pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
+pub async fn run_server() -> Result<(AxumApplication<AppConfig, AppState>, SocketAddr)> {
     let mut app = init::app();
 
-    let server = app.run::<AppState>(None).await?;
+    let server = app.run(None).await?;
     let addr = server.local_addr();
 
     // Spawn the server in the background
@@ -72,7 +72,7 @@ impl Provider<Client<HttpsConnector<HttpConnector>>> for HttpClientProvider {
 
 /// Common test utils
 pub struct TestUtils {
-    pub app: AxumApplication<AppConfig>,
+    pub app: AxumApplication<AppConfig, AppState>,
     pub auth: AuthConfig,
     pub addr: SocketAddr,
     pub http_client: Client<HttpsConnector<HttpConnector>>,

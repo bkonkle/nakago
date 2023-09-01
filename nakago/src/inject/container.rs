@@ -146,6 +146,40 @@ impl Inject {
         Ok(None)
     }
 
+    /// Temporarily remove a dependency from the container and try to unwrap it from the Arc, which
+    /// will only succeed if there are no other strong pointers to the value. Then, apply a function
+    /// to it, and then inject sit back into the container.
+    pub async fn modify_key<T, F>(&self, key: Key, modify: F) -> Result<()>
+    where
+        T: Any + Send + Sync,
+        F: FnOnce(T) -> Result<T>,
+    {
+        if let Some(dep) = self.get_key_opt::<T>(key.clone()).await? {
+            // Remove the dependency from the container and drop the reference it holds
+            self.remove_key(key.clone()).await?;
+
+            // If there is more than 1 strong pointer, this will fail and the CannotConsume error
+            // will be returned
+            let dep = Arc::try_unwrap(dep)
+                .map(Some)
+                .map_err(|arc| Error::CannotConsume {
+                    key: key.clone(),
+                    strong_count: Arc::strong_count(&arc),
+                })?;
+
+            if let Some(dep) = dep {
+                self.inject_key(key.clone(), modify(dep)?).await?;
+            }
+
+            return Ok(());
+        };
+
+        Err(Error::NotFound {
+            missing: key,
+            available: self.get_available_keys().await,
+        })
+    }
+
     /// Discard a Dependency from the container. Any Arcs handed out will still be valid, but
     /// the container will no longer hold a reference.
     pub async fn remove_key(&self, key: Key) -> Result<()> {
