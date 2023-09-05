@@ -114,6 +114,12 @@ script = '''
 
 # Run example projects
 
+[tasks.run-simple]
+env = { "RUST_LOG" = "info,sqlx::query=warn" }
+command = "cargo"
+args = ["run", "-p", "nakago-examples-simple"]
+watch = true
+
 [tasks.run-async-graphql]
 env = { "RUST_LOG" = "info,sqlx::query=warn" }
 command = "cargo"
@@ -121,6 +127,21 @@ args = ["run", "-p", "nakago-examples-async-graphql"]
 watch = true
 
 # Database tasks for example projects
+
+[tasks.db-create-simple]
+cwd = "./examples/simple"
+command = "sqlx"
+args = ["db", "create"]
+
+[tasks.db-migrate-simple]
+cwd = "./examples/simple"
+command = "sqlx"
+args = ["migrate", "run"]
+
+[tasks.db-reset-simple]
+cwd = "./examples/simple"
+command = "sqlx"
+args = ["db", "reset"]
 
 [tasks.db-create-async-graphql]
 cwd = "./examples/async-graphql"
@@ -143,6 +164,19 @@ args = ["db", "reset"]
 cwd = "./"
 command = "docker-compose"
 args = ["-f", "docker-compose.yml", "${@}"]
+
+[tasks.docker-simple]
+cwd = "./examples/simple"
+command = "docker-compose"
+args = [
+    "-f",
+    "../../docker-compose.yml",
+    "-f",
+    "docker-compose.app.yml",
+    "--env-file",
+    "../../.env",
+    "${@}",
+]
 
 [tasks.docker-async-graphql]
 cwd = "./examples/async-graphql"

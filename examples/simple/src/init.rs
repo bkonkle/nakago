@@ -11,6 +11,7 @@ use nakago_sea_orm::{ProvideConnection, DATABASE_CONNECTION};
 use crate::{
     config::{AppConfig, CONFIG},
     routes::{new_health_route, new_user_route, AppState, ProvideAppState, STATE},
+    users::service::{ProvideUsersService, USERS_SERVICE},
 };
 
 /// Create a default AxumApplication instance
@@ -53,6 +54,9 @@ impl Hook for Load {
             ProvideConnection::<AppConfig>::default(),
         )
         .await?;
+
+        i.provide(&USERS_SERVICE, ProvideUsersService::default())
+            .await?;
 
         i.provide(&AUTH_STATE, ProvideAuthState::default()).await?;
 
