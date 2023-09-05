@@ -1,0 +1,13 @@
+# Default settings
+
+run_mode = "development"
+port = 0
+
+[auth]
+url = "https://simple-dev.oauth-services.com"
+audience = "localhost"
+
+[auth.client]
+
+[dynamo]
+url = "http://localhost:4666"

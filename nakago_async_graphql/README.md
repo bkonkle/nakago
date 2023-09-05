@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="https://raw.githubusercontent.com/bkonkle/nakago/main/docs/images/katana.png" width="400" alt="A katana leaning on a stand"/>
+  <img src="https://raw.githubusercontent.com/bkonkle/nakago/main/website/static/img/katana.png" width="400" alt="A katana leaning on a stand"/>
 
   <h1>Nakago (中子) Async-GraphQL</h1>
 

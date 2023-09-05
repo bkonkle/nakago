@@ -1,0 +1,7 @@
+# Local development
+
+port = 3000
+
+[auth.client]
+id = "client_id"
+secret = "client_secret"
