@@ -69,12 +69,12 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
-        i.provide(&JWKS, ProvideJwks::<AppConfig>::default())
+        i.provide(&JWKS, ProvideJwks::default().with_config_tag(&CONFIG))
             .await?;
 
         i.provide(
             &DATABASE_CONNECTION,
-            ProvideConnection::<AppConfig>::default(),
+            ProvideConnection::default().with_config_tag(&CONFIG),
         )
         .await?;
 

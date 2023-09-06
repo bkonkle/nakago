@@ -22,7 +22,26 @@ pub const DATABASE_CONNECTION: Tag<DatabaseConnection> = Tag::new("SeaORM:Databa
 ///   - `<C: Config>` - requires that `C` fulfills the `DatabaseConfig: FromRef<C>` constraint
 #[derive(Default)]
 pub struct ProvideConnection<C: Config> {
+    config_tag: Option<&'static Tag<C>>,
     _phantom: PhantomData<C>,
+}
+
+impl<C: Config> ProvideConnection<C> {
+    /// Create a new instance of ProvideConnection
+    pub fn new(config_tag: Option<&'static Tag<C>>) -> Self {
+        Self {
+            config_tag,
+            ..Default::default()
+        }
+    }
+
+    /// Set the config Tag for this instance
+    pub fn with_config_tag(self, config_tag: &'static Tag<C>) -> Self {
+        Self {
+            config_tag: Some(config_tag),
+            ..self
+        }
+    }
 }
 
 #[Provider]
@@ -32,7 +51,12 @@ where
     DatabaseConfig: FromRef<C>,
 {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DatabaseConnection>> {
-        let config = i.get_type::<C>().await?;
+        let config = if let Some(tag) = self.config_tag {
+            i.get(tag).await?
+        } else {
+            i.get_type::<C>().await?
+        };
+
         let database = DatabaseConfig::from_ref(&*config);
 
         Ok(Arc::new(

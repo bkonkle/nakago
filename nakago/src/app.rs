@@ -13,22 +13,32 @@ use crate::{
     config::{Config, InitConfig},
     inject::{Hook, Inject},
     lifecycle::Events,
-    EventType, InjectResult,
+    EventType, InjectResult, Tag,
 };
 
 /// The top-level Application struct
+#[derive(Default)]
 pub struct Application<C: Config> {
     events: Events,
     i: Inject,
+    config_tag: Option<&'static Tag<C>>,
     _phantom: PhantomData<C>,
 }
 
-impl<C: Config> Default for Application<C> {
-    fn default() -> Self {
+impl<C: Config> Application<C> {
+    /// Create a new Application instance
+    pub fn new(config_tag: Option<&'static Tag<C>>) -> Self {
         Self {
-            events: Events::default(),
-            i: Inject::default(),
-            _phantom: PhantomData,
+            config_tag,
+            ..Self::default()
+        }
+    }
+
+    /// Add a config Tag to this Application instance
+    pub fn with_config_tag(self, tag: &'static Tag<C>) -> Self {
+        Self {
+            config_tag: Some(tag),
+            ..self
         }
     }
 }
@@ -75,14 +85,16 @@ where
     /// **Consumes:**
     ///   - `Tag(ConfigLoaders)`
     pub async fn load(&self, config_path: Option<PathBuf>) -> InjectResult<()> {
+        println!(">------ Application load ------<");
+
         // Trigger the Load lifecycle event
         self.events
             .trigger(&EventType::Load, self.i.clone())
             .await?;
 
         // Load the Config using the given path
-        InitConfig::<C>::new(config_path)
-            .handle(self.i.clone())
+        self.i
+            .handle(InitConfig::new(config_path, self.config_tag))
             .await?;
 
         Ok(())

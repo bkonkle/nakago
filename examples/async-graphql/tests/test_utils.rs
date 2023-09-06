@@ -17,7 +17,7 @@ use hyper_tls::HttpsConnector;
 use nakago::{Inject, InjectResult, Provider};
 use nakago_axum::{auth::config::AuthConfig, AxumApplication};
 use nakago_examples_async_graphql::{
-    config::AppConfig,
+    config::{AppConfig, CONFIG},
     domains::{
         episodes::{model::Episode, mutations::CreateEpisodeInput, service::EPISODES_SERVICE},
         profiles::{model::Profile, mutations::CreateProfileInput, service::PROFILES_SERVICE},
@@ -84,7 +84,7 @@ impl TestUtils {
     pub async fn init() -> Result<Self> {
         let (app, addr) = run_server().await?;
 
-        let config = app.get_type::<AppConfig>().await?;
+        let config = app.get(&CONFIG).await?;
 
         let auth = AuthConfig::from_ref(&*config);
 

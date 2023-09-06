@@ -56,23 +56,33 @@ impl Hook for AddConfigLoaders {
 #[derive(Default)]
 pub struct InitConfig<C: Config> {
     custom_path: Option<PathBuf>,
+    tag: Option<&'static Tag<C>>,
     _phantom: PhantomData<C>,
 }
 
 impl<C: Config> InitConfig<C> {
-    /// Create a new InitConfig
-    pub fn new(custom_path: Option<PathBuf>) -> Self {
+    /// Create a new InitConfig instance
+    pub fn new(custom_path: Option<PathBuf>, tag: Option<&'static Tag<C>>) -> Self {
         Self {
             custom_path,
+            tag,
             _phantom: PhantomData,
         }
     }
 
-    /// Create a new InitConfig with a custom path
-    pub fn with_path(custom_path: PathBuf) -> Self {
+    /// Use a custom path when loading the Config
+    pub fn with_path(self, custom_path: PathBuf) -> Self {
         Self {
             custom_path: Some(custom_path),
-            _phantom: PhantomData,
+            ..self
+        }
+    }
+
+    /// Use a config Tag when injecting the loaded Config
+    pub fn with_tag(self, tag: &'static Tag<C>) -> Self {
+        Self {
+            tag: Some(tag),
+            ..self
         }
     }
 }
@@ -87,7 +97,13 @@ impl<C: Config> Hook for InitConfig<C> {
                 .load(self.custom_path.clone())
                 .map_err(|e| InjectError::Provider(Arc::new(e.into())))?;
 
-            i.inject_type(config).await?;
+            if let Some(tag) = self.tag {
+                println!(">------ InitConifig handle tag ------<");
+                i.inject(tag, config).await?;
+            } else {
+                println!(">------ InitConifig handle type ------<");
+                i.inject_type(config).await?;
+            }
         }
 
         Ok(())

@@ -24,7 +24,7 @@ pub trait State: Clone + Any + Send + Sync {}
 /// An Axum HTTP Application
 pub struct AxumApplication<C, S>
 where
-    C: Config + Debug,
+    C: Config,
     S: State,
 {
     app: Application<C>,
@@ -37,10 +37,20 @@ where
     C: Config,
     S: State,
 {
+    /// Create a new AxumApplication instance
+    pub fn new(config_tag: Option<&'static Tag<C>>, state_tag: Option<&'static Tag<S>>) -> Self {
+        Self {
+            app: Application::new(config_tag),
+            config_tag,
+            state_tag,
+        }
+    }
+
     /// Add a config tag for the Application to use
     pub fn with_config_tag(self, tag: &'static Tag<C>) -> Self {
         Self {
             config_tag: Some(tag),
+            app: self.app.with_config_tag(tag),
             ..self
         }
     }
@@ -60,11 +70,7 @@ where
     S: State,
 {
     fn default() -> Self {
-        Self {
-            app: Application::default(),
-            config_tag: None,
-            state_tag: None,
-        }
+        Self::new(None, None)
     }
 }
 
@@ -97,6 +103,8 @@ where
 {
     /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
     pub async fn load(&mut self, config_path: Option<PathBuf>) -> InjectResult<()> {
+        println!(">------ AxumApplication load ------<");
+
         // Add the HTTP Config Initializer
         self.handle(AddConfigLoaders::new(default_http_config_loaders()))
             .await?;

@@ -113,7 +113,26 @@ pub async fn init(config: AuthConfig) -> JWKSet<Empty> {
 ///   - `<C: Config>` - requires that `C` fulfills the `AuthConfig: FromRef<C>` constraint
 #[derive(Default)]
 pub struct ProvideJwks<C: Config> {
+    config_tag: Option<&'static Tag<C>>,
     _phantom: PhantomData<C>,
+}
+
+impl<C: Config> ProvideJwks<C> {
+    /// Create a new instance of ProvideJwks
+    pub fn new(config_tag: Option<&'static Tag<C>>) -> Self {
+        Self {
+            config_tag,
+            ..Default::default()
+        }
+    }
+
+    /// Set the config Tag for this instance
+    pub fn with_config_tag(self, config_tag: &'static Tag<C>) -> Self {
+        Self {
+            config_tag: Some(config_tag),
+            ..self
+        }
+    }
 }
 
 #[Provider]
@@ -123,7 +142,12 @@ where
     AuthConfig: FromRef<C>,
 {
     async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<JWKSet<Empty>>> {
-        let config = i.get_type::<C>().await?;
+        let config = if let Some(tag) = self.config_tag {
+            i.get(tag).await?
+        } else {
+            i.get_type::<C>().await?
+        };
+
         let auth = AuthConfig::from_ref(&*config);
         let key_set = init(auth).await;
 
