@@ -7,14 +7,8 @@ use log::info;
 use pico_args::{Arguments, Error};
 
 mod config;
-mod handlers;
+mod http;
 mod init;
-mod routes;
-mod users;
-
-/// Error macros
-#[macro_use]
-extern crate anyhow;
 
 const HELP: &str = "\
 Usage: simple [OPTIONS]
