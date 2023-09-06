@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use nakago::{config::AddConfigLoaders, EventType, Hook, Inject, InjectResult};
+use nakago::{EventType, Hook, Inject, InjectResult};
 use nakago_axum::{AxumApplication, InitRoute};
 
 use crate::{
@@ -15,13 +15,6 @@ pub fn app() -> AxumApplication<AppConfig, AppState> {
     let mut app = AxumApplication::default()
         .with_config_tag(&CONFIG)
         .with_state_tag(&STATE);
-
-    // Config
-
-    app.on(
-        &EventType::Load,
-        AddConfigLoaders::new(nakago_sea_orm::default_config_loaders()),
-    );
 
     // Dependencies
 
