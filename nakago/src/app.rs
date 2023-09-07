@@ -85,8 +85,6 @@ where
     /// **Consumes:**
     ///   - `Tag(ConfigLoaders)`
     pub async fn load(&self, config_path: Option<PathBuf>) -> InjectResult<()> {
-        println!(">------ Application load ------<");
-
         // Trigger the Load lifecycle event
         self.events
             .trigger(&EventType::Load, self.i.clone())

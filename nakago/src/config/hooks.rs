@@ -98,10 +98,8 @@ impl<C: Config> Hook for InitConfig<C> {
                 .map_err(|e| InjectError::Provider(Arc::new(e.into())))?;
 
             if let Some(tag) = self.tag {
-                println!(">------ InitConifig handle tag ------<");
                 i.inject(tag, config).await?;
             } else {
-                println!(">------ InitConifig handle type ------<");
                 i.inject_type(config).await?;
             }
         }

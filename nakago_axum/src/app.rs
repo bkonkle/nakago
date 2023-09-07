@@ -103,9 +103,7 @@ where
 {
     /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
     pub async fn load(&mut self, config_path: Option<PathBuf>) -> InjectResult<()> {
-        println!(">------ AxumApplication load ------<");
-
-        // Add the HTTP Config Initializer
+        // Add the default HTTP Config loaders
         self.handle(AddConfigLoaders::new(default_http_config_loaders()))
             .await?;
 
