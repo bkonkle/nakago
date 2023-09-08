@@ -19,8 +19,9 @@ use crate::{
         ProvideConnections, ProvideSocket, {CONNECTIONS, SOCKET_HANDLER},
     },
     graphql::{InitGraphQL, GRAPHQL_SCHEMA, GRAPHQL_SCHEMA_BUILDER},
-    routes::{
-        new_events_route, new_graphql_route, new_health_route, AppState, ProvideAppState, STATE,
+    http::{
+        routes::{new_events_route, new_graphql_route, new_health_route},
+        state::{AppState, ProvideAppState, STATE},
     },
     utils::authz::{LoadAuthz, ProvideOso, OSO},
 };

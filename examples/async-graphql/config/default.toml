@@ -1,13 +1,10 @@
 # Default settings
 
 run_mode = "development"
-port = 0
+port = 8010
 
 [auth]
-url = "https://async-graphql-dev.oauth-services.com"
+url = "https://async-graphql-dev.oauth-service.com"
 audience = "localhost"
 
 [auth.client]
-
-[dynamo]
-url = "http://localhost:4666"

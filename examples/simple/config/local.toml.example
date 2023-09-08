@@ -1,6 +1,6 @@
 # Local development
 
-port = 3000
+port = 8000
 
 [auth.client]
 id = "client_id"

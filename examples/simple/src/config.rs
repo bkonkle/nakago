@@ -1,6 +1,6 @@
 use axum::extract::FromRef;
 use nakago::{Config, Tag};
-use nakago_axum::config::HttpConfig;
+use nakago_axum::{auth::config::AuthConfig, config::HttpConfig};
 use serde::Serialize;
 use serde_derive::Deserialize;
 
@@ -12,6 +12,9 @@ pub const CONFIG: Tag<AppConfig> = Tag::new("AppConfig");
 pub struct AppConfig {
     /// HTTP config
     pub http: HttpConfig,
+
+    /// HTTP Auth Config
+    pub auth: AuthConfig,
 }
 
 impl Config for AppConfig {}

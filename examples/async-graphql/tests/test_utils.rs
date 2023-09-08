@@ -24,8 +24,8 @@ use nakago_examples_async_graphql::{
         shows::{model::Show, mutations::CreateShowInput, service::SHOWS_SERVICE},
         users::{model::User, service::USERS_SERVICE},
     },
+    http::state::AppState,
     init,
-    routes::AppState,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};

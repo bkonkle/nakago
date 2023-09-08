@@ -10,9 +10,8 @@ mod config;
 mod domains;
 mod events;
 mod graphql;
-mod handlers;
+mod http;
 mod init;
-mod routes;
 mod utils;
 
 /// Error macros

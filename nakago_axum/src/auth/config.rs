@@ -25,6 +25,16 @@ pub struct AuthClientConfig {
     pub secret: Option<String>,
 }
 
+impl Default for AuthConfig {
+    fn default() -> Self {
+        AuthConfig {
+            url: "https://".to_string(),
+            audience: "localhost".to_string(),
+            client: AuthClientConfig::default(),
+        }
+    }
+}
+
 /// The Auth Config Loader
 #[derive(Default)]
 pub struct AuthConfigLoader {}
