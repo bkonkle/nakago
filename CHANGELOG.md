@@ -5,12 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.10.0]
 
 ### Added
 
 - Added a Config tag and a State tag to the AxumApplication struct, to prevent the need for explicit turbofish syntax when injecting those dependencies.
 - Added "modify" and "modify_type" convenience methods, making it easier to handle cases where you want to consume a dependency, modify it, and then immediately re-inject it.
+- Added an `HttpConfigLoader` to the `nakago-axum` crate, and added it to the list of default config loaders for Axum.
+- Added a `simple` example with a simple Axum HTTP application with authentication.
+- Added to the `website/docs/tutorial.md` documentation.
 
 ## [0.9.0]
 
@@ -144,6 +147,7 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
+[0.10.0]: https://github.com/bkonkle/nakago/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/bkonkle/nakago/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/bkonkle/nakago/compare/0.7.2...0.8.0
 [0.7.2]: https://github.com/bkonkle/nakago/compare/0.7.1...0.7.2
