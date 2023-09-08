@@ -1,4 +1,5 @@
 use axum::extract::FromRef;
+use nakago::Tag;
 use nakago_axum::{
     auth::config::{AuthClientConfig, AuthConfig},
     config::HttpConfig,
@@ -6,6 +7,9 @@ use nakago_axum::{
 use nakago_sea_orm::config::{DatabaseConfig, DatabasePool};
 use serde::Serialize;
 use serde_derive::Deserialize;
+
+/// Tag(AppConfig)
+pub const CONFIG: Tag<AppConfig> = Tag::new("AppConfig");
 
 /// Server Config
 #[derive(Debug, Serialize, Deserialize, Clone, FromRef)]

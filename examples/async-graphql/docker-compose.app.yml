@@ -6,7 +6,8 @@ services:
         container_name: async_graphql
         depends_on:
             - redis
+            - postgres
         ports:
-            - 3000:3000
+            - 8010:8010
         environment:
             REDIS_URL: redis:6380

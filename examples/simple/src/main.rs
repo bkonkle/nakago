@@ -1,4 +1,4 @@
-//! The main entry point for the async-graphql example.
+//! The main entry point for the simple example.
 #![forbid(unsafe_code)]
 
 use std::path::PathBuf;
@@ -7,19 +7,11 @@ use log::info;
 use pico_args::{Arguments, Error};
 
 mod config;
-mod domains;
-mod events;
-mod graphql;
 mod http;
 mod init;
-mod utils;
-
-/// Error macros
-#[macro_use]
-extern crate anyhow;
 
 const HELP: &str = "\
-Usage: async-graphql [OPTIONS]
+Usage: simple [OPTIONS]
 
 Options:
   -c, --config <FILE>  Sets a custom config file path
@@ -44,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let app = init::app();
+    let app = init::app().await?;
     let server = app.run(args.config_path).await?;
 
     let addr = server.local_addr();

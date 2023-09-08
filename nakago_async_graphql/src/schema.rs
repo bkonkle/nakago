@@ -39,29 +39,26 @@ where
 /// Initialize the GraphQL Schema and inject it with the given Tag
 #[derive(Default)]
 pub struct InitSchema<Query: Any, Mutation: Any, Subscription: Any> {
-    builder: Option<&'static Tag<SchemaBuilder<Query, Mutation, Subscription>>>,
-    schema: Option<&'static Tag<Schema<Query, Mutation, Subscription>>>,
+    builder_tag: Option<&'static Tag<SchemaBuilder<Query, Mutation, Subscription>>>,
+    schema_tag: Option<&'static Tag<Schema<Query, Mutation, Subscription>>>,
 }
 
 impl<Query: Any, Mutation: Any, Subscription: Any> InitSchema<Query, Mutation, Subscription> {
     /// Add a builder tag to the hook
     pub fn with_builder_tag(
         self,
-        builder: &'static Tag<SchemaBuilder<Query, Mutation, Subscription>>,
+        tag: &'static Tag<SchemaBuilder<Query, Mutation, Subscription>>,
     ) -> Self {
         Self {
-            builder: Some(builder),
+            builder_tag: Some(tag),
             ..self
         }
     }
 
     /// Add a schema tag to the hook
-    pub fn with_schema_tag(
-        self,
-        schema: &'static Tag<Schema<Query, Mutation, Subscription>>,
-    ) -> Self {
+    pub fn with_schema_tag(self, tag: &'static Tag<Schema<Query, Mutation, Subscription>>) -> Self {
         Self {
-            schema: Some(schema),
+            schema_tag: Some(tag),
             ..self
         }
     }
@@ -75,7 +72,7 @@ where
     Subscription: SubscriptionType + Default + 'static,
 {
     async fn handle(&self, inject: Inject) -> InjectResult<()> {
-        let schema_builder = if let Some(tag) = self.builder {
+        let schema_builder = if let Some(tag) = self.builder_tag {
             inject.consume(tag).await?
         } else {
             inject
@@ -85,7 +82,7 @@ where
 
         let schema = schema_builder.finish();
 
-        if let Some(tag) = self.schema {
+        if let Some(tag) = self.schema_tag {
             inject.inject(tag, schema).await?;
         } else {
             inject.inject_type(schema).await?;

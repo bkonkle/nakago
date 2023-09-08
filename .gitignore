@@ -18,6 +18,8 @@ dist/
 
 # Config files
 .envrc
+.envrc.*
+!.envrc.example
 config.toml
 
 lcov.info

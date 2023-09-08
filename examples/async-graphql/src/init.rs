@@ -10,7 +10,7 @@ use nakago_axum::{
 use nakago_sea_orm::{ProvideConnection, DATABASE_CONNECTION};
 
 use crate::{
-    config::AppConfig,
+    config::{AppConfig, CONFIG},
     domains::{
         episodes::schema::LoadEpisodes, profiles::schema::LoadProfiles,
         role_grants::schema::LoadRoleGrants, shows::schema::LoadShows, users::schema::LoadUsers,
@@ -19,13 +19,18 @@ use crate::{
         ProvideConnections, ProvideSocket, {CONNECTIONS, SOCKET_HANDLER},
     },
     graphql::{InitGraphQL, GRAPHQL_SCHEMA, GRAPHQL_SCHEMA_BUILDER},
-    routes::{new_events_route, new_graphql_route, new_health_route, AppState, ProvideAppState},
+    http::{
+        routes::{new_events_route, new_graphql_route, new_health_route},
+        state::{AppState, ProvideAppState, STATE},
+    },
     utils::authz::{LoadAuthz, ProvideOso, OSO},
 };
 
 /// Create a default AxumApplication instance
-pub fn app() -> AxumApplication<AppConfig> {
-    let mut app = AxumApplication::<AppConfig>::default();
+pub fn app() -> AxumApplication<AppConfig, AppState> {
+    let mut app = AxumApplication::default()
+        .with_config_tag(&CONFIG)
+        .with_state_tag(&STATE);
 
     // Config
 
@@ -65,12 +70,12 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
-        i.provide(&JWKS, ProvideJwks::<AppConfig>::default())
+        i.provide(&JWKS, ProvideJwks::default().with_config_tag(&CONFIG))
             .await?;
 
         i.provide(
             &DATABASE_CONNECTION,
-            ProvideConnection::<AppConfig>::default(),
+            ProvideConnection::default().with_config_tag(&CONFIG),
         )
         .await?;
 
@@ -86,8 +91,7 @@ impl Hook for Load {
         i.provide(&GRAPHQL_SCHEMA_BUILDER, SchemaBuilderProvider::default())
             .await?;
 
-        i.provide_type::<AppState>(ProvideAppState::default())
-            .await?;
+        i.provide(&STATE, ProvideAppState::default()).await?;
 
         // Handle some sub-hooks to load more dependencies
 

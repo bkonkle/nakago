@@ -19,6 +19,8 @@ pub const CONNECTIONS: Tag<Connections> = Tag::new("Connections");
 /// User Connection for WebSocket connections
 pub struct Connection {
     tx: mpsc::UnboundedSender<Message>,
+
+    #[allow(dead_code)]
     session: Session,
 }
 
@@ -31,6 +33,7 @@ pub struct Connections(Arc<RwLock<HashMap<String, Connection>>>);
 
 impl Connections {
     /// Get a copy of the Session associated with the given connection ID
+    #[allow(dead_code)]
     pub async fn get_session(&self, conn_id: &str) -> Session {
         self.0
             .write()
@@ -41,6 +44,7 @@ impl Connections {
     }
 
     /// Set the Session associated with the given connection ID, if it exists
+    #[allow(dead_code)]
     pub async fn set_session(&self, conn_id: &str, session: Session) {
         if let Some(connection) = self.0.write().await.get_mut(conn_id) {
             connection.session = session;
@@ -99,6 +103,7 @@ impl Session {
     }
 
     /// Get the User associated with this session, if any
+    #[allow(dead_code)]
     pub fn get_user(&self) -> Option<&User> {
         match self {
             Session::Anonymous => None,

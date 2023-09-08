@@ -45,15 +45,12 @@ impl Hook for InitGraphQLEpisodes {
         let shows = i.get(&SHOWS_SERVICE).await?;
         let show_loader = i.get(&SHOW_LOADER).await?;
 
-        let builder = i.consume(&GRAPHQL_SCHEMA_BUILDER).await?;
-
-        i.inject(
-            &GRAPHQL_SCHEMA_BUILDER,
-            builder
+        i.modify(&GRAPHQL_SCHEMA_BUILDER, |builder| {
+            Ok(builder
                 .data(shows.clone())
                 .data(show_loader.clone())
-                .data(episodes.clone()),
-        )
+                .data(episodes.clone()))
+        })
         .await?;
 
         Ok(())

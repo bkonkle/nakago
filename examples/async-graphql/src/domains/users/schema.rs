@@ -40,12 +40,9 @@ impl Hook for InitGraphQLUsers {
         let service = i.get(&USERS_SERVICE).await?;
         let profiles = i.get(&PROFILES_SERVICE).await?;
 
-        let builder = i.consume(&GRAPHQL_SCHEMA_BUILDER).await?;
-
-        i.inject(
-            &GRAPHQL_SCHEMA_BUILDER,
-            builder.data(service.clone()).data(profiles.clone()),
-        )
+        i.modify(&GRAPHQL_SCHEMA_BUILDER, |builder| {
+            Ok(builder.data(service.clone()).data(profiles.clone()))
+        })
         .await?;
 
         Ok(())

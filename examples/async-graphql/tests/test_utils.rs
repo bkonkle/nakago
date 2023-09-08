@@ -17,15 +17,15 @@ use hyper_tls::HttpsConnector;
 use nakago::{Inject, InjectResult, Provider};
 use nakago_axum::{auth::config::AuthConfig, AxumApplication};
 use nakago_examples_async_graphql::{
-    config::AppConfig,
+    config::{AppConfig, CONFIG},
     domains::{
         episodes::{model::Episode, mutations::CreateEpisodeInput, service::EPISODES_SERVICE},
         profiles::{model::Profile, mutations::CreateProfileInput, service::PROFILES_SERVICE},
         shows::{model::Show, mutations::CreateShowInput, service::SHOWS_SERVICE},
         users::{model::User, service::USERS_SERVICE},
     },
+    http::state::AppState,
     init,
-    routes::AppState,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -40,10 +40,10 @@ use tokio_tungstenite::{
 };
 
 /// Run the Application Server
-pub async fn run_server() -> Result<(AxumApplication<AppConfig>, SocketAddr)> {
-    let mut app = init::app();
+pub async fn run_server() -> Result<(AxumApplication<AppConfig, AppState>, SocketAddr)> {
+    let app = init::app();
 
-    let server = app.run::<AppState>(None).await?;
+    let server = app.run(None).await?;
     let addr = server.local_addr();
 
     // Spawn the server in the background
@@ -72,7 +72,7 @@ impl Provider<Client<HttpsConnector<HttpConnector>>> for HttpClientProvider {
 
 /// Common test utils
 pub struct TestUtils {
-    pub app: AxumApplication<AppConfig>,
+    pub app: AxumApplication<AppConfig, AppState>,
     pub auth: AuthConfig,
     pub addr: SocketAddr,
     pub http_client: Client<HttpsConnector<HttpConnector>>,
@@ -84,7 +84,7 @@ impl TestUtils {
     pub async fn init() -> Result<Self> {
         let (app, addr) = run_server().await?;
 
-        let config = app.get_type::<AppConfig>().await?;
+        let config = app.get(&CONFIG).await?;
 
         let auth = AuthConfig::from_ref(&*config);
 

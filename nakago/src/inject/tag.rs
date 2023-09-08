@@ -112,6 +112,17 @@ impl Inject {
         self.consume_key_opt(Key::from_tag(tag)).await
     }
 
+    /// Temporarily remove a dependency from the container and try to unwrap it from the Arc, which
+    /// will only succeed if there are no other strong pointers to the value. Then, apply a function
+    /// to it, and then inject sit back into the container.
+    pub async fn modify<T, F>(&self, tag: &'static Tag<T>, modify: F) -> Result<()>
+    where
+        T: Any + Send + Sync,
+        F: FnOnce(T) -> Result<T>,
+    {
+        self.modify_key(Key::from_tag(tag), modify).await
+    }
+
     /// Discard a Tagged Dependency from the container. Any Arcs handed out will still be valid, but
     /// the container will no longer hold a reference.
     pub async fn remove<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<()> {

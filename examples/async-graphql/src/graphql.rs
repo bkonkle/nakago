@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use nakago::{Hook, Inject, InjectResult, Tag};
 
 use crate::{
-    config::AppConfig,
+    config::CONFIG,
     domains::{
         episodes::schema::InitGraphQLEpisodes, profiles::schema::InitGraphQLProfiles,
         shows::schema::InitGraphQLShows, users::schema::InitGraphQLUsers,
@@ -49,15 +49,12 @@ pub struct InitGraphQL {}
 #[async_trait]
 impl Hook for InitGraphQL {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
-        let config = i.get_type::<AppConfig>().await?;
+        let config = i.get(&CONFIG).await?;
         let oso = i.get(&OSO).await?;
 
-        let builder = i.consume(&GRAPHQL_SCHEMA_BUILDER).await?;
-
-        i.inject(
-            &GRAPHQL_SCHEMA_BUILDER,
-            builder.data(config.clone()).data((*oso).clone()),
-        )
+        i.modify(&GRAPHQL_SCHEMA_BUILDER, |builder| {
+            Ok(builder.data(config.clone()).data((*oso).clone()))
+        })
         .await?;
 
         i.handle(InitGraphQLUsers::default()).await?;
