@@ -24,6 +24,15 @@ pub struct HttpConfig {
     pub address: String,
 }
 
+impl Default for HttpConfig {
+    fn default() -> Self {
+        HttpConfig {
+            port: 0,
+            address: "0.0.0.0".to_string(),
+        }
+    }
+}
+
 /// The Axum HTTP Config Loader
 #[derive(Default)]
 pub struct HttpConfigLoader {}

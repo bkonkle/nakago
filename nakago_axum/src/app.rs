@@ -1,9 +1,6 @@
 use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
 use hyper::server::conn::AddrIncoming;
-use nakago::{
-    config::{loader::Config, AddConfigLoaders},
-    Application, InjectResult, Tag,
-};
+use nakago::{config::loader::Config, Application, InjectResult, Tag};
 use std::{
     any::Any,
     fmt::Debug,
@@ -13,10 +10,7 @@ use std::{
 use tokio::sync::Mutex;
 use tower_http::trace;
 
-use crate::{
-    config::{default_http_config_loaders, HttpConfig},
-    Route,
-};
+use crate::{config::HttpConfig, Route};
 
 /// State must be clonable and able to be stored in the Inject container
 pub trait State: Clone + Any + Send + Sync {}
@@ -101,15 +95,6 @@ where
     C: Config + Debug,
     S: State,
 {
-    /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
-    pub async fn load(&mut self, config_path: Option<PathBuf>) -> InjectResult<()> {
-        // Add the default HTTP Config loaders
-        self.handle(AddConfigLoaders::new(default_http_config_loaders()))
-            .await?;
-
-        self.app.load(config_path).await
-    }
-
     /// Run the server and return the bound address and a `Future`. Triggers the Startup lifecycle
     /// event.
     ///
@@ -117,7 +102,7 @@ where
     ///   - `C: Config`
     ///   - `S: State`
     pub async fn run(
-        &mut self,
+        &self,
         config_path: Option<PathBuf>,
     ) -> InjectResult<Server<AddrIncoming, IntoMakeService<Router>>>
     where

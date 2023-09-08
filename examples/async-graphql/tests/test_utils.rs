@@ -41,7 +41,7 @@ use tokio_tungstenite::{
 
 /// Run the Application Server
 pub async fn run_server() -> Result<(AxumApplication<AppConfig, AppState>, SocketAddr)> {
-    let mut app = init::app();
+    let app = init::app();
 
     let server = app.run(None).await?;
     let addr = server.local_addr();
