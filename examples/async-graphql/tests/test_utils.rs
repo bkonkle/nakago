@@ -1,26 +1,21 @@
 #![allow(dead_code)] // Since each test is an independent module, this is needed
 
-use std::{default::Default, net::SocketAddr, sync::Arc, time::Duration};
+use std::{default::Default, ops::Deref, time::Duration};
 
 use anyhow::Result;
-use axum::{extract::FromRef, http::HeaderValue};
-use biscuit::{
-    jwa::SignatureAlgorithm,
-    jws::{RegisteredHeader, Secret},
-    ClaimsSet, Empty, RegisteredClaims, SingleOrMultiple, JWT,
-};
+use axum::http::HeaderValue;
 use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
-use hyper::{client::HttpConnector, Client};
-use hyper_tls::HttpsConnector;
-use nakago_async_graphql::test::http::GraphQL;
-use nakago_axum::{
-    auth::config::AuthConfig,
-    test::{http::HTTP_CLIENT, HttpClientProvider},
-    AxumApplication,
+use serde::Deserialize;
+use tokio::{net::TcpStream, time::timeout};
+use tokio_tungstenite::{
+    connect_async, tungstenite,
+    tungstenite::{client::IntoClientRequest, Message},
+    MaybeTlsStream, WebSocketStream,
 };
+
 use nakago_examples_async_graphql::{
-    config::{AppConfig, CONFIG},
+    config::AppConfig,
     domains::{
         episodes::{model::Episode, mutations::CreateEpisodeInput, service::EPISODES_SERVICE},
         profiles::{model::Profile, mutations::CreateProfileInput, service::PROFILES_SERVICE},
@@ -30,85 +25,23 @@ use nakago_examples_async_graphql::{
     http::state::AppState,
     init,
 };
-use serde::Deserialize;
-use tokio::{
-    net::TcpStream,
-    time::{sleep, timeout},
-};
-use tokio_tungstenite::{
-    connect_async, tungstenite,
-    tungstenite::{client::IntoClientRequest, Message},
-    MaybeTlsStream, WebSocketStream,
-};
 
-/// Common test utils
-pub struct TestUtils {
-    pub app: AxumApplication<AppConfig, AppState>,
-    pub addr: SocketAddr,
-    pub http_client: Arc<Client<HttpsConnector<HttpConnector>>>,
-    pub graphql: GraphQL,
+/// Test utils, extended for application-specific helpers
+pub struct TestUtils(nakago_async_graphql::test::utils::TestUtils<AppConfig, AppState>);
+
+impl Deref for TestUtils {
+    type Target = nakago_async_graphql::test::utils::TestUtils<AppConfig, AppState>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl TestUtils {
-    /// Initialize a new set of utils
     pub async fn init() -> Result<Self> {
-        let app = init::app();
+        let utils = nakago_async_graphql::test::utils::TestUtils::init(init::app).await?;
 
-        app.provide(&HTTP_CLIENT, HttpClientProvider::default())
-            .await?;
-
-        let server = app.run(None).await?;
-        let addr = server.local_addr();
-
-        // Spawn the server in the background
-        tokio::spawn(server);
-
-        // Wait for it to initialize
-        sleep(Duration::from_millis(200)).await;
-
-        let graphql = GraphQL::new(format!(
-            "http://localhost:{port}/graphql",
-            port = addr.port()
-        ));
-
-        let http_client = app.get(&HTTP_CLIENT).await?;
-
-        Ok(TestUtils {
-            app,
-            addr,
-            http_client,
-            graphql,
-        })
-    }
-
-    /// Create a test JWT token with a dummy secret
-    pub async fn create_jwt(&self, username: &str) -> Result<String> {
-        let config = self.app.get(&CONFIG).await?;
-        let auth = AuthConfig::from_ref(&*config);
-
-        let expected_claims = ClaimsSet::<Empty> {
-            registered: RegisteredClaims {
-                issuer: Some(auth.url.clone()),
-                subject: Some(username.to_string()),
-                audience: Some(SingleOrMultiple::Single(auth.audience.clone())),
-                ..Default::default()
-            },
-            private: Default::default(),
-        };
-
-        let jwt = JWT::new_decoded(
-            From::from(RegisteredHeader {
-                algorithm: SignatureAlgorithm::HS256,
-                ..Default::default()
-            }),
-            expected_claims,
-        );
-
-        let token = jwt
-            .into_encoded(&Secret::Bytes("test-jwt-secret".into()))
-            .unwrap();
-
-        Ok(token.unwrap_encoded().to_string())
+        Ok(Self(utils))
     }
 
     /// Create a User and Profile together

@@ -217,15 +217,13 @@ async fn test_user_get_or_create_current_create() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_user_get_or_create_current_requires_authn() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(GET_OR_CREATE_CURRENT_USER, json!({ "input": {}}), None)?;
+    let req = utils
+        .graphql
+        .query(GET_OR_CREATE_CURRENT_USER, json!({ "input": {}}), None)?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -309,13 +307,9 @@ async fn test_user_update_current() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_user_update_current_requires_authn() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(
+    let req = utils.graphql.query(
         UPDATE_CURRENT_USER,
         json!({ "input": {
            "isActive": false
@@ -323,7 +317,7 @@ async fn test_user_update_current_requires_authn() -> Result<()> {
         None,
     )?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;

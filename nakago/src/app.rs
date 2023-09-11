@@ -6,6 +6,7 @@ use std::{
     ops::{Deref, DerefMut},
     panic::{self, PanicInfo},
     path::PathBuf,
+    sync::Arc,
 };
 use tracing_subscriber::prelude::*;
 
@@ -134,6 +135,17 @@ where
             .await?;
 
         Ok(())
+    }
+
+    /// Get the top-level Config by tag or type
+    pub async fn get_config(&self) -> InjectResult<Arc<C>> {
+        let config = if let Some(tag) = self.config_tag {
+            self.i.get(tag).await?
+        } else {
+            self.i.get_type::<C>().await?
+        };
+
+        Ok(config)
     }
 }
 

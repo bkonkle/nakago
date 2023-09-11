@@ -22,7 +22,6 @@ where
     S: State,
 {
     app: Application<C>,
-    config_tag: Option<&'static Tag<C>>,
     state_tag: Option<&'static Tag<S>>,
 }
 
@@ -35,7 +34,6 @@ where
     pub fn new(config_tag: Option<&'static Tag<C>>, state_tag: Option<&'static Tag<S>>) -> Self {
         Self {
             app: Application::new(config_tag),
-            config_tag,
             state_tag,
         }
     }
@@ -43,7 +41,6 @@ where
     /// Add a config tag for the Application to use
     pub fn with_config_tag(self, tag: &'static Tag<C>) -> Self {
         Self {
-            config_tag: Some(tag),
             app: self.app.with_config_tag(tag),
             ..self
         }
@@ -113,12 +110,7 @@ where
         self.start().await?;
 
         let router = self.get_router().await?;
-
-        let config = if let Some(tag) = self.config_tag {
-            self.app.get(tag).await?
-        } else {
-            self.app.get_type::<C>().await?
-        };
+        let config = self.get_config().await?;
 
         let http = HttpConfig::from_ref(&*config);
 

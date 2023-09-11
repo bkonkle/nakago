@@ -240,18 +240,13 @@ const GET_MANY_SHOWS: &str = "
 #[tokio::test]
 #[ignore]
 async fn test_show_get_many() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        app,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
     show_input.summary = Some("test-summary".to_string());
 
-    let shows = app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let mut other_show_input: CreateShowInput = Faker.fake();
@@ -260,7 +255,7 @@ async fn test_show_get_many() -> Result<()> {
 
     let other_show = shows.create(&other_show_input).await?;
 
-    let req = graphql.query(
+    let req = utils.graphql.query(
         GET_MANY_SHOWS,
         json!({
             "where": {
@@ -269,7 +264,7 @@ async fn test_show_get_many() -> Result<()> {
         }),
         None,
     )?;
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
 
     let status = resp.status();
 
@@ -378,13 +373,9 @@ async fn test_show_update_simple() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_show_update_not_found() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(
+    let req = utils.graphql.query(
         UPDATE_SHOW,
         json!({
             "id": "test-id",
@@ -395,7 +386,7 @@ async fn test_show_update_not_found() -> Result<()> {
         None,
     )?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -412,20 +403,15 @@ async fn test_show_update_not_found() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_show_update_requires_authn() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        app,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
-    let req = graphql.query(
+    let req = utils.graphql.query(
         UPDATE_SHOW,
         json!({
             "id": show.id,
@@ -435,7 +421,7 @@ async fn test_show_update_requires_authn() -> Result<()> {
         }),
         None,
     )?;
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
 
     let status = resp.status();
 
@@ -554,15 +540,13 @@ async fn test_show_delete_simple() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_show_delete_not_found() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(DELETE_SHOW, json!({"id": "test-id"}), None)?;
+    let req = utils
+        .graphql
+        .query(DELETE_SHOW, json!({"id": "test-id"}), None)?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -579,21 +563,18 @@ async fn test_show_delete_not_found() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_show_delete_requires_authn() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        app,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
-    let req = graphql.query(DELETE_SHOW, json!({"id": show.id}), None)?;
-    let resp = http_client.request(req).await?;
+    let req = utils
+        .graphql
+        .query(DELETE_SHOW, json!({"id": show.id}), None)?;
+    let resp = utils.http_client.request(req).await?;
 
     let status = resp.status();
 

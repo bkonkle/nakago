@@ -128,13 +128,9 @@ async fn test_profile_create_requires_email_user_id() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_profile_create_authn() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(
+    let req = utils.graphql.query(
         CREATE_PROFILE,
         json!({
             "input": {
@@ -145,7 +141,7 @@ async fn test_profile_create_authn() -> Result<()> {
         None,
     )?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -590,13 +586,9 @@ async fn test_profile_update_authn() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_profile_update_not_found() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(
+    let req = utils.graphql.query(
         UPDATE_PROFILE,
         json!({
             "id": "test-id",
@@ -607,7 +599,7 @@ async fn test_profile_update_not_found() -> Result<()> {
         None,
     )?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -742,15 +734,13 @@ async fn test_profile_delete_authn() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_profile_delete_not_found() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(DELETE_PROFILE, json!({"id": "test-id"}), None)?;
+    let req = utils
+        .graphql
+        .query(DELETE_PROFILE, json!({"id": "test-id"}), None)?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
