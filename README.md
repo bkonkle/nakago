@@ -27,10 +27,10 @@ NOTE: This library is in early development, and the API may shift rapidly as it 
 
 ## Features
 
-- [Dependency Injection](https://bkonkle.github.io/nakago/docs/features/dependency-injection)
-- [HTTP Adapter](https://bkonkle.github.io/nakago/docs/features/axum-http) using [Axum](https://github.com/tokio-rs/axum)
-- [SQL Adapter](https://bkonkle.github.io/nakago/docs/features/sea-orm) using [SeaORM](https://github.com/SeaQL/sea-orm)
-- [GraphQL Adapter](https://bkonkle.github.io/nakago/docs/features/async-graphql) using [Async-GraphQL](https://github.com/async-graphql/async-graphql)
+- [Dependency Injection](https://nakago.dev/docs/features/dependency-injection)
+- [HTTP Adapter](https://nakago.dev/docs/features/axum-http) using [Axum](https://github.com/tokio-rs/axum)
+- [SQL Adapter](https://nakago.dev/docs/features/sea-orm) using [SeaORM](https://github.com/SeaQL/sea-orm)
+- [GraphQL Adapter](https://nakago.dev/docs/features/async-graphql) using [Async-GraphQL](https://github.com/async-graphql/async-graphql)
 - CQRS Adapter using [CQRS-ES](https://crates.io/crates/cqrs-es) (upcoming)
 
 As development progresses, major features will be split up into separate crates, so that developers can install only what they need.
@@ -48,7 +48,7 @@ Nakago (中子) is a Japanese word meaning "core", or less commonly the "middle 
 
 ## Development
 
-See [docs/development.md](https://bkonkle.github.io/nakago/docs/development).
+See [docs/development.md](https://nakago.dev/docs/development).
 
 ## License
 
