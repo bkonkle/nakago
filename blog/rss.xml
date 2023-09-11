@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
     <channel>
         <title>Nakago (中子) Blog</title>
-        <link>https://bkonkle.github.io/nakago/blog</link>
+        <link>https://nakago.dev/blog</link>
         <description>Nakago (中子) Blog</description>
         <lastBuildDate>Wed, 30 Aug 2023 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
@@ -10,11 +10,11 @@
         <language>en</language>
         <item>
             <title><![CDATA[Welcome]]></title>
-            <link>https://bkonkle.github.io/nakago/blog/welcome</link>
-            <guid>https://bkonkle.github.io/nakago/blog/welcome</guid>
+            <link>https://nakago.dev/blog/welcome</link>
+            <guid>https://nakago.dev/blog/welcome</guid>
             <pubDate>Wed, 30 Aug 2023 00:00:00 GMT</pubDate>
             <description><![CDATA[Welcome to Nakago]]></description>
-            <content:encoded><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="welcome-to-nakago">Welcome to Nakago<a href="#welcome-to-nakago" class="hash-link" aria-label="Direct link to Welcome to Nakago" title="Direct link to Welcome to Nakago">​</a></h2><p>I created Nakago to help organize my Rust projects and cut down on boilerplate code as my applications grew larger. I wanted a framework that would allow me to focus on the business logic of my applications, while providing a solid foundation for the rest of the code.</p><p>I've had great experiences in other language ecosystems with frameworks like Django in Python and Nest.js in TypeScript. I wanted to bring some of the same ideas to Rust, while taking advantage of the unique features of the language.</p><p>Nakago is a lightweight framework for building Rust applications with a modular structure, taking advantage of dependency injection and lifecycle events to bring organization and testability to Rust projects large and small.</p><h3 class="anchor anchorWithStickyNavbar_LWe7" id="documentation--examples">Documentation &amp; Examples<a href="#documentation--examples" class="hash-link" aria-label="Direct link to Documentation &amp; Examples" title="Direct link to Documentation &amp; Examples">​</a></h3><p>Check out the <a href="/nakago/docs/intro">Documentation</a> and <a href="/nakago/docs/examples">Examples</a> to learn more about how to use Nakago. A 10-minute tutorial is coming soon, and stay tuned for videos on YouTube and Twitch as I begin to share my experiences with Nakago.</p>]]></content:encoded>
+            <content:encoded><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="welcome-to-nakago">Welcome to Nakago<a href="#welcome-to-nakago" class="hash-link" aria-label="Direct link to Welcome to Nakago" title="Direct link to Welcome to Nakago">​</a></h2><p>I created Nakago to help organize my Rust projects and cut down on boilerplate code as my applications grew larger. I wanted a framework that would allow me to focus on the business logic of my applications, while providing a solid foundation for the rest of the code.</p><p>I've had great experiences in other language ecosystems with frameworks like Django in Python and Nest.js in TypeScript. I wanted to bring some of the same ideas to Rust, while taking advantage of the unique features of the language.</p><p>Nakago is a lightweight framework for building Rust applications with a modular structure, taking advantage of dependency injection and lifecycle events to bring organization and testability to Rust projects large and small.</p><h3 class="anchor anchorWithStickyNavbar_LWe7" id="documentation--examples">Documentation &amp; Examples<a href="#documentation--examples" class="hash-link" aria-label="Direct link to Documentation &amp; Examples" title="Direct link to Documentation &amp; Examples">​</a></h3><p>Check out the <a href="/docs/intro">Documentation</a> and <a href="/docs/examples">Examples</a> to learn more about how to use Nakago. A 10-minute tutorial is coming soon, and stay tuned for videos on YouTube and Twitch as I begin to share my experiences with Nakago.</p>]]></content:encoded>
         </item>
     </channel>
 </rss>
