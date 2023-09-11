@@ -13,7 +13,7 @@ async fn test_ping() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let message = serde_json::to_string(&IncomingMessage::Ping)?;
 

@@ -40,7 +40,7 @@ async fn test_show_create_simple() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
     let _ = utils.create_user_and_profile(&username, &email).await?;
@@ -77,7 +77,7 @@ async fn test_show_create_requires_title() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils
         .graphql
@@ -105,7 +105,7 @@ async fn test_show_create_requires_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils.graphql.query(
         CREATE_SHOW,
@@ -152,7 +152,7 @@ async fn test_show_get_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
@@ -187,7 +187,7 @@ async fn test_show_get_empty() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils
         .graphql
@@ -322,7 +322,7 @@ async fn test_show_update_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a User
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -456,7 +456,7 @@ async fn test_show_update_requires_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a User
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -510,7 +510,7 @@ async fn test_show_delete_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a User
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -614,7 +614,7 @@ async fn test_show_delete_requires_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a User
     let users = utils.app.get(&USERS_SERVICE).await?;

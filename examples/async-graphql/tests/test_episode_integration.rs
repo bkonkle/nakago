@@ -41,7 +41,7 @@ async fn test_episode_create_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and a show
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -98,7 +98,7 @@ async fn test_episode_create_requires_title_show_id() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils
         .graphql
@@ -191,7 +191,7 @@ async fn test_episode_create_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
@@ -252,7 +252,7 @@ async fn test_episode_get() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let (show, episode) = utils
         .create_show_and_episode("Test Show", "Test Episode 1")
@@ -287,7 +287,7 @@ async fn test_episode_get_empty() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils
         .graphql
@@ -345,7 +345,7 @@ async fn test_episode_get_many() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let (show, episode) = utils
         .create_show_and_episode("Test Show", "Test Episode 1")
@@ -422,7 +422,7 @@ async fn test_episode_update() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -553,7 +553,7 @@ async fn test_episode_update_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -604,7 +604,7 @@ async fn test_episode_delete() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -705,7 +705,7 @@ async fn test_episode_delete_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;

@@ -39,7 +39,7 @@ async fn test_profile_create_simple() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -80,7 +80,7 @@ async fn test_profile_create_requires_email_user_id() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils
         .graphql
@@ -166,7 +166,7 @@ async fn test_profile_create_authz() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -223,7 +223,7 @@ async fn test_profile_get_simple() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
     let (user, profile) = utils.create_user_and_profile(&username, &email).await?;
@@ -257,7 +257,7 @@ async fn test_profile_get_empty() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -321,7 +321,7 @@ async fn test_profile_get_authz() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let dummy_username = Ulid::new().to_string();
 
@@ -393,7 +393,7 @@ async fn test_profile_get_many_simple() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let dummy_username = Ulid::new().to_string();
 
@@ -513,7 +513,7 @@ async fn test_profile_update_simple() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
     let (user, profile) = utils.create_user_and_profile(&username, &email).await?;
@@ -631,7 +631,7 @@ async fn test_profile_update_authz() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let dummy_username = Ulid::new().to_string();
 
@@ -686,7 +686,7 @@ async fn test_profile_delete_simple() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
     let (_, profile) = utils.create_user_and_profile(&username, &email).await?;
@@ -774,7 +774,7 @@ async fn test_profile_delete_authz() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let dummy_username = Ulid::new().to_string();
 

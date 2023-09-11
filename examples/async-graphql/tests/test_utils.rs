@@ -3,7 +3,6 @@
 use std::{default::Default, net::SocketAddr, sync::Arc, time::Duration};
 
 use anyhow::Result;
-use async_trait::async_trait;
 use axum::{extract::FromRef, http::HeaderValue};
 use biscuit::{
     jwa::SignatureAlgorithm,
@@ -12,10 +11,14 @@ use biscuit::{
 };
 use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
-use hyper::{client::HttpConnector, Body, Client, Method, Request};
+use hyper::{client::HttpConnector, Client};
 use hyper_tls::HttpsConnector;
-use nakago::{Inject, InjectResult, Provider};
-use nakago_axum::{auth::config::AuthConfig, AxumApplication};
+use nakago_async_graphql::test::http::GraphQL;
+use nakago_axum::{
+    auth::config::AuthConfig,
+    test::{http::HTTP_CLIENT, HttpClientProvider},
+    AxumApplication,
+};
 use nakago_examples_async_graphql::{
     config::{AppConfig, CONFIG},
     domains::{
@@ -28,7 +31,6 @@ use nakago_examples_async_graphql::{
     init,
 };
 use serde::Deserialize;
-use serde_json::{json, Value};
 use tokio::{
     net::TcpStream,
     time::{sleep, timeout},
@@ -39,78 +41,56 @@ use tokio_tungstenite::{
     MaybeTlsStream, WebSocketStream,
 };
 
-/// Run the Application Server
-pub async fn run_server() -> Result<(AxumApplication<AppConfig, AppState>, SocketAddr)> {
-    let app = init::app();
-
-    let server = app.run(None).await?;
-    let addr = server.local_addr();
-
-    // Spawn the server in the background
-    tokio::spawn(server);
-
-    // Wait for it to initialize
-    sleep(Duration::from_millis(200)).await;
-
-    // Return the bound address
-    Ok((app, addr))
-}
-
-struct HttpClientProvider {}
-
-#[async_trait]
-impl Provider<Client<HttpsConnector<HttpConnector>>> for HttpClientProvider {
-    async fn provide(
-        self: Arc<Self>,
-        _i: Inject,
-    ) -> InjectResult<Arc<Client<HttpsConnector<HttpConnector>>>> {
-        Ok(Arc::new(
-            Client::builder().build::<_, Body>(HttpsConnector::new()),
-        ))
-    }
-}
-
 /// Common test utils
 pub struct TestUtils {
     pub app: AxumApplication<AppConfig, AppState>,
-    pub auth: AuthConfig,
     pub addr: SocketAddr,
-    pub http_client: Client<HttpsConnector<HttpConnector>>,
+    pub http_client: Arc<Client<HttpsConnector<HttpConnector>>>,
     pub graphql: GraphQL,
 }
 
 impl TestUtils {
     /// Initialize a new set of utils
     pub async fn init() -> Result<Self> {
-        let (app, addr) = run_server().await?;
+        let app = init::app();
 
-        let config = app.get(&CONFIG).await?;
+        app.provide(&HTTP_CLIENT, HttpClientProvider::default())
+            .await?;
 
-        let auth = AuthConfig::from_ref(&*config);
+        let server = app.run(None).await?;
+        let addr = server.local_addr();
 
-        let http_client = Client::builder().build::<_, Body>(HttpsConnector::new());
+        // Spawn the server in the background
+        tokio::spawn(server);
+
+        // Wait for it to initialize
+        sleep(Duration::from_millis(200)).await;
 
         let graphql = GraphQL::new(format!(
             "http://localhost:{port}/graphql",
             port = addr.port()
         ));
 
+        let http_client = app.get(&HTTP_CLIENT).await?;
+
         Ok(TestUtils {
             app,
             addr,
-            auth,
             http_client,
             graphql,
         })
     }
 
     /// Create a test JWT token with a dummy secret
-    pub fn create_jwt(&self, username: &str) -> String {
+    pub async fn create_jwt(&self, username: &str) -> Result<String> {
+        let config = self.app.get(&CONFIG).await?;
+        let auth = AuthConfig::from_ref(&*config);
+
         let expected_claims = ClaimsSet::<Empty> {
             registered: RegisteredClaims {
-                issuer: Some(self.auth.url.clone()),
+                issuer: Some(auth.url.clone()),
                 subject: Some(username.to_string()),
-                audience: Some(SingleOrMultiple::Single(self.auth.audience.clone())),
+                audience: Some(SingleOrMultiple::Single(auth.audience.clone())),
                 ..Default::default()
             },
             private: Default::default(),
@@ -128,7 +108,7 @@ impl TestUtils {
             .into_encoded(&Secret::Bytes("test-jwt-secret".into()))
             .unwrap();
 
-        token.unwrap_encoded().to_string()
+        Ok(token.unwrap_encoded().to_string())
     }
 
     /// Create a User and Profile together
@@ -274,35 +254,5 @@ impl TestUtils {
         }
 
         Ok(())
-    }
-}
-
-/// Utilities for testing graphql endpoints
-pub struct GraphQL {
-    url: String,
-}
-
-impl GraphQL {
-    /// Construct a new GraphQL helper with a path to the endpoint
-    pub fn new(url: String) -> Self {
-        GraphQL { url }
-    }
-
-    /// Create a GraphQL query request for Hyper with an optional auth token
-    pub fn query(
-        &self,
-        query: &str,
-        variables: Value,
-        token: Option<&str>,
-    ) -> Result<Request<Body>> {
-        let mut req = Request::builder().method(Method::POST).uri(&self.url);
-
-        if let Some(token) = token {
-            req = req.header("Authorization", format!("Bearer {}", token));
-        }
-
-        let body = serde_json::to_string(&json!({ "query": query, "variables": variables }))?;
-
-        req.body(Body::from(body)).map_err(|err| err.into())
     }
 }

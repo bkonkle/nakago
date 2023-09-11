@@ -3,3 +3,6 @@
 
 /// The GraphQL Schema
 pub mod schema;
+
+/// Testing utils
+pub mod test;
