@@ -1,3 +1,5 @@
+#![cfg(feature = "integration")]
+
 use anyhow::Result;
 use fake::{faker::internet::en::FreeEmail, Fake, Faker};
 use hyper::body::to_bytes;
@@ -34,7 +36,6 @@ const CREATE_SHOW: &str = "
 
 /// It creates a new show
 #[tokio::test]
-#[ignore]
 async fn test_show_create_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -72,7 +73,6 @@ async fn test_show_create_simple() -> Result<()> {
 
 /// It requires a title
 #[tokio::test]
-#[ignore]
 async fn test_show_create_requires_title() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -100,7 +100,6 @@ async fn test_show_create_requires_title() -> Result<()> {
 
 /// It requires authentication
 #[tokio::test]
-#[ignore]
 async fn test_show_create_requires_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -147,7 +146,6 @@ const GET_SHOW: &str = "
 
 /// It retrieves an existing show
 #[tokio::test]
-#[ignore]
 async fn test_show_get_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -182,7 +180,6 @@ async fn test_show_get_simple() -> Result<()> {
 
 /// It returns nothing when no show is found
 #[tokio::test]
-#[ignore]
 async fn test_show_get_empty() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -238,7 +235,6 @@ const GET_MANY_SHOWS: &str = "
 
 /// It queries existing shows
 #[tokio::test]
-#[ignore]
 async fn test_show_get_many() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -312,7 +308,6 @@ const UPDATE_SHOW: &str = "
 
 /// It updates an existing show
 #[tokio::test]
-#[ignore]
 async fn test_show_update_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -371,7 +366,6 @@ async fn test_show_update_simple() -> Result<()> {
 
 /// It returns an error if no existing show is found
 #[tokio::test]
-#[ignore]
 async fn test_show_update_not_found() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -401,7 +395,6 @@ async fn test_show_update_not_found() -> Result<()> {
 
 /// It requires authentication
 #[tokio::test]
-#[ignore]
 async fn test_show_update_requires_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -437,7 +430,6 @@ async fn test_show_update_requires_authn() -> Result<()> {
 
 /// It requires authorization
 #[tokio::test]
-#[ignore]
 async fn test_show_update_requires_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -491,7 +483,6 @@ const DELETE_SHOW: &str = "
 
 /// It deletes an existing show
 #[tokio::test]
-#[ignore]
 async fn test_show_delete_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -538,7 +529,6 @@ async fn test_show_delete_simple() -> Result<()> {
 
 /// It returns an error if no existing show is found
 #[tokio::test]
-#[ignore]
 async fn test_show_delete_not_found() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -561,7 +551,6 @@ async fn test_show_delete_not_found() -> Result<()> {
 
 /// It requires authentication
 #[tokio::test]
-#[ignore]
 async fn test_show_delete_requires_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -590,7 +579,6 @@ async fn test_show_delete_requires_authn() -> Result<()> {
 
 /// It requires authorization
 #[tokio::test]
-#[ignore]
 async fn test_show_delete_requires_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 

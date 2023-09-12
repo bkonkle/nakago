@@ -37,12 +37,7 @@ impl Default for AppConfig {
                 client: AuthClientConfig::default(),
             },
             database: DatabaseConfig {
-                hostname: "localhost".to_string(),
-                username: "async-graphql".to_string(),
-                password: "async-graphql".to_string(),
-                name: "async-graphql".to_string(),
-                port: 1701,
-                url: "postgresql://async-graphql:async-graphql@localhost:1701/async-graphql"
+                url: "postgresql://async-graphql:async-graphql@localhost:5432/async-graphql"
                     .to_string(),
                 debug: false,
                 pool: DatabasePool::default(),

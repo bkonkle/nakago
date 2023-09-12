@@ -484,6 +484,8 @@ thread '<unnamed>' panicked at 'assertion failed: `(left == right)`
  right: `"bob"`', tests/test_users_int.rs:32:5
 ```
 
-## Congratulations
+## Finished Result
 
 Congratulations! You now have a simple API server with JWT+JWKS authentication in Rust, and you've added integration tests to ensure that it works as expected!
+
+You can see everything together in the [examples/simple](https://github.com/bkonkle/nakago/tree/main/examples/simple) folder of the `nakago` repository.

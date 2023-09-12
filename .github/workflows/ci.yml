@@ -63,12 +63,7 @@ jobs:
     needs: check
     env:
       AUTH_URL: ${{ vars.AUTH_URL }}
-      DATABASE_HOSTNAME: localhost
-      DATABASE_USERNAME: async_graphql
-      DATABASE_PASSWORD: async_graphql
-      DATABASE_NAME: async_graphql
-      DATABASE_PORT: 1701
-      DATABASE_URL: postgresql://async_graphql:async_graphql@localhost:1701/async_graphql
+      DATABASE_URL_ASYNC_GRAPHQL: postgresql://nakago:nakago@localhost:1701/async_graphql
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -93,11 +88,11 @@ jobs:
           args: --no-default-features --features rustls,postgres
           version: latest
 
-      - name: Create Async-GraphQL Database
-        run: cargo make db-create-async-graphql
+      - name: Create Databases
+        run: cargo make db-create
 
-      - name: Migrate Async-GraphQL Database
-        run: cargo make db-migrate-async-graphql
+      - name: Migrate Databases
+        run: cargo make db-migrate
 
       - name: Run Integration Tests
         run: cargo make integration-ci

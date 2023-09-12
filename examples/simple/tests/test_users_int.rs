@@ -1,3 +1,5 @@
+#![cfg(feature = "integration")]
+
 use anyhow::Result;
 
 #[cfg(test)]
@@ -9,7 +11,6 @@ use test_utils::TestUtils;
 use ulid::Ulid;
 
 #[tokio::test]
-#[ignore]
 async fn test_get_username_success() -> Result<()> {
     let utils = TestUtils::init().await?;
 
