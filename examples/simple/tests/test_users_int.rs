@@ -19,6 +19,7 @@ async fn test_get_username_success() -> Result<()> {
     let req = utils
         .http
         .call(Method::GET, "/username", Value::Null, Some(&token))?;
+
     let resp = utils.http_client.request(req).await?;
 
     let status = resp.status();
