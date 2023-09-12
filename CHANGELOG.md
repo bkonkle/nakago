@@ -5,12 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.11.0]
 
 ### Added
 
-- Added test utils to `nakago` and `nakago-axum`.
+- Added test utils to `nakago`, `nakago-axum`, and `nakago-async-graphql`.
 - Added a convenience method to retrieve the config for an Application by tag or type.
+
+### Changed
+
+- Updated `nakago-axum` to make the mocked authenticate method injectable by DI rather than using build tags.
+- Updated the Async-GraphQL example to streamline things and take advantage of the `TestUtils` provided in the library.
 
 ## [0.10.0]
 
@@ -154,6 +159,7 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
+[0.11.0]: https://github.com/bkonkle/nakago/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/bkonkle/nakago/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/bkonkle/nakago/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/bkonkle/nakago/compare/0.7.2...0.8.0

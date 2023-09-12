@@ -15,7 +15,7 @@ async-trait = "0.1"
 axum = { version = "0.6", features = ["macros"] }
 figment = { version = "0.10", features = ["env"] }
 log = "0.4"
-nakago = "0.10"
+nakago = "0.11"
 nakago-derive = "0.8"
 pretty_env_logger = "0.5"
 rand = "0.8"
