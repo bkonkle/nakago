@@ -3,9 +3,10 @@ use std::{marker::PhantomData, sync::Arc};
 use async_trait::async_trait;
 use axum::extract::FromRef;
 use biscuit::{
+    jwa::SignatureAlgorithm,
     jwk::{AlgorithmParameters, JWKSet, JWK},
-    jws::Secret,
-    Empty,
+    jws::{Header, Secret},
+    ClaimsSet, Empty, JWT,
 };
 use hyper::{body::to_bytes, client::HttpConnector, Body, Client, Method, Request};
 use hyper_tls::HttpsConnector;
@@ -13,21 +14,19 @@ use nakago::{Config, Inject, InjectResult, Provider, Tag};
 use nakago_derive::Provider;
 use thiserror::Error;
 
-use super::config::AuthConfig;
+use super::{config::AuthConfig, AuthError};
 
 /// The JWKS Tag
 pub const JWKS: Tag<JWKSet<Empty>> = Tag::new("JWKS");
 
-/// Possible errors during jwks retrieval
-#[derive(Debug, Error)]
-pub enum JwksClientError {
-    /// No key found with the given key_id
-    #[error("No key found with the given key_id")]
-    MissingKeyId,
+/// Get the default set of JWKS keys
+pub async fn init(config: AuthConfig) -> JWKSet<Empty> {
+    let jwks_client = JwksClient::new(config);
 
-    /// Unable to construct RSA public key secret
-    #[error("Unable to construct RSA public key secret")]
-    SecretKeyError,
+    jwks_client
+        .get_key_set()
+        .await
+        .expect("Unable to retrieve JWKS")
 }
 
 /// A struct that can retrieve `JWKSet` from a configured Auth url
@@ -64,6 +63,17 @@ impl JwksClient {
     }
 }
 
+/// A convenience function to get a particular key from a key set, and convert it into a secret
+pub fn get_secret_from_key_set(
+    jwks: &JWKSet<Empty>,
+    key_id: &str,
+) -> Result<Secret, JwksClientError> {
+    let jwk = get_key(jwks, key_id)?;
+    let secret = get_secret(jwk)?;
+
+    Ok(secret)
+}
+
 /// Get a particular key from a key set by id
 pub fn get_key(jwks: &JWKSet<Empty>, key_id: &str) -> Result<JWK<Empty>, JwksClientError> {
     let key = jwks
@@ -84,25 +94,68 @@ pub fn get_secret(jwk: JWK<Empty>) -> Result<Secret, JwksClientError> {
     Ok(secret)
 }
 
-/// A convenience function to get a particular key from a key set, and convert it into a secret
-pub fn get_secret_from_key_set(
-    jwks: &JWKSet<Empty>,
-    key_id: &str,
-) -> Result<Secret, JwksClientError> {
-    let jwk = get_key(jwks, key_id)?;
-    let secret = get_secret(jwk)?;
-
-    Ok(secret)
+#[derive(Clone)]
+pub(crate) enum JWKSValidator {
+    KeySet(Arc<JWKSet<Empty>>),
+    Unverified, // Used for testing
 }
 
-/// Get the default set of JWKS keys
-pub async fn init(config: AuthConfig) -> JWKSet<Empty> {
-    let jwks_client = JwksClient::new(config);
+impl JWKSValidator {
+    pub(crate) fn get_payload(&self, jwt: &str) -> Result<ClaimsSet<Empty>, AuthError> {
+        match self {
+            JWKSValidator::KeySet(jwks) => {
+                // First extract without verifying the header to locate the key-id (kid)
+                let token = JWT::<Empty, Empty>::new_encoded(jwt);
 
-    jwks_client
-        .get_key_set()
-        .await
-        .expect("Unable to retrieve JWKS")
+                let header: Header<Empty> = token
+                    .unverified_header()
+                    .map_err(AuthError::JWTTokenError)?;
+
+                let key_id = header.registered.key_id.ok_or(AuthError::JWKSError)?;
+
+                debug!("Fetching signing key for '{:?}'", key_id);
+
+                // Now that we have the key, construct our RSA public key secret
+                let secret =
+                    get_secret_from_key_set(jwks, &key_id).map_err(|_err| AuthError::JWKSError)?;
+
+                // Now fully verify and extract the token
+                let token = token
+                    .into_decoded(&secret, SignatureAlgorithm::RS256)
+                    .map_err(AuthError::JWTTokenError)?;
+
+                let payload = token.payload().map_err(AuthError::JWTTokenError)?;
+
+                debug!(
+                    "Successfully verified token with subject: {:?}",
+                    payload.registered.subject
+                );
+
+                Ok(payload.clone())
+            }
+            JWKSValidator::Unverified => {
+                let token = JWT::<Empty, Empty>::new_encoded(jwt);
+
+                let payload = &token
+                    .unverified_payload()
+                    .map_err(AuthError::JWTTokenError)?;
+
+                Ok(payload.clone())
+            }
+        }
+    }
+}
+
+/// Possible errors during jwks retrieval
+#[derive(Debug, Error)]
+pub enum JwksClientError {
+    /// No key found with the given key_id
+    #[error("No key found with the given key_id")]
+    MissingKeyId,
+
+    /// Unable to construct RSA public key secret
+    #[error("Unable to construct RSA public key secret")]
+    SecretKeyError,
 }
 
 /// Provide the Json Web Key Set

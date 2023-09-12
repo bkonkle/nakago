@@ -41,7 +41,7 @@ async fn test_episode_create_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and a show
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -98,7 +98,7 @@ async fn test_episode_create_requires_title_show_id() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils
         .graphql
@@ -146,20 +146,15 @@ async fn test_episode_create_requires_title_show_id() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_episode_create_authn() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        app,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&SHOWS_SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
-    let req = graphql.query(
+    let req = utils.graphql.query(
         CREATE_EPISODE,
         json!({
             "input": {
@@ -170,7 +165,7 @@ async fn test_episode_create_authn() -> Result<()> {
         None,
     )?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -191,7 +186,7 @@ async fn test_episode_create_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
@@ -252,7 +247,7 @@ async fn test_episode_get() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let (show, episode) = utils
         .create_show_and_episode("Test Show", "Test Episode 1")
@@ -287,7 +282,7 @@ async fn test_episode_get_empty() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils
         .graphql
@@ -345,7 +340,7 @@ async fn test_episode_get_many() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let (show, episode) = utils
         .create_show_and_episode("Test Show", "Test Episode 1")
@@ -422,7 +417,7 @@ async fn test_episode_update() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -478,13 +473,9 @@ async fn test_episode_update() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_episode_update_not_found() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(
+    let req = utils.graphql.query(
         UPDATE_EPISODE,
         json!({
             "id": "test-id",
@@ -495,7 +486,7 @@ async fn test_episode_update_not_found() -> Result<()> {
         None,
     )?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -553,7 +544,7 @@ async fn test_episode_update_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -604,7 +595,7 @@ async fn test_episode_delete() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -646,15 +637,13 @@ async fn test_episode_delete() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_episode_delete_not_found() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(DELETE_EPISODE, json!({"id": "test-id"}), None)?;
+    let req = utils
+        .graphql
+        .query(DELETE_EPISODE, json!({"id": "test-id"}), None)?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -705,7 +694,7 @@ async fn test_episode_delete_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;

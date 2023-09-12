@@ -1,5 +1,4 @@
-use async_trait::async_trait;
-use nakago::{config::AddConfigLoaders, EventType, Hook, Inject, InjectResult};
+use nakago::{config::AddConfigLoaders, EventType, InjectResult};
 use nakago_async_graphql::schema::{InitSchema, SchemaBuilderProvider};
 use nakago_axum::{
     auth::{
@@ -27,23 +26,58 @@ use crate::{
 };
 
 /// Create a default AxumApplication instance
-pub fn app() -> AxumApplication<AppConfig, AppState> {
+pub async fn app() -> InjectResult<AxumApplication<AppConfig, AppState>> {
     let mut app = AxumApplication::default()
         .with_config_tag(&CONFIG)
         .with_state_tag(&STATE);
 
-    // Config
+    // Dependencies
+
+    app.provide(&JWKS, ProvideJwks::default().with_config_tag(&CONFIG))
+        .await?;
+
+    app.provide(
+        &DATABASE_CONNECTION,
+        ProvideConnection::default().with_config_tag(&CONFIG),
+    )
+    .await?;
+
+    app.provide(&OSO, ProvideOso::default()).await?;
+
+    app.provide(&CONNECTIONS, ProvideConnections::default())
+        .await?;
+
+    app.provide(&SOCKET_HANDLER, ProvideSocket::default())
+        .await?;
+
+    app.provide(&GRAPHQL_SCHEMA_BUILDER, SchemaBuilderProvider::default())
+        .await?;
+
+    app.provide(&AUTH_STATE, ProvideAuthState::default())
+        .await?;
+
+    app.provide(&STATE, ProvideAppState::default()).await?;
+
+    // Loading
 
     app.on(
         &EventType::Load,
         AddConfigLoaders::new(nakago_sea_orm::default_config_loaders()),
     );
 
-    // Dependencies
+    app.on(&EventType::Load, LoadUsers::default());
 
-    app.on(&EventType::Load, Load::default());
+    app.on(&EventType::Load, LoadRoleGrants::default());
 
-    // GraphQL
+    app.on(&EventType::Load, LoadProfiles::default());
+
+    app.on(&EventType::Load, LoadShows::default());
+
+    app.on(&EventType::Load, LoadEpisodes::default());
+
+    app.on(&EventType::Load, LoadAuthz::default());
+
+    // Initialization
 
     app.on(&EventType::Init, InitGraphQL::default());
 
@@ -54,59 +88,9 @@ pub fn app() -> AxumApplication<AppConfig, AppState> {
             .with_schema_tag(&GRAPHQL_SCHEMA),
     );
 
-    // Routes
-
     app.on(&EventType::Init, InitRoute::new(new_health_route));
     app.on(&EventType::Init, InitRoute::new(new_graphql_route));
     app.on(&EventType::Init, InitRoute::new(new_events_route));
 
-    app
-}
-
-/// Provides default dependencies for the Application
-#[derive(Default)]
-pub struct Load {}
-
-#[async_trait]
-impl Hook for Load {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        i.provide(&JWKS, ProvideJwks::default().with_config_tag(&CONFIG))
-            .await?;
-
-        i.provide(
-            &DATABASE_CONNECTION,
-            ProvideConnection::default().with_config_tag(&CONFIG),
-        )
-        .await?;
-
-        i.provide(&OSO, ProvideOso::default()).await?;
-
-        i.provide(&CONNECTIONS, ProvideConnections::default())
-            .await?;
-
-        i.provide(&SOCKET_HANDLER, ProvideSocket::default()).await?;
-
-        i.provide(&AUTH_STATE, ProvideAuthState::default()).await?;
-
-        i.provide(&GRAPHQL_SCHEMA_BUILDER, SchemaBuilderProvider::default())
-            .await?;
-
-        i.provide(&STATE, ProvideAppState::default()).await?;
-
-        // Handle some sub-hooks to load more dependencies
-
-        i.handle(LoadUsers::default()).await?;
-
-        i.handle(LoadRoleGrants::default()).await?;
-
-        i.handle(LoadProfiles::default()).await?;
-
-        i.handle(LoadShows::default()).await?;
-
-        i.handle(LoadEpisodes::default()).await?;
-
-        i.handle(LoadAuthz::default()).await?;
-
-        Ok(())
-    }
+    Ok(app)
 }

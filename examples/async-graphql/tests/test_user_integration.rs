@@ -40,7 +40,7 @@ async fn test_user_get_current_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -86,7 +86,7 @@ async fn test_user_get_current_no_user() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils
         .graphql
@@ -131,7 +131,7 @@ async fn test_user_get_or_create_current_existing() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -179,7 +179,7 @@ async fn test_user_get_or_create_current_create() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils.graphql.query(
         GET_OR_CREATE_CURRENT_USER,
@@ -217,15 +217,13 @@ async fn test_user_get_or_create_current_create() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_user_get_or_create_current_requires_authn() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(GET_OR_CREATE_CURRENT_USER, json!({ "input": {}}), None)?;
+    let req = utils
+        .graphql
+        .query(GET_OR_CREATE_CURRENT_USER, json!({ "input": {}}), None)?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -264,7 +262,7 @@ async fn test_user_update_current() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -309,13 +307,9 @@ async fn test_user_update_current() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_user_update_current_requires_authn() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(
+    let req = utils.graphql.query(
         UPDATE_CURRENT_USER,
         json!({ "input": {
            "isActive": false
@@ -323,7 +317,7 @@ async fn test_user_update_current_requires_authn() -> Result<()> {
         None,
     )?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -342,7 +336,7 @@ async fn test_user_update_current_requires_user() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils.graphql.query(
         UPDATE_CURRENT_USER,

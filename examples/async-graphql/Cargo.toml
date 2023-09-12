@@ -21,11 +21,11 @@ figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
 hyper = "0.14"
 log = "0.4"
-nakago = "0.10"
-nakago-axum = "0.10"
+nakago = "0.11"
+nakago-axum = "0.11"
 nakago-derive = "0.8"
 nakago-sea-orm = "0.10"
-nakago-async-graphql = "0.10"
+nakago-async-graphql = "0.11"
 oso = "0.27"
 pico-args = "0.5.0"
 pretty_env_logger = "0.5"
@@ -48,7 +48,6 @@ ulid = "1.0"
 [dev-dependencies]
 biscuit = "0.6.0-beta1"
 criterion = "0.5"
-fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 futures-util = { version = "0.3", default-features = false, features = [
     "sink",
     "std",

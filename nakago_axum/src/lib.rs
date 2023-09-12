@@ -13,6 +13,9 @@ pub mod auth;
 /// Routes
 pub mod routes;
 
+/// Testing
+pub mod test;
+
 #[macro_use]
 extern crate log;
 

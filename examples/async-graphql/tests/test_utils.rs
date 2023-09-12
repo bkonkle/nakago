@@ -1,23 +1,22 @@
 #![allow(dead_code)] // Since each test is an independent module, this is needed
 
-use std::{default::Default, net::SocketAddr, sync::Arc, time::Duration};
+use std::{default::Default, ops::Deref, time::Duration};
 
 use anyhow::Result;
-use async_trait::async_trait;
-use axum::{extract::FromRef, http::HeaderValue};
-use biscuit::{
-    jwa::SignatureAlgorithm,
-    jws::{RegisteredHeader, Secret},
-    ClaimsSet, Empty, RegisteredClaims, SingleOrMultiple, JWT,
-};
+use axum::http::HeaderValue;
 use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
-use hyper::{client::HttpConnector, Body, Client, Method, Request};
-use hyper_tls::HttpsConnector;
-use nakago::{Inject, InjectResult, Provider};
-use nakago_axum::{auth::config::AuthConfig, AxumApplication};
+use nakago_axum::auth::{authenticate::ProvideUnverifiedAuthState, AUTH_STATE};
+use serde::Deserialize;
+use tokio::{net::TcpStream, time::timeout};
+use tokio_tungstenite::{
+    connect_async, tungstenite,
+    tungstenite::{client::IntoClientRequest, Message},
+    MaybeTlsStream, WebSocketStream,
+};
+
 use nakago_examples_async_graphql::{
-    config::{AppConfig, CONFIG},
+    config::AppConfig,
     domains::{
         episodes::{model::Episode, mutations::CreateEpisodeInput, service::EPISODES_SERVICE},
         profiles::{model::Profile, mutations::CreateProfileInput, service::PROFILES_SERVICE},
@@ -27,108 +26,29 @@ use nakago_examples_async_graphql::{
     http::state::AppState,
     init,
 };
-use serde::Deserialize;
-use serde_json::{json, Value};
-use tokio::{
-    net::TcpStream,
-    time::{sleep, timeout},
-};
-use tokio_tungstenite::{
-    connect_async, tungstenite,
-    tungstenite::{client::IntoClientRequest, Message},
-    MaybeTlsStream, WebSocketStream,
-};
 
-/// Run the Application Server
-pub async fn run_server() -> Result<(AxumApplication<AppConfig, AppState>, SocketAddr)> {
-    let app = init::app();
+/// Test utils, extended for application-specific helpers
+pub struct TestUtils(nakago_async_graphql::test::utils::TestUtils<AppConfig, AppState>);
 
-    let server = app.run(None).await?;
-    let addr = server.local_addr();
+impl Deref for TestUtils {
+    type Target = nakago_async_graphql::test::utils::TestUtils<AppConfig, AppState>;
 
-    // Spawn the server in the background
-    tokio::spawn(server);
-
-    // Wait for it to initialize
-    sleep(Duration::from_millis(200)).await;
-
-    // Return the bound address
-    Ok((app, addr))
-}
-
-struct HttpClientProvider {}
-
-#[async_trait]
-impl Provider<Client<HttpsConnector<HttpConnector>>> for HttpClientProvider {
-    async fn provide(
-        self: Arc<Self>,
-        _i: Inject,
-    ) -> InjectResult<Arc<Client<HttpsConnector<HttpConnector>>>> {
-        Ok(Arc::new(
-            Client::builder().build::<_, Body>(HttpsConnector::new()),
-        ))
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
-}
-
-/// Common test utils
-pub struct TestUtils {
-    pub app: AxumApplication<AppConfig, AppState>,
-    pub auth: AuthConfig,
-    pub addr: SocketAddr,
-    pub http_client: Client<HttpsConnector<HttpConnector>>,
-    pub graphql: GraphQL,
 }
 
 impl TestUtils {
-    /// Initialize a new set of utils
     pub async fn init() -> Result<Self> {
-        let (app, addr) = run_server().await?;
+        let app = init::app().await?;
 
-        let config = app.get(&CONFIG).await?;
+        app.replace_with(&AUTH_STATE, ProvideUnverifiedAuthState::default())
+            .await?;
 
-        let auth = AuthConfig::from_ref(&*config);
+        let utils =
+            nakago_async_graphql::test::utils::TestUtils::init(app, "/", "/graphql").await?;
 
-        let http_client = Client::builder().build::<_, Body>(HttpsConnector::new());
-
-        let graphql = GraphQL::new(format!(
-            "http://localhost:{port}/graphql",
-            port = addr.port()
-        ));
-
-        Ok(TestUtils {
-            app,
-            addr,
-            auth,
-            http_client,
-            graphql,
-        })
-    }
-
-    /// Create a test JWT token with a dummy secret
-    pub fn create_jwt(&self, username: &str) -> String {
-        let expected_claims = ClaimsSet::<Empty> {
-            registered: RegisteredClaims {
-                issuer: Some(self.auth.url.clone()),
-                subject: Some(username.to_string()),
-                audience: Some(SingleOrMultiple::Single(self.auth.audience.clone())),
-                ..Default::default()
-            },
-            private: Default::default(),
-        };
-
-        let jwt = JWT::new_decoded(
-            From::from(RegisteredHeader {
-                algorithm: SignatureAlgorithm::HS256,
-                ..Default::default()
-            }),
-            expected_claims,
-        );
-
-        let token = jwt
-            .into_encoded(&Secret::Bytes("test-jwt-secret".into()))
-            .unwrap();
-
-        token.unwrap_encoded().to_string()
+        Ok(Self(utils))
     }
 
     /// Create a User and Profile together
@@ -274,35 +194,5 @@ impl TestUtils {
         }
 
         Ok(())
-    }
-}
-
-/// Utilities for testing graphql endpoints
-pub struct GraphQL {
-    url: String,
-}
-
-impl GraphQL {
-    /// Construct a new GraphQL helper with a path to the endpoint
-    pub fn new(url: String) -> Self {
-        GraphQL { url }
-    }
-
-    /// Create a GraphQL query request for Hyper with an optional auth token
-    pub fn query(
-        &self,
-        query: &str,
-        variables: Value,
-        token: Option<&str>,
-    ) -> Result<Request<Body>> {
-        let mut req = Request::builder().method(Method::POST).uri(&self.url);
-
-        if let Some(token) = token {
-            req = req.header("Authorization", format!("Bearer {}", token));
-        }
-
-        let body = serde_json::to_string(&json!({ "query": query, "variables": variables }))?;
-
-        req.body(Body::from(body)).map_err(|err| err.into())
     }
 }

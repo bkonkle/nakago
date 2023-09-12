@@ -1,6 +1,6 @@
 [package]
 name = "nakago-axum"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "An Axum HTTP routes integration for Nakago"
@@ -17,13 +17,18 @@ anyhow = "1.0"
 async-trait = "0.1"
 axum = { version = "0.6", features = ["ws", "macros"] }
 biscuit = "0.6.0-beta1"
+fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env"] }
+futures-util = { version = "0.3", default-features = false, features = [
+    "sink",
+    "std",
+] }
 http = "0.2"
 hyper = "0.14"
 hyper-tls = "0.5"
 jsonwebtoken = "8.0"
 log = "0.4"
-nakago = "0.10"
+nakago = "0.11"
 nakago-derive = "0.8"
 pretty_env_logger = "0.5"
 rand = "0.8"
@@ -37,6 +42,5 @@ tracing = "0.1"
 
 [dev-dependencies]
 criterion = "0.5"
-fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 mockall = "0.11"
 pretty_assertions = "1.2"

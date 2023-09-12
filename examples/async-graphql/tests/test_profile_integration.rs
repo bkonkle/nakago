@@ -39,7 +39,7 @@ async fn test_profile_create_simple() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -80,7 +80,7 @@ async fn test_profile_create_requires_email_user_id() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let req = utils
         .graphql
@@ -128,13 +128,9 @@ async fn test_profile_create_requires_email_user_id() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_profile_create_authn() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(
+    let req = utils.graphql.query(
         CREATE_PROFILE,
         json!({
             "input": {
@@ -145,7 +141,7 @@ async fn test_profile_create_authn() -> Result<()> {
         None,
     )?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -166,7 +162,7 @@ async fn test_profile_create_authz() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -223,7 +219,7 @@ async fn test_profile_get_simple() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
     let (user, profile) = utils.create_user_and_profile(&username, &email).await?;
@@ -257,7 +253,7 @@ async fn test_profile_get_empty() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
     let users = utils.app.get(&USERS_SERVICE).await?;
@@ -321,7 +317,7 @@ async fn test_profile_get_authz() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let dummy_username = Ulid::new().to_string();
 
@@ -393,7 +389,7 @@ async fn test_profile_get_many_simple() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let dummy_username = Ulid::new().to_string();
 
@@ -513,7 +509,7 @@ async fn test_profile_update_simple() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
     let (user, profile) = utils.create_user_and_profile(&username, &email).await?;
@@ -590,13 +586,9 @@ async fn test_profile_update_authn() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_profile_update_not_found() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(
+    let req = utils.graphql.query(
         UPDATE_PROFILE,
         json!({
             "id": "test-id",
@@ -607,7 +599,7 @@ async fn test_profile_update_not_found() -> Result<()> {
         None,
     )?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -631,7 +623,7 @@ async fn test_profile_update_authz() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let dummy_username = Ulid::new().to_string();
 
@@ -686,7 +678,7 @@ async fn test_profile_delete_simple() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
     let (_, profile) = utils.create_user_and_profile(&username, &email).await?;
@@ -742,15 +734,13 @@ async fn test_profile_delete_authn() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn test_profile_delete_not_found() -> Result<()> {
-    let TestUtils {
-        http_client,
-        graphql,
-        ..
-    } = TestUtils::init().await?;
+    let utils = TestUtils::init().await?;
 
-    let req = graphql.query(DELETE_PROFILE, json!({"id": "test-id"}), None)?;
+    let req = utils
+        .graphql
+        .query(DELETE_PROFILE, json!({"id": "test-id"}), None)?;
 
-    let resp = http_client.request(req).await?;
+    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
     let body = to_bytes(resp.into_body()).await?;
@@ -774,7 +764,7 @@ async fn test_profile_delete_authz() -> Result<()> {
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
-    let token = utils.create_jwt(&username);
+    let token = utils.create_jwt(&username).await?;
 
     let dummy_username = Ulid::new().to_string();
 
