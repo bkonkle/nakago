@@ -13,7 +13,10 @@ use tokio::time::sleep;
 
 use crate::{app::State, auth::config::AuthConfig, config::HttpConfig, AxumApplication};
 
-use super::{http::HTTP_CLIENT, HttpClientProvider};
+use super::{
+    http::{Http, HTTP_CLIENT},
+    HttpClientProvider,
+};
 
 /// Common test utils
 pub struct TestUtils<C, S>
@@ -27,6 +30,9 @@ where
     /// The Address the server is listening on
     pub addr: SocketAddr,
 
+    /// The test HTTP Request helper
+    pub http: Http,
+
     /// The test HTTP client
     pub http_client: Arc<Client<HttpsConnector<HttpConnector>>>,
 }
@@ -39,7 +45,7 @@ where
     AuthConfig: FromRef<C>,
 {
     /// Initialize a new set of utils
-    pub async fn init(app: AxumApplication<C, S>) -> InjectResult<Self> {
+    pub async fn init(app: AxumApplication<C, S>, base_url: &str) -> InjectResult<Self> {
         app.provide(&HTTP_CLIENT, HttpClientProvider::default())
             .await?;
 
@@ -52,11 +58,18 @@ where
         // Wait for it to initialize
         sleep(Duration::from_millis(200)).await;
 
+        let http = Http::new(format!(
+            "http://localhost:{port}{base_url}",
+            port = addr.port(),
+            base_url = base_url,
+        ));
+
         let http_client = app.get(&HTTP_CLIENT).await?;
 
         Ok(TestUtils {
             app,
             addr,
+            http,
             http_client,
         })
     }

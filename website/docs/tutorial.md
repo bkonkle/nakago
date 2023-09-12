@@ -244,4 +244,148 @@ When you call `http://localhost:8000/username` in your browser, you should see t
 
 ## Integration Testing
 
-Now that you have a simple route that requires authentication, you'll want to add some integration tests to ensure that it works as expected. You don't actually need to have an OAuth2 provider running to test this, because the `nakago-axum` library provides a mock `AuthState` that you can use to simulate a logged-in user.
+Now that you have a simple route that requires authentication, you'll want to add some integration tests to ensure that it works as expected. You don't actually need to have an OAuth2 provider running to test this, because the `nakago-axum` library provides a mock unverified `AuthState` that you can use to simulate a logged-in user.
+
+### Test Utils
+
+Nakago Axum's HTTP `TestUtils` class is based on the idea of extending the base `TestUtils` class you'll find in `nakago_axum::test::utils::TestUtils` with additional functionality, like adding a `graphql` property if you're using `nakago-async-graphql` or adding convenience methods around your app-specific data.
+
+To start out with, create a `simple/tests` folder alongside your `simple/src`. This will be used by Cargo as an ["integration test"](<https://doc.rust-lang.org/book/ch11-03-test-organization.html#integration-tests>) module, and will be excluded from your final binary. It allows you to import the module in your `src` as if it were an external package, with access only to the public exports.
+
+For the purposes of your own application, you'll want to create a `simple/tests/utils.rs` file that wraps the `nakago-axum` `TestUtils` so that you can override any dependencies that you need or add convenience methods to build test data easily for your tests. Start out with a newtype like this:
+
+```rust
+use simple::{config::AppConfig, http::state::AppState};
+
+pub struct TestUtils(nakago_axum::test::utils::TestUtils<AppConfig, AppState>);
+
+```
+
+To make it easy to access the fields on the inner `TestUtils`, you can implement the `Deref` trait for your newtype. This isn't generally a good practice for newtypes in Production because it can result in some easy-to-miss implicit conversion behind the scenes, but in testing it's a nice convenience:
+
+```rust
+use std::ops::Deref;
+
+impl Deref for TestUtils {
+    type Target = nakago_axum::test::utils::TestUtils<AppConfig, AppState>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+```
+
+Now, you can implement an `init()` method for your app-specific `TestUtils` wrapper:
+
+```rust
+use nakago_axum::auth::{authenticate::ProvideUnverifiedAuthState, AUTH_STATE};
+
+use simple::init;
+
+impl TestUtils {
+    pub async fn init() -> Result<Self> {
+        let app = init::app().await?;
+
+        app.replace_with(&AUTH_STATE, ProvideUnverifiedAuthState::default())
+            .await?;
+
+        let utils = nakago_axum::test::utils::TestUtils::init(app, "/").await?;
+
+        Ok(Self(utils))
+    }
+}
+```
+
+Now, create a `test_users_int.rs` to represent your User integration tests, which will currently just test the `/username` endpoint.
+
+```rust
+use test_utils::TestUtils;
+
+#[tokio::test]
+#[ignore]
+async fn test_get_username_success() -> Result<()> {
+    let utils = TestUtils::init().await?;
+
+    todo!("unimplemented")
+}
+```
+
+The `todo!()` macro allows you to leave this test unfinished for now, but it will throw an error if you try to execute the tests.
+
+### HTTP Calls
+
+Next, we can add an HTTP call with a JWT token. First, create the dummy token, which will only work with the `ProvideUnverifiedAuthState` provider above for use in testing.
+
+```rust
+use ulid::Ulid;
+
+#[tokio::test]
+#[ignore]
+async fn test_get_username_success() -> Result<()> {
+    let utils = TestUtils::init().await?;
+
+    let username = Ulid::new().to_string();
+    let token = utils.create_jwt(&username).await?;
+
+    todo!("unimplemented")
+}
+```
+
+Now we can make the HTTP call:
+
+```rust
+let req = utils.http.call("/username", Value::Null, Some(&token))?;
+let resp = utils.http_client.request(req).await?;
+```
+
+Pull the response apart into a status and a body:
+
+```rust
+let status = resp.status();
+let body = to_bytes(resp.into_body()).await?;
+```
+
+Now you can make assertions based on the response:
+
+```rust
+let json: Value = serde_json::from_slice(&body)?;
+
+assert_eq!(status, 200);
+assert_eq!(json["username"], username);
+```
+
+Add an `Ok(())` at the end to signal a successful test run, and your final test should look like this:
+
+```rust
+use anyhow::Result;
+
+#[cfg(test)]
+mod test_utils;
+
+use hyper::body::to_bytes;
+use serde_json::Value;
+use test_utils::TestUtils;
+use ulid::Ulid;
+
+#[tokio::test]
+#[ignore]
+async fn test_get_username_success() -> Result<()> {
+    let utils = TestUtils::init().await?;
+
+    let username = Ulid::new().to_string();
+    let token = utils.create_jwt(&username).await?;
+
+    let req = utils.http.call("/username", Value::Null, Some(&token))?;
+    let resp = utils.http_client.request(req).await?;
+
+    let status = resp.status();
+    let body = to_bytes(resp.into_body()).await?;
+
+    let json: Value = serde_json::from_slice(&body)?;
+
+    assert_eq!(status, 200);
+    assert_eq!(json["username"], username);
+
+    Ok(())
+}
+```

@@ -24,17 +24,27 @@ impl<C: Config, S: State> Deref for TestUtils<C, S> {
 
 impl<C: Config, S: State> TestUtils<C, S> {
     /// Initialize the GraphQL test utils
-    pub async fn init(app: AxumApplication<C, S>) -> InjectResult<Self>
+    pub async fn init(
+        app: AxumApplication<C, S>,
+        base_url: &str,
+        graphql_url: &str,
+    ) -> InjectResult<Self>
     where
         C: Config,
         S: State,
         HttpConfig: FromRef<C>,
         AuthConfig: FromRef<C>,
     {
-        let utils = nakago_axum::test::utils::TestUtils::init(app).await?;
+        let utils = nakago_axum::test::utils::TestUtils::init(app, base_url.clone()).await?;
+
+        let base_url = if graphql_url.starts_with('/') {
+            base_url.strip_suffix('/').unwrap_or(base_url)
+        } else {
+            base_url
+        };
 
         let graphql = GraphQL::new(format!(
-            "http://localhost:{port}/graphql",
+            "http://localhost:{port}{base_url}{graphql_url}",
             port = utils.addr.port()
         ));
 

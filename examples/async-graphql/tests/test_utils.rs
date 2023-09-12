@@ -45,7 +45,8 @@ impl TestUtils {
         app.replace_with(&AUTH_STATE, ProvideUnverifiedAuthState::default())
             .await?;
 
-        let utils = nakago_async_graphql::test::utils::TestUtils::init(app).await?;
+        let utils =
+            nakago_async_graphql::test::utils::TestUtils::init(app, "/", "/graphql").await?;
 
         Ok(Self(utils))
     }
