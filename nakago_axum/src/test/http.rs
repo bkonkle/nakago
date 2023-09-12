@@ -21,7 +21,13 @@ impl Http {
     }
 
     /// Create a GraphQL query request for Hyper with an optional auth token
-    pub fn call(&self, path: &str, body: Value, token: Option<&str>) -> Result<Request<Body>> {
+    pub fn call(
+        &self,
+        method: Method,
+        path: &str,
+        body: Value,
+        token: Option<&str>,
+    ) -> Result<Request<Body>> {
         let base_url = if path.starts_with('/') {
             self.base_url.strip_suffix('/').unwrap_or(&self.base_url)
         } else {
@@ -29,7 +35,7 @@ impl Http {
         };
 
         let mut req = Request::builder()
-            .method(Method::POST)
+            .method(method)
             .uri(format!("{}{}", base_url, path));
 
         if let Some(token) = token {

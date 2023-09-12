@@ -3,7 +3,7 @@ use anyhow::Result;
 #[cfg(test)]
 mod test_utils;
 
-use hyper::body::to_bytes;
+use hyper::{body::to_bytes, Method};
 use serde_json::Value;
 use test_utils::TestUtils;
 use ulid::Ulid;
@@ -16,7 +16,9 @@ async fn test_get_username_success() -> Result<()> {
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
-    let req = utils.http.call("/username", Value::Null, Some(&token))?;
+    let req = utils
+        .http
+        .call(Method::GET, "/username", Value::Null, Some(&token))?;
     let resp = utils.http_client.request(req).await?;
 
     let status = resp.status();
