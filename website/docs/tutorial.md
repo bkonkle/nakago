@@ -389,3 +389,7 @@ async fn test_get_username_success() -> Result<()> {
     Ok(())
 }
 ```
+
+### Running the Tests
+
+COMING SOON...
