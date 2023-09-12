@@ -39,12 +39,7 @@ where
     AuthConfig: FromRef<C>,
 {
     /// Initialize a new set of utils
-    pub async fn init<F>(init_app: F) -> InjectResult<Self>
-    where
-        F: Fn() -> AxumApplication<C, S>,
-    {
-        let app = init_app();
-
+    pub async fn init(app: AxumApplication<C, S>) -> InjectResult<Self> {
         app.provide(&HTTP_CLIENT, HttpClientProvider::default())
             .await?;
 

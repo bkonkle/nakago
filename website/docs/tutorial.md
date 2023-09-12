@@ -245,5 +245,3 @@ When you call `http://localhost:8000/username` in your browser, you should see t
 ## Integration Testing
 
 Now that you have a simple route that requires authentication, you'll want to add some integration tests to ensure that it works as expected. You don't actually need to have an OAuth2 provider running to test this, because the `nakago-axum` library provides a mock `AuthState` that you can use to simulate a logged-in user.
-
-To set up

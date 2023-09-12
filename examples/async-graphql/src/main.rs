@@ -44,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let app = init::app();
+    let app = init::app().await?;
     let server = app.run(args.config_path).await?;
 
     let addr = server.local_addr();

@@ -6,6 +6,7 @@ use anyhow::Result;
 use axum::http::HeaderValue;
 use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
+use nakago_axum::auth::{authenticate::ProvideUnverifiedAuthState, AUTH_STATE};
 use serde::Deserialize;
 use tokio::{net::TcpStream, time::timeout};
 use tokio_tungstenite::{
@@ -39,7 +40,12 @@ impl Deref for TestUtils {
 
 impl TestUtils {
     pub async fn init() -> Result<Self> {
-        let utils = nakago_async_graphql::test::utils::TestUtils::init(init::app).await?;
+        let app = init::app().await?;
+
+        app.replace_with(&AUTH_STATE, ProvideUnverifiedAuthState::default())
+            .await?;
+
+        let utils = nakago_async_graphql::test::utils::TestUtils::init(app).await?;
 
         Ok(Self(utils))
     }
