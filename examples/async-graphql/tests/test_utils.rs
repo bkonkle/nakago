@@ -45,8 +45,12 @@ impl TestUtils {
         app.replace_with(&AUTH_STATE, ProvideUnverifiedAuthState::default())
             .await?;
 
+        let config_path = std::env::var("CONFIG_PATH_ASYNC_GRAPHQL")
+            .unwrap_or_else(|_| "examples/async-graphql/config/test.toml".to_string());
+
         let utils =
-            nakago_async_graphql::test::utils::TestUtils::init(app, "/", "/graphql").await?;
+            nakago_async_graphql::test::utils::TestUtils::init(app, &config_path, "/", "/graphql")
+                .await?;
 
         Ok(Self(utils))
     }

@@ -94,19 +94,13 @@ app.on(
 );
 ```
 
-Next, add the following to your `config/default.toml` file, updating them to match your own OAuth2 details. If you don't have an auth provider yet, you can leave these at the dummy values for now:
+Next, add the following values to your `config/local.toml.example` file as a hint, so that new developers know they need to reach out to you for real values when they create their own `config/local.toml` file:
 
 ```toml
 [auth]
 url = "https://simple-dev.oauth-service.com"
 audience = "localhost"
 
-[auth.client]
-```
-
-Then, add a hint to your `config/local.toml.example` so that new developers know they need to reach out to you for real values when they create their own `config/local.toml` file:
-
-```toml
 [auth.client]
 id = "client_id"
 secret = "client_secret"
@@ -325,14 +319,17 @@ impl TestUtils {
         app.replace_with(&AUTH_STATE, ProvideUnverifiedAuthState::default())
             .await?;
 
-        let utils = nakago_axum::test::utils::TestUtils::init(app, "/").await?;
+        let config_path =
+            std::env::var("CONFIG_PATH").unwrap_or_else(|_| "config/test.toml".to_string());
+
+        let utils = nakago_axum::test::utils::TestUtils::init(app, &config_path, "/").await?;
 
         Ok(Self(utils))
     }
 }
 ```
 
-Again, replace `simple` with your actual project name.
+Again, replace `simple` with your actual project name. The `CONFIG_PATH` variable is used so that you can replace that with `config/ci.toml` or whatever you need for testing in different environments.
 
 Now, create a `test_users_int.rs` to represent your User integration tests, which will currently just test the `/username` endpoint.
 

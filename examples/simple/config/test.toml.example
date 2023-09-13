@@ -1,4 +1,7 @@
 # Local testing
 
 port = 0
-run_mode = "test"
+
+[auth.client]
+id = "client_id"
+secret = "client_secret"

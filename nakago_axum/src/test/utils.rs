@@ -45,11 +45,15 @@ where
     AuthConfig: FromRef<C>,
 {
     /// Initialize a new set of utils
-    pub async fn init(app: AxumApplication<C, S>, base_url: &str) -> InjectResult<Self> {
+    pub async fn init(
+        app: AxumApplication<C, S>,
+        config_path: &str,
+        base_url: &str,
+    ) -> InjectResult<Self> {
         app.provide(&HTTP_CLIENT, HttpClientProvider::default())
             .await?;
 
-        let server = app.run(None).await?;
+        let server = app.run(Some(config_path.into())).await?;
         let addr = server.local_addr();
 
         // Spawn the server in the background
