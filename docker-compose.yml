@@ -13,7 +13,6 @@ services:
         environment:
             POSTGRES_USER: ${DATABASE_USERNAME}
             POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-            POSTGRES_DB: ${DATABASE_NAME}
     redis:
         image: redis
         container_name: async_graphql_redis

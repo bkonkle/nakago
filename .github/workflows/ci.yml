@@ -63,6 +63,9 @@ jobs:
     needs: check
     env:
       AUTH_URL: ${{ vars.AUTH_URL }}
+      DATABASE_USERNAME: nakago
+      DATABASE_PASSWORD: nakago
+      DATABASE_PORT: 1701
       DATABASE_URL_ASYNC_GRAPHQL: postgresql://nakago:nakago@localhost:1701/async_graphql
       CONFIG_PATH_ASYNC_GRAPHQL: examples/async-graphql/config/ci.toml
       CONFIG_PATH_SIMPLE: examples/simple/config/ci.toml

@@ -1,8 +1,19 @@
-export DATABASE_HOSTNAME=localhost
-export DATABASE_USERNAME=my-project
-export DATABASE_PASSWORD=my-project
-export DATABASE_NAME=my-project
-export DATABASE_PORT=5432
-export DATABASE_URL=postgresql://my-project:my-project@localhost:5432/my-project
+# HTTP
 
-export AUTH_URL="https://my-project-dev.oauth-provider.com"
+export HTTP_PORT=8000
+
+# Databases
+
+export DATABASE_USERNAME=nakago
+export DATABASE_PASSWORD=nakago
+export DATABASE_HOSTNAME=localhost
+export DATABASE_PORT=5432
+
+DATABASE_URL_PREFIX=postgresql://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOSTNAME}:${DATABASE_PORT}
+
+export DATABASE_NAME_ASYNC_GRAPHQL=async-graphql
+export DATABASE_URL_ASYNC_GRAPHQL=${DATABASE_URL_PREFIX}/${DATABASE_NAME_ASYNC_GRAPHQL}
+
+# Auth
+
+export AUTH_URL="https://nakago-dev.oauth-service.com"
