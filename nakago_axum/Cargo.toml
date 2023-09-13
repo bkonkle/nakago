@@ -9,9 +9,6 @@ homepage = "https://github.com/bkonkle/nakago"
 repository = "https://github.com/bkonkle/nakago"
 license = "MIT"
 
-[features]
-integration = []
-
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"

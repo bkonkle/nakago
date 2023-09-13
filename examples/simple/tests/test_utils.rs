@@ -22,7 +22,10 @@ impl TestUtils {
         app.replace_with(&AUTH_STATE, ProvideUnverifiedAuthState::default())
             .await?;
 
-        let utils = nakago_axum::test::utils::TestUtils::init(app, "/").await?;
+        let config_path = std::env::var("CONFIG_PATH_SIMPLE")
+            .unwrap_or_else(|_| "examples/simple/config/test.toml".to_string());
+
+        let utils = nakago_axum::test::utils::TestUtils::init(app, &config_path, "/").await?;
 
         Ok(Self(utils))
     }

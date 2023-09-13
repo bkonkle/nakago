@@ -1,3 +1,6 @@
 # CI testing
 
 port = 0
+
+[database]
+url = "postgres://nakago:nakago@localhost:1701/async-graphql"

@@ -9,6 +9,9 @@ license = "MIT"
 
 publish = false
 
+[features]
+integration = []
+
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"

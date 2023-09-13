@@ -1,3 +1,5 @@
+#![cfg(feature = "integration")]
+
 use anyhow::Result;
 use fake::{faker::internet::en::FreeEmail, Fake};
 use hyper::body::to_bytes;
@@ -33,7 +35,6 @@ const CREATE_PROFILE: &str = "
 
 /// It creates a new user profile
 #[tokio::test]
-#[ignore]
 async fn test_profile_create_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -74,7 +75,6 @@ async fn test_profile_create_simple() -> Result<()> {
 
 /// It requires an email address and a userId
 #[tokio::test]
-#[ignore]
 async fn test_profile_create_requires_email_user_id() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -126,7 +126,6 @@ async fn test_profile_create_requires_email_user_id() -> Result<()> {
 
 /// It requires authentication
 #[tokio::test]
-#[ignore]
 async fn test_profile_create_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -156,7 +155,6 @@ async fn test_profile_create_authn() -> Result<()> {
 
 /// It requires authorization
 #[tokio::test]
-#[ignore]
 async fn test_profile_create_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -213,7 +211,6 @@ const GET_PROFILE: &str = "
 
 /// It retrieves an existing user profile
 #[tokio::test]
-#[ignore]
 async fn test_profile_get_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -248,7 +245,6 @@ async fn test_profile_get_simple() -> Result<()> {
 
 /// It returns nothing when no profile is found
 #[tokio::test]
-#[ignore]
 async fn test_profile_get_empty() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -278,7 +274,6 @@ async fn test_profile_get_empty() -> Result<()> {
 
 /// It censors responses for anonymous users
 #[tokio::test]
-#[ignore]
 async fn test_profile_get_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -311,7 +306,6 @@ async fn test_profile_get_authn() -> Result<()> {
 
 /// It censors responses for unauthorized users
 #[tokio::test]
-#[ignore]
 async fn test_profile_get_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -383,7 +377,6 @@ const GET_MANY_PROFILES: &str = "
 
 /// It queries existing profiles and censors responses for unauthorized users
 #[tokio::test]
-#[ignore]
 async fn test_profile_get_many_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -443,7 +436,6 @@ async fn test_profile_get_many_simple() -> Result<()> {
 
 /// It censors responses for anonymous users
 #[tokio::test]
-#[ignore]
 async fn test_profile_get_many_anon() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -503,7 +495,6 @@ const UPDATE_PROFILE: &str = "
 
 /// It updates an existing user profile
 #[tokio::test]
-#[ignore]
 async fn test_profile_update_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -547,7 +538,6 @@ async fn test_profile_update_simple() -> Result<()> {
 
 /// It requires authentication
 #[tokio::test]
-#[ignore]
 async fn test_profile_update_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -584,7 +574,6 @@ async fn test_profile_update_authn() -> Result<()> {
 
 /// It returns an error if no existing profile was found
 #[tokio::test]
-#[ignore]
 async fn test_profile_update_not_found() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -617,7 +606,6 @@ async fn test_profile_update_not_found() -> Result<()> {
 
 /// It requires authorization
 #[tokio::test]
-#[ignore]
 async fn test_profile_update_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -672,7 +660,6 @@ const DELETE_PROFILE: &str = "
 
 /// It deletes an existing user profile
 #[tokio::test]
-#[ignore]
 async fn test_profile_delete_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -702,7 +689,6 @@ async fn test_profile_delete_simple() -> Result<()> {
 
 /// It requires authentication
 #[tokio::test]
-#[ignore]
 async fn test_profile_delete_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -732,7 +718,6 @@ async fn test_profile_delete_authn() -> Result<()> {
 
 /// It returns an error if no existing profile was found
 #[tokio::test]
-#[ignore]
 async fn test_profile_delete_not_found() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -758,7 +743,6 @@ async fn test_profile_delete_not_found() -> Result<()> {
 
 /// It requires authorization
 #[tokio::test]
-#[ignore]
 async fn test_profile_delete_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 

@@ -94,7 +94,7 @@ app.on(
 );
 ```
 
-Next, add the following to your `config/default.toml` file:
+Next, add the following values to your `config/local.toml.example` file as a hint, so that new developers know they need to reach out to you for real values when they create their own `config/local.toml` file:
 
 ```toml
 [auth]
@@ -102,17 +102,11 @@ url = "https://simple-dev.oauth-service.com"
 audience = "localhost"
 
 [auth.client]
-```
-
-Then, add a hint to your `config/local.toml.example` so that new developers know they need to reach out to you for real values when they create their own `config/local.toml` file:
-
-```toml
-[auth.client]
 id = "client_id"
 secret = "client_secret"
 ```
 
-Add the real details to your own `config/local.toml` file, which should be excluded from git via the `.gitignore` file.
+Add the real details to your own `config/local.toml` file, which should be excluded from git via the `.gitignore` file. If you don't have real values yet, leave them as the dummy values above. You can still run integration tests without having a real OAuth2 provider running, if you want.
 
 ### Axum State
 
@@ -128,20 +122,11 @@ pub struct AppState {
 }
 ```
 
-In your `init.rs` file, you'll want to add the use `ProvideJwks` and `ProvideAuthState` to provide the AuthState that the custom `ProvideAppState` provider unique to your app will use to populate that property.
+Then you can update the `ProvideAppState` provider to retrieve the `AuthState` you provided earlier and use it when creating the `AppState`:
 
 ```rust
-// Dependencies
+use nakago_axum::auth::authenticate::AUTH_STATE;
 
-app.provide(&JWKS, ProvideJwks::default().with_config_tag(&CONFIG)).await?;
-app.provide(&AUTH_STATE, ProvideAuthState::default()).await?;
-```
-
-The `.with_config_tag(&CONFIG)` provides the custom Tag for your `AppConfig`, which will be unique to your app.
-
-Then you can update the `ProvideAppState` provider in `http/state.rs` to retrieve the `AuthState` you provided earlier and use it when creating the `AppState`:
-
-```rust
 #[Provider]
 #[async_trait]
 impl Provider<AppState> for ProvideAppState {
@@ -164,11 +149,29 @@ You'll probably also want to add a note to the docstring for your `ProvideAppSta
 ///   - `Tag(AuthState)`
 ```
 
-### Axum Route
-
-You can now add a quick handler that allows a user to view their own username when logged in.
+In your `init.rs` file, you should use `ProvideJwks` and `ProvideAuthState` to provide the AuthState that the custom `ProvideAppState` provider unique to your app will use to populate that property.
 
 ```rust
+use nakago_axum::auth::{ProvideAuthState, ProvideJwks, AUTH_STATE, JWKS};
+
+app.provide(&JWKS, ProvideJwks::default().with_config_tag(&CONFIG))
+    .await?;
+
+app.provide(&AUTH_STATE, ProvideAuthState::default())
+    .await?;
+
+app.provide(&STATE, ProvideAppState::default()).await?; // <-- this line should already be there
+```
+
+The `.with_config_tag(&CONFIG)` provides the custom Tag for your `AppConfig`, which will be unique to your app.
+
+### Axum Route
+
+You can now add a quick handler to `http/handlers.rs` that allows a user to view their own username when logged in.
+
+```rust
+use nakago_axum::auth::Subject;
+
 // Get Username
 // ------------
 
@@ -202,6 +205,8 @@ The `Subject` extension uses the AuthState to decode the JWT and return the `sub
 Now add a route that uses the handler to `http/routes.rs`:
 
 ```rust
+use super::handlers::get_username_handler;
+
 /// Initialize the User route
 pub fn new_user_route(_: Inject) -> Route<AppState> {
     Route::new("/", Router::new().route("/username", get(get_username_handler)))
@@ -213,10 +218,14 @@ The `Inject` container is there if you need it, but most things will be provided
 Finally, in your `init.rs` add a new `InitRoute` hook to your app:
 
 ```rust
+use crate::https::routes::new_user_route;
+
 // Routes
 
 app.on(&EventType::Init, InitRoute::new(new_health_route));
 app.on(&EventType::Init, InitRoute::new(new_user_route)); // <-- the new route
+
+Ok(app)
 ```
 
 ### Running the App
@@ -227,7 +236,26 @@ At this point, you can run your app and see the `(anonymous)` response at the `G
 cargo make run
 ```
 
-You should see output that looks like the following:
+The uses cargo-make, a tool to provide enhanced Makefile-like functionality for Rust projects. You can see the configuration in the `Makefile.toml` file.
+
+At first, you'll see a big ugly traceback with the following error message at the top because you don't have a valid autd provider configured:
+
+```sh
+thread '<unnamed>' panicked at 'Unable to retrieve JWKS: invalid format'
+```
+
+This is okay - you don't have to have a properly configured auth provider to run the integration tests for your app. You can use the "unverified" `AuthState` variant during integration testing, and skip the rest of this section.
+
+If you *do* have a valid OAuth2 provider, then you'll want to create a `config/local.toml` file and set the following property in it:
+
+```toml
+[auth]
+url = "https://simple-dev.oauth-service.com"
+```
+
+You can also use the `AUTH_URL` environment variable to set this value. Consider using a tool like [direnv](https://direnv.net/) to manage variables like this in your local development environment with `.envrc` files.
+
+Your provider should have a `/.well-known/jwks.json` file available at the given auth url, which will avoid the error message above. You should now see output that looks like the following:
 
 ```sh
 2023-09-08T02:14:03.388670Z  INFO simple: Started on port: 8000
@@ -250,16 +278,17 @@ Now that you have a simple route that requires authentication, you'll want to ad
 
 Nakago Axum's HTTP `TestUtils` class is based on the idea of extending the base `TestUtils` class you'll find in `nakago_axum::test::utils::TestUtils` with additional functionality, like adding a `graphql` property if you're using `nakago-async-graphql` or adding convenience methods around your app-specific data.
 
-To start out with, create a `simple/tests` folder alongside your `simple/src`. This will be used by Cargo as an ["integration test"](<https://doc.rust-lang.org/book/ch11-03-test-organization.html#integration-tests>) module, and will be excluded from your final binary. It allows you to import the module in your `src` as if it were an external package, with access only to the public exports.
+To start out with, create a `tests` folder alongside your `src`. This will be used by Cargo as an ["integration test"](<https://doc.rust-lang.org/book/ch11-03-test-organization.html#integration-tests>) module, and will be excluded from your final binary. It allows you to import the module in your `src` as if it were an external package, with access only to the public exports. You don't need to add a `lib.rs`, `mod.rs`, or `main.rs` - each file in the `tests` folder will be auto-discovered and treated as a separate entry point with its own module.
 
-For the purposes of your own application, you'll want to create a `simple/tests/utils.rs` file that wraps the `nakago-axum` `TestUtils` so that you can override any dependencies that you need or add convenience methods to build test data easily for your tests. Start out with a newtype like this:
+For the purposes of your own application, you'll want to create a `tests/test_utils.rs` file that wraps the `nakago_axum::test::utils::TestUtils` so that you can override any dependencies that you need or add convenience methods to build test data easily for your tests. Start out with a newtype like this:
 
 ```rust
 use simple::{config::AppConfig, http::state::AppState};
 
 pub struct TestUtils(nakago_axum::test::utils::TestUtils<AppConfig, AppState>);
-
 ```
+
+Replace `simple` with your actual project name.
 
 To make it easy to access the fields on the inner `TestUtils`, you can implement the `Deref` trait for your newtype. This isn't generally a good practice for newtypes in Production because it can result in some easy-to-miss implicit conversion behind the scenes, but in testing it's a nice convenience:
 
@@ -278,6 +307,7 @@ impl Deref for TestUtils {
 Now, you can implement an `init()` method for your app-specific `TestUtils` wrapper:
 
 ```rust
+use anyhow::Result;
 use nakago_axum::auth::{authenticate::ProvideUnverifiedAuthState, AUTH_STATE};
 
 use simple::init;
@@ -289,26 +319,34 @@ impl TestUtils {
         app.replace_with(&AUTH_STATE, ProvideUnverifiedAuthState::default())
             .await?;
 
-        let utils = nakago_axum::test::utils::TestUtils::init(app, "/").await?;
+        let config_path =
+            std::env::var("CONFIG_PATH").unwrap_or_else(|_| "config/test.toml".to_string());
+
+        let utils = nakago_axum::test::utils::TestUtils::init(app, &config_path, "/").await?;
 
         Ok(Self(utils))
     }
 }
 ```
 
+Again, replace `simple` with your actual project name. The `CONFIG_PATH` variable is used so that you can replace that with `config/ci.toml` or whatever you need for testing in different environments.
+
 Now, create a `test_users_int.rs` to represent your User integration tests, which will currently just test the `/username` endpoint.
 
 ```rust
+#![cfg(feature = "integration")]
+
 use test_utils::TestUtils;
 
 #[tokio::test]
-#[ignore]
 async fn test_get_username_success() -> Result<()> {
     let utils = TestUtils::init().await?;
 
     todo!("unimplemented")
 }
 ```
+
+The `#![cfg(feature = "integration")]` at the top of this file means that it will only be included in the build if the `integration` feature flag is enabled. This is a good practice to follow for all your integration tests, because it allows you to run your unit tests while skipping integration tests so that you don't need supporting services in a local Docker Compose formation or other external dependencies.
 
 The `todo!()` macro allows you to leave this test unfinished for now, but it will throw an error if you try to execute the tests.
 
@@ -320,9 +358,8 @@ Next, we can add an HTTP call with a JWT token. First, create the dummy token, w
 use ulid::Ulid;
 
 #[tokio::test]
-#[ignore]
 async fn test_get_username_success() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = TestUtils::init().await?; // <-- this line should already be there
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
@@ -334,7 +371,10 @@ async fn test_get_username_success() -> Result<()> {
 Now we can make the HTTP call:
 
 ```rust
-let req = utils.http.call("/username", Value::Null, Some(&token))?;
+let req = utils
+    .http
+    .call(Method::GET, "/username", Value::Null, Some(&token))?;
+
 let resp = utils.http_client.request(req).await?;
 ```
 
@@ -368,7 +408,6 @@ use test_utils::TestUtils;
 use ulid::Ulid;
 
 #[tokio::test]
-#[ignore]
 async fn test_get_username_success() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -392,4 +431,58 @@ async fn test_get_username_success() -> Result<()> {
 
 ### Running the Tests
 
-COMING SOON...
+To run integration tests locally, add the following command to your `Makefile.toml`:
+
+```toml
+[tasks.integration]
+env = { "RUN_MODE" = "test", "RUST_LOG" = "info", "RUST_BACKTRACE" = 1 }
+command = "cargo"
+args = ["nextest", "run", "--features=integration", "--workspace", "${@}"]
+```
+
+This won't work until you add the `integration` feature to your `Cargo.toml`, however:
+
+```toml
+[features]
+integration = []
+```
+
+Now you can run `cargo make integration`, and it will use [nextest](https://github.com/nextest-rs/nextest) to run all available integration tests. It also allows you to pass options to `nextest`, including filtering down to a specific test or group of tests.
+
+```sh
+cargo make integration
+```
+
+You should see a message that looks like the following:
+
+```sh
+    Starting 1 test across 4 binaries
+        PASS [   0.230s] simple::test_users_int test_get_username_success
+------------
+     Summary [   0.230s] 1 test run: 1 passed, 0 skipped
+```
+
+If you want to see it fail, you can adjust the expectations at the end of the test in `test_users_int.rs`:
+
+```rust
+assert_eq!(json["username"], "bob");
+```
+
+Instead of the output above, you'll see a gnarly stacktrace with the following at the top:
+
+```sh
+        FAIL [   0.378s] simple::test_users_int test_get_username_success
+
+--- STDOUT:              simple::test_users_int test_get_username_success ---
+
+running 1 test
+thread '<unnamed>' panicked at 'assertion failed: `(left == right)`
+  left: `String("01HA5SF2AB3FV269P5ZEZ46033")`,
+ right: `"bob"`', tests/test_users_int.rs:32:5
+```
+
+## Finished Result
+
+Congratulations! You now have a simple API server with JWT+JWKS authentication in Rust, and you've added integration tests to ensure that it works as expected!
+
+You can see everything together in the [examples/simple](https://github.com/bkonkle/nakago/tree/main/examples/simple) folder of the `nakago` repository.

@@ -1,3 +1,5 @@
+#![cfg(feature = "integration")]
+
 use anyhow::Result;
 use fake::{Fake, Faker};
 use hyper::body::to_bytes;
@@ -36,7 +38,6 @@ const CREATE_EPISODE: &str = "
 
 /// It creates a new episode
 #[tokio::test]
-#[ignore]
 async fn test_episode_create_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -93,7 +94,6 @@ async fn test_episode_create_simple() -> Result<()> {
 
 /// It requires a title and a showId
 #[tokio::test]
-#[ignore]
 async fn test_episode_create_requires_title_show_id() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -144,7 +144,6 @@ async fn test_episode_create_requires_title_show_id() -> Result<()> {
 
 /// It requires authentication
 #[tokio::test]
-#[ignore]
 async fn test_episode_create_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -181,7 +180,6 @@ async fn test_episode_create_authn() -> Result<()> {
 
 /// It requires authorization
 #[tokio::test]
-#[ignore]
 async fn test_episode_create_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -242,7 +240,6 @@ const GET_EPISODE: &str = "
 
 /// It retrieves an existing episode
 #[tokio::test]
-#[ignore]
 async fn test_episode_get() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -277,7 +274,6 @@ async fn test_episode_get() -> Result<()> {
 
 /// It returns nothing when no episode is found
 #[tokio::test]
-#[ignore]
 async fn test_episode_get_empty() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -335,7 +331,6 @@ const GET_MANY_EPISODES: &str = "
 
 /// It queries existing episodes
 #[tokio::test]
-#[ignore]
 async fn test_episode_get_many() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -412,7 +407,6 @@ const UPDATE_EPISODE: &str = "
 
 /// It updates an existing episode
 #[tokio::test]
-#[ignore]
 async fn test_episode_update() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -471,7 +465,6 @@ async fn test_episode_update() -> Result<()> {
 
 /// It returns an error if no existing episode was found
 #[tokio::test]
-#[ignore]
 async fn test_episode_update_not_found() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -504,7 +497,6 @@ async fn test_episode_update_not_found() -> Result<()> {
 
 /// It requires authentication
 #[tokio::test]
-#[ignore]
 async fn test_episode_update_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -539,7 +531,6 @@ async fn test_episode_update_authn() -> Result<()> {
 
 /// It requires authorization
 #[tokio::test]
-#[ignore]
 async fn test_episode_update_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -590,7 +581,6 @@ const DELETE_EPISODE: &str = "
 
 /// It deletes an existing user episode
 #[tokio::test]
-#[ignore]
 async fn test_episode_delete() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -635,7 +625,6 @@ async fn test_episode_delete() -> Result<()> {
 
 /// It returns an error if no existing episode was found
 #[tokio::test]
-#[ignore]
 async fn test_episode_delete_not_found() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -661,7 +650,6 @@ async fn test_episode_delete_not_found() -> Result<()> {
 
 /// It requires authentication
 #[tokio::test]
-#[ignore]
 async fn test_episode_delete_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -689,7 +677,6 @@ async fn test_episode_delete_authn() -> Result<()> {
 
 /// It requires authorization
 #[tokio::test]
-#[ignore]
 async fn test_episode_delete_authz() -> Result<()> {
     let utils = TestUtils::init().await?;
 

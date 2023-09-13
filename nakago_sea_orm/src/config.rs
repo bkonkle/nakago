@@ -12,21 +12,6 @@ pub fn default_config_loaders() -> Vec<Arc<dyn ConfigLoader>> {
 /// Database Config
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DatabaseConfig {
-    /// Database hostname/IP
-    pub hostname: String,
-
-    /// Database username
-    pub username: String,
-
-    /// Database password
-    pub password: String,
-
-    /// Database name
-    pub name: String,
-
-    /// Database port
-    pub port: u16,
-
     /// Full database url
     pub url: String,
 

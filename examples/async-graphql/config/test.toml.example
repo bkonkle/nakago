@@ -1,4 +1,10 @@
 # Local testing
 
 port = 0
-run_mode = "test"
+
+[auth.client]
+id = "client_id"
+secret = "client_secret"
+
+[database]
+url = "postgres://nakago:nakago@localhost:5432/async-graphql"

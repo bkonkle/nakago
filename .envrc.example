@@ -1,8 +1,19 @@
-export DATABASE_HOSTNAME=localhost
-export DATABASE_USERNAME=async-graphql
-export DATABASE_PASSWORD=async-graphql
-export DATABASE_NAME=async-graphql
-export DATABASE_PORT=1701
-export DATABASE_URL=postgresql://async-graphql:async-graphql@localhost:1701/async-graphql
+# HTTP
 
-export AUTH_URL="https://caster-api-dev.us.auth0.com"
+export HTTP_PORT=8000
+
+# Databases
+
+export DATABASE_USERNAME=nakago
+export DATABASE_PASSWORD=nakago
+export DATABASE_HOSTNAME=localhost
+export DATABASE_PORT=5432
+
+DATABASE_URL_PREFIX=postgresql://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOSTNAME}:${DATABASE_PORT}
+
+export DATABASE_NAME_ASYNC_GRAPHQL=async-graphql
+export DATABASE_URL_ASYNC_GRAPHQL=${DATABASE_URL_PREFIX}/${DATABASE_NAME_ASYNC_GRAPHQL}
+
+# Auth
+
+export AUTH_URL="https://nakago-dev.oauth-service.com"

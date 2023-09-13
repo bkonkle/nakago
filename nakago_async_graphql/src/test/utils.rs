@@ -26,6 +26,7 @@ impl<C: Config, S: State> TestUtils<C, S> {
     /// Initialize the GraphQL test utils
     pub async fn init(
         app: AxumApplication<C, S>,
+        config_path: &str,
         base_url: &str,
         graphql_url: &str,
     ) -> InjectResult<Self>
@@ -35,7 +36,8 @@ impl<C: Config, S: State> TestUtils<C, S> {
         HttpConfig: FromRef<C>,
         AuthConfig: FromRef<C>,
     {
-        let utils = nakago_axum::test::utils::TestUtils::init(app, base_url.clone()).await?;
+        let utils =
+            nakago_axum::test::utils::TestUtils::init(app, config_path, base_url.clone()).await?;
 
         let base_url = if graphql_url.starts_with('/') {
             base_url.strip_suffix('/').unwrap_or(base_url)

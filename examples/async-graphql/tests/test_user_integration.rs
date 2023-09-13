@@ -1,3 +1,5 @@
+#![cfg(feature = "integration")]
+
 use anyhow::Result;
 use fake::{faker::internet::en::FreeEmail, Fake};
 use hyper::body::to_bytes;
@@ -35,7 +37,6 @@ const GET_CURRENT_USER: &str = "
 ";
 
 #[tokio::test]
-#[ignore]
 async fn test_user_get_current_simple() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -81,7 +82,6 @@ async fn test_user_get_current_simple() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_user_get_current_no_user() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -126,7 +126,6 @@ const GET_OR_CREATE_CURRENT_USER: &str = "
 ";
 
 #[tokio::test]
-#[ignore]
 async fn test_user_get_or_create_current_existing() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -173,7 +172,6 @@ async fn test_user_get_or_create_current_existing() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_user_get_or_create_current_create() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -215,7 +213,6 @@ async fn test_user_get_or_create_current_create() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_user_get_or_create_current_requires_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -257,7 +254,6 @@ const UPDATE_CURRENT_USER: &str = "
 ";
 
 #[tokio::test]
-#[ignore]
 async fn test_user_update_current() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -305,7 +301,6 @@ async fn test_user_update_current() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_user_update_current_requires_authn() -> Result<()> {
     let utils = TestUtils::init().await?;
 
@@ -331,7 +326,6 @@ async fn test_user_update_current_requires_authn() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_user_update_current_requires_user() -> Result<()> {
     let utils = TestUtils::init().await?;
 

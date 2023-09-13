@@ -72,25 +72,12 @@ args = ["llvm-cov", "nextest", "--lcov", "--output-path", "lcov.info"]
 [tasks.integration]
 env = { "RUN_MODE" = "test", "RUST_LOG" = "info,sqlx::query=warn", "RUST_BACKTRACE" = 1 }
 command = "cargo"
-args = [
-    "nextest",
-    "run",
-    "--features=integration",
-    "--workspace",
-    "--run-ignored=ignored-only",
-    "${@}",
-]
+args = ["nextest", "run", "--features=integration", "--workspace", "${@}"]
 
 [tasks.integration-ci]
 env = { "RUN_MODE" = "ci", "RUST_LOG" = "info,sqlx::query=warn" }
 command = "cargo"
-args = [
-    "nextest",
-    "run",
-    "--features=integration",
-    "--workspace",
-    "--run-ignored=ignored-only",
-]
+args = ["nextest", "run", "--features=integration", "--workspace"]
 
 [tasks.audit]
 command = "cargo"
@@ -128,32 +115,29 @@ watch = true
 
 # Database tasks for example projects
 
-[tasks.db-create-simple]
-cwd = "./examples/simple"
-command = "sqlx"
-args = ["db", "create"]
+[tasks.db-create]
+dependencies = ["db-create-async-graphql"]
 
-[tasks.db-migrate-simple]
-cwd = "./examples/simple"
-command = "sqlx"
-args = ["migrate", "run"]
+[tasks.db-migrate]
+dependencies = ["db-migrate-async-graphql"]
 
-[tasks.db-reset-simple]
-cwd = "./examples/simple"
-command = "sqlx"
-args = ["db", "reset"]
+[tasks.db-reset]
+dependencies = ["db-reset-async-graphql"]
 
 [tasks.db-create-async-graphql]
+env = { "DATABASE_URL" = "${DATABASE_URL_ASYNC_GRAPHQL}" }
 cwd = "./examples/async-graphql"
 command = "sqlx"
 args = ["db", "create"]
 
 [tasks.db-migrate-async-graphql]
+env = { "DATABASE_URL" = "${DATABASE_URL_ASYNC_GRAPHQL}" }
 cwd = "./examples/async-graphql"
 command = "sqlx"
 args = ["migrate", "run"]
 
 [tasks.db-reset-async-graphql]
+env = { "DATABASE_URL" = "${DATABASE_URL_ASYNC_GRAPHQL}" }
 cwd = "./examples/async-graphql"
 command = "sqlx"
 args = ["db", "reset"]

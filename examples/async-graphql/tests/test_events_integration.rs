@@ -1,3 +1,5 @@
+#![cfg(feature = "integration")]
+
 use anyhow::Result;
 use futures_util::StreamExt;
 use nakago_examples_async_graphql::events::{IncomingMessage, OutgoingMessage};
@@ -8,7 +10,6 @@ mod test_utils;
 use test_utils::TestUtils;
 
 #[tokio::test]
-#[ignore]
 async fn test_ping() -> Result<()> {
     let utils = TestUtils::init().await?;
 
