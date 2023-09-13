@@ -66,7 +66,7 @@ jobs:
       DATABASE_USERNAME: nakago
       DATABASE_PASSWORD: nakago
       DATABASE_PORT: 1701
-      DATABASE_URL_ASYNC_GRAPHQL: postgresql://nakago:nakago@localhost:1701/async_graphql
+      DATABASE_URL_ASYNC_GRAPHQL: postgresql://nakago:nakago@localhost:1701/async-graphql
       CONFIG_PATH_ASYNC_GRAPHQL: examples/async-graphql/config/ci.toml
       CONFIG_PATH_SIMPLE: examples/simple/config/ci.toml
 
