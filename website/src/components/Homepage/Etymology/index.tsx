@@ -24,6 +24,13 @@ export default function Etymoology(): JSX.Element {
                     </div>
                     <div className="col col--2"></div>
                 </div>
+                <div className={`${styles.goodLuck} row`}>
+                    <div className="col col--4"></div>
+                    <div className="col col--4 text--center">
+                        <h2>頑張ってください！</h2>
+                    </div>
+                    <div className="col col--4"></div>
+                </div>
             </div>
         </section>
     );
