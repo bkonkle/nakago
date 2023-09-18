@@ -82,7 +82,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Run docker-compose
         run: docker-compose -f docker-compose.yml up -d
