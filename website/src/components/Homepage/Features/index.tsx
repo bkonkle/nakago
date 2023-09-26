@@ -11,7 +11,7 @@ type FeatureItem = {
 const FeatureList: FeatureItem[] = [
     {
         title: "Dependency Injection",
-        Svg: require("@site/static/img/undraw_my_answer_re_k4dv.svg").default,
+        Svg: require("@site/static/img/undraw_logistics_x-4-dc.svg").default,
         description: (
             <>
                 Nakago is built around a fully async dependency injection system
@@ -28,8 +28,7 @@ const FeatureList: FeatureItem[] = [
     },
     {
         title: "Application Lifecycle",
-        Svg: require("@site/static/img/undraw_software_engineer_re_tnjc.svg")
-            .default,
+        Svg: require("@site/static/img/undraw_my_answer_re_k4dv.svg").default,
         description: (
             <>
                 Nakago provides a simple and flexible application lifecycle that
@@ -41,7 +40,8 @@ const FeatureList: FeatureItem[] = [
     },
     {
         title: "Comprehensive Testing",
-        Svg: require("@site/static/img/undraw_result_re_uj08.svg").default,
+        Svg: require("@site/static/img/undraw_software_engineer_re_tnjc.svg")
+            .default,
         description: (
             <>
                 Easily swap in mock dependencies for unit testing to isolate and
