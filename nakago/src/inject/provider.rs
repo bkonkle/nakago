@@ -126,9 +126,9 @@ pub(crate) mod test {
         async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Box<dyn HasId>>> {
             i.get_type_opt::<String>().await?;
 
-            let dep: Box<dyn HasId> = Box::new(OtherService::new("test-service".to_string()));
-
-            Ok(Arc::new(dep))
+            Ok(Arc::new(Box::new(OtherService::new(
+                "test-service".to_string(),
+            ))))
         }
     }
 }

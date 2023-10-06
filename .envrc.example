@@ -1,7 +1,3 @@
-# HTTP
-
-export HTTP_PORT=8000
-
 # Databases
 
 export DATABASE_USERNAME=nakago
@@ -13,7 +9,3 @@ DATABASE_URL_PREFIX=postgresql://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DAT
 
 export DATABASE_NAME_ASYNC_GRAPHQL=async-graphql
 export DATABASE_URL_ASYNC_GRAPHQL=${DATABASE_URL_PREFIX}/${DATABASE_NAME_ASYNC_GRAPHQL}
-
-# Auth
-
-export AUTH_URL="https://nakago-dev.oauth-service.com"
