@@ -11,10 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added an optional Backtrace to the NotFound error, which uses the RUST_BACKTRACE variable to determine whether or not to include it.
 
+<<<<<<< HEAD
 ### Changed
 
 - Fixed the Config init process so that it would work even if you haven't added any loaders.
 
+=======
+>>>>>>> 908736e (Test fixes)
 ## [0.12.0]
 
 ### Changed
