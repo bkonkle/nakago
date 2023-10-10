@@ -67,11 +67,11 @@ fn format_avail_lines(available: &Vec<Key>) -> String {
 }
 
 fn format_backtrace(backtrace: &Arc<Backtrace>) -> String {
-    let rust_backtrace = std::env::var("RUST_BACKTRACE").unwrap_or_default();
-    if rust_backtrace == "1" {
-        format!("\nstack backtrace:\n{:?}", backtrace)
-    } else {
-        "".to_string()
+    match std::env::var("RUST_LIB_BACKTRACE").or_else(|_| std::env::var("RUST_BACKTRACE")) {
+        Ok(should_disable) if should_disable != "0" => {
+            format!("\nstack backtrace:\n{:?}", backtrace)
+        }
+        _ => "".to_string(),
     }
 }
 
