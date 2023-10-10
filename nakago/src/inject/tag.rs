@@ -271,10 +271,9 @@ pub(crate) mod test {
         let result = i.get(&SERVICE_TAG).await;
 
         if let Err(err) = result {
-            assert_eq!(
-                format!("{} was not found\n\nAvailable: (empty)", SERVICE_TAG),
-                err.to_string()
-            );
+            let expected = format!("{} was not found\n\nAvailable: (empty)", SERVICE_TAG);
+
+            assert!(err.to_string().contains(&expected));
         } else {
             panic!("did not return Err as expected")
         }
@@ -315,13 +314,12 @@ pub(crate) mod test {
             .await;
 
         if let Err(err) = result {
-            assert_eq!(
-                format!(
-                    "{} was not found\n\nAvailable:\n - {}",
-                    OTHER_TAG, SERVICE_TAG
-                ),
-                err.to_string()
+            let expected = format!(
+                "{} was not found\n\nAvailable:\n - {}",
+                OTHER_TAG, SERVICE_TAG
             );
+
+            assert!(err.to_string().contains(&expected));
         } else {
             panic!("did not return Err as expected")
         }
@@ -517,7 +515,7 @@ pub(crate) mod test {
             .await;
 
         if let Err(err) = result {
-            assert_eq!(err.to_string(), expected);
+            assert!(err.to_string().contains(&expected));
         } else {
             panic!("did not return Err as expected")
         }

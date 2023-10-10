@@ -1,7 +1,6 @@
-use std::{
-    fmt::{self, Debug, Display},
-    sync::Arc,
-};
+use std::{fmt::Debug, sync::Arc};
+
+use backtrace::Backtrace;
 use thiserror::Error;
 
 use super::Key;
@@ -10,24 +9,31 @@ use super::Key;
 #[derive(Error, Debug, Clone)]
 pub enum Error {
     /// Type ID already occupied
+    #[error("{0} has already been provided")]
     Occupied(
         /// The Key of the entity type that was already provided
         Key,
     ),
 
     /// An instance for the given Key was not found
+    #[error("{missing} was not found\n\nAvailable:{}\n{}", format_avail_lines(.available), format_backtrace(.backtrace))]
     NotFound {
         /// The Key of the entity that was not found
         missing: Key,
 
         /// The Keys that are available in the container
         available: Vec<Key>,
+
+        /// A Backtrace of the error
+        backtrace: Arc<Backtrace>,
     },
 
     /// An error thrown from a Provider
+    #[error("provider failure")]
     Provider(#[from] Arc<anyhow::Error>),
 
     /// An error thrown when an Any type cannot be downcast to the given concrete type
+    #[error("{0} was not able to be downcast to {}", .0.type_name)]
     TypeMismatch(
         /// The Key of the entity that was not found
         Key,
@@ -35,6 +41,7 @@ pub enum Error {
 
     /// An error thrown when a Key cannot be consumed and removed from the container, usually
     /// because there are still active refs to the Arc containing the dependency.
+    #[error("{key} cannot be consumed, {strong_count} strong pointers remain")]
     CannotConsume {
         /// The Key of the entity that cannot be consumed
         key: Key,
@@ -44,39 +51,29 @@ pub enum Error {
     },
 }
 
-/// A Dependency Injection Result
-pub type Result<T> = std::result::Result<T, Error>;
-
-impl Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Occupied(key) => write!(f, "{key} has already been provided"),
-            Self::NotFound { missing, available } => {
-                let avail_lines = if !available.is_empty() {
-                    format!(
-                        "\n - {}",
-                        available
-                            .iter()
-                            .map(|k| k.to_string())
-                            .collect::<Vec<String>>()
-                            .join("\n\n - ")
-                    )
-                } else {
-                    " (empty)".to_string()
-                };
-
-                write!(f, "{missing} was not found\n\nAvailable:{avail_lines}")
-            }
-            Self::Provider(_) => write!(f, "provider failure"),
-            Self::TypeMismatch(key) => {
-                write!(f, "{key} was not able to be downcast to {0}", key.type_name)
-            }
-            Self::CannotConsume { key, strong_count } => {
-                write!(
-                    f,
-                    "{key} cannot be consumed, {strong_count} strong pointers remain"
-                )
-            }
-        }
+fn format_avail_lines(available: &Vec<Key>) -> String {
+    if !available.is_empty() {
+        format!(
+            "\n - {}",
+            available
+                .iter()
+                .map(|k| k.to_string())
+                .collect::<Vec<String>>()
+                .join("\n\n - ")
+        )
+    } else {
+        " (empty)".to_string()
     }
 }
+
+fn format_backtrace(backtrace: &Arc<Backtrace>) -> String {
+    let rust_backtrace = std::env::var("RUST_BACKTRACE").unwrap_or_default();
+    if rust_backtrace == "1" {
+        format!("\nstack backtrace:\n{:?}", backtrace)
+    } else {
+        "".to_string()
+    }
+}
+
+/// A Dependency Injection Result
+pub type Result<T> = std::result::Result<T, Error>;
