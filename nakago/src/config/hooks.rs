@@ -40,7 +40,7 @@ impl Hook for AddConfigLoaders {
             Err(_) => self.loaders.clone(),
         };
 
-        let _ = i.override_tag(&CONFIG_LOADERS, loaders).await?;
+        i.inject(&CONFIG_LOADERS, loaders).await?;
 
         Ok(())
     }
@@ -90,18 +90,17 @@ impl<C: Config> InitConfig<C> {
 #[async_trait]
 impl<C: Config> Hook for InitConfig<C> {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
-        if let Ok(loaders) = i.get(&CONFIG_LOADERS).await {
-            let loader = Loader::<C>::new(loaders.to_vec());
+        let config_loaders = i.get(&CONFIG_LOADERS).await.unwrap_or_default().to_vec();
+        let loader = Loader::<C>::new(config_loaders);
 
-            let config = loader
-                .load(self.custom_path.clone())
-                .map_err(|e| InjectError::Provider(Arc::new(e.into())))?;
+        let config = loader
+            .load(self.custom_path.clone())
+            .map_err(|e| InjectError::Provider(Arc::new(e.into())))?;
 
-            if let Some(tag) = self.tag {
-                i.inject(tag, config).await?;
-            } else {
-                i.inject_type(config).await?;
-            }
+        if let Some(tag) = self.tag {
+            i.inject(tag, config).await?;
+        } else {
+            i.inject_type(config).await?;
         }
 
         Ok(())

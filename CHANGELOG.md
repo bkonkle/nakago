@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1]
+
+### Added
+
+- Added an optional Backtrace to the NotFound error, which uses the RUST_BACKTRACE variable to determine whether or not to include it.
+
+### Changed
+
+- Fixed the Config init process so that it would work even if you haven't added any loaders.
+
 ## [0.12.0]
 
 ### Changed
@@ -173,6 +183,7 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
+[0.12.1]: https://github.com/bkonkle/nakago/compare/0.12.0...0.12.1
 [0.12.0]: https://github.com/bkonkle/nakago/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/bkonkle/nakago/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/bkonkle/nakago/compare/0.9.0...0.10.0

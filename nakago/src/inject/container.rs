@@ -6,6 +6,7 @@ use std::{
     sync::Arc,
 };
 
+use backtrace::Backtrace;
 use futures::{Future, FutureExt};
 use tokio::sync::RwLock;
 
@@ -34,6 +35,7 @@ impl Inject {
             Err(Error::NotFound {
                 missing: key,
                 available,
+                backtrace: Arc::new(Backtrace::new()),
             })
         }
     }
@@ -78,6 +80,7 @@ impl Inject {
             Err(Error::NotFound {
                 missing: key,
                 available,
+                backtrace: Arc::new(Backtrace::new()),
             })
         }
     }
@@ -121,6 +124,7 @@ impl Inject {
             .ok_or(Error::NotFound {
                 missing: key,
                 available,
+                backtrace: Arc::new(Backtrace::new()),
             })
     }
 
@@ -177,6 +181,7 @@ impl Inject {
         Err(Error::NotFound {
             missing: key,
             available: self.get_available_keys().await,
+            backtrace: Arc::new(Backtrace::new()),
         })
     }
 
@@ -194,6 +199,7 @@ impl Inject {
             Entry::Vacant(_) => Err(Error::NotFound {
                 missing: key,
                 available,
+                backtrace: Arc::new(Backtrace::new()),
             }),
         }
     }
@@ -209,6 +215,7 @@ impl Inject {
             .ok_or(Error::NotFound {
                 missing: key,
                 available,
+                backtrace: Arc::new(Backtrace::new()),
             })
     }
 
