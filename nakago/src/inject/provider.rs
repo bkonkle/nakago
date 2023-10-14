@@ -1,6 +1,7 @@
 use std::{any::Any, collections::hash_map::Entry, sync::Arc};
 
 use async_trait::async_trait;
+use backtrace::Backtrace;
 
 use super::{
     injector::{Dependency, Injector},
@@ -48,6 +49,7 @@ impl Inject {
             Entry::Vacant(_) => Err(Error::NotFound {
                 missing: key,
                 available,
+                backtrace: Arc::new(Backtrace::new()),
             }),
         }
     }
@@ -126,9 +128,9 @@ pub(crate) mod test {
         async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Box<dyn HasId>>> {
             i.get_type_opt::<String>().await?;
 
-            let dep: Box<dyn HasId> = Box::new(OtherService::new("test-service".to_string()));
-
-            Ok(Arc::new(dep))
+            Ok(Arc::new(Box::new(OtherService::new(
+                "test-service".to_string(),
+            ))))
         }
     }
 }
