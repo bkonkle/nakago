@@ -94,14 +94,19 @@ pub fn get_secret(jwk: JWK<Empty>) -> Result<Secret, JwksClientError> {
     Ok(secret)
 }
 
+/// A validator for JWTs that uses a JWKS key set to validate the token
 #[derive(Clone)]
-pub(crate) enum JWKSValidator {
+pub enum JWKSValidator {
+    /// A validator that uses a JWKS key set to validate the token
     KeySet(Arc<JWKSet<Empty>>),
-    Unverified, // Used for testing
+
+    /// A validator that does not validate the token, used for testing
+    Unverified,
 }
 
 impl JWKSValidator {
-    pub(crate) fn get_payload(&self, jwt: &str) -> Result<ClaimsSet<Empty>, AuthError> {
+    /// Get a validated payload from a JWT string
+    pub fn get_payload(&self, jwt: &str) -> Result<ClaimsSet<Empty>, AuthError> {
         match self {
             JWKSValidator::KeySet(jwks) => {
                 // First extract without verifying the header to locate the key-id (kid)
