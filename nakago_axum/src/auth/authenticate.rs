@@ -30,7 +30,8 @@ const BEARER: &str = "Bearer ";
 #[derive(Clone)]
 #[allow(dead_code)]
 pub struct AuthState {
-    jwks: JWKSValidator,
+    /// The JWKS Validator
+    pub jwks: JWKSValidator,
 }
 
 impl AuthState {
