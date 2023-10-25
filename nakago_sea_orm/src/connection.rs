@@ -5,29 +5,29 @@ use std::{
 
 use async_trait::async_trait;
 use axum::extract::FromRef;
-use nakago::{to_provider_error, Config, Inject, InjectResult, Provider, Tag};
+use nakago::{self, inject, to_provider_error, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use sea_orm::{DatabaseBackend, DatabaseConnection, MockDatabase, MockDatabaseTrait};
 
-use crate::config::DatabaseConfig;
+use crate::Config;
 
 /// Tag(SeaORM:DatabaseConnection)
-pub const DATABASE_CONNECTION: Tag<DatabaseConnection> = Tag::new("SeaORM:DatabaseConnection");
+pub const CONNECTION: Tag<DatabaseConnection> = Tag::new("SeaORM:DatabaseConnection");
 
 /// Provide a SeaOrm Database connection
 ///
 /// **Provides:** `Arc<DatabaseConnection>`
 ///
 /// **Depends on:**
-///   - `<C: Config>` - requires that `C` fulfills the `DatabaseConfig: FromRef<C>` constraint
+///   - `<C: nakago::Config>` - requires that `C` fulfills the `Config: FromRef<C>` constraint
 #[derive(Default)]
-pub struct ProvideConnection<C: Config> {
+pub struct Provide<C: nakago::Config> {
     config_tag: Option<&'static Tag<C>>,
     _phantom: PhantomData<C>,
 }
 
-impl<C: Config> ProvideConnection<C> {
-    /// Create a new instance of ProvideConnection
+impl<C: nakago::Config> Provide<C> {
+    /// Create a new instance of Provide
     pub fn new(config_tag: Option<&'static Tag<C>>) -> Self {
         Self {
             config_tag,
@@ -46,21 +46,21 @@ impl<C: Config> ProvideConnection<C> {
 
 #[Provider]
 #[async_trait]
-impl<C: Config> Provider<DatabaseConnection> for ProvideConnection<C>
+impl<C: nakago::Config> Provider<DatabaseConnection> for Provide<C>
 where
-    DatabaseConfig: FromRef<C>,
+    Config: FromRef<C>,
 {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DatabaseConnection>> {
-        let config = if let Some(tag) = self.config_tag {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<DatabaseConnection>> {
+        let dep = if let Some(tag) = self.config_tag {
             i.get(tag).await?
         } else {
             i.get_type::<C>().await?
         };
 
-        let database = DatabaseConfig::from_ref(&*config);
+        let config = Config::from_ref(&*dep);
 
         Ok(Arc::new(
-            sea_orm::Database::connect(&database.url)
+            sea_orm::Database::connect(&config.url)
                 .await
                 .map_err(to_provider_error)?,
         ))
@@ -70,11 +70,11 @@ where
 /// Provide a Mock Database Connection for use in unit testing
 ///
 /// **Provides:** `Arc<DatabaseConnection>`
-pub struct ProvideMockConnection {
+pub struct ProvideMock {
     db: Mutex<MockDatabase>,
 }
 
-impl ProvideMockConnection {
+impl ProvideMock {
     /// Initialize a new Mock DB connection
     pub fn new(db: MockDatabase) -> Self {
         Self { db: Mutex::new(db) }
@@ -89,7 +89,7 @@ impl ProvideMockConnection {
     }
 }
 
-impl Default for ProvideMockConnection {
+impl Default for ProvideMock {
     fn default() -> Self {
         Self::new(MockDatabase::new(DatabaseBackend::Sqlite))
     }
@@ -97,8 +97,8 @@ impl Default for ProvideMockConnection {
 
 #[Provider]
 #[async_trait]
-impl Provider<DatabaseConnection> for ProvideMockConnection {
-    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<DatabaseConnection>> {
+impl Provider<DatabaseConnection> for ProvideMock {
+    async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<DatabaseConnection>> {
         let existing = self.db.lock().expect("Could not lock MockDatabase Mutex");
         let backend = existing.get_database_backend();
         drop(existing);

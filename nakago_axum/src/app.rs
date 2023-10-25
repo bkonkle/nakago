@@ -1,16 +1,17 @@
-use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
-use hyper::server::conn::AddrIncoming;
-use nakago::{config::loader::Config, Application, InjectResult, Tag};
 use std::{
     any::Any,
     fmt::Debug,
     ops::{Deref, DerefMut},
     path::PathBuf,
 };
+
+use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
+use hyper::server::conn::AddrIncoming;
+use nakago::{self, inject, Application, Tag};
 use tokio::sync::Mutex;
 use tower_http::trace;
 
-use crate::{config::HttpConfig, Route};
+use crate::{Config, Route};
 
 /// State must be clonable and able to be stored in the Inject container
 pub trait State: Clone + Any + Send + Sync {}
@@ -18,7 +19,7 @@ pub trait State: Clone + Any + Send + Sync {}
 /// An Axum HTTP Application
 pub struct AxumApplication<C, S>
 where
-    C: Config,
+    C: nakago::Config,
     S: State,
 {
     app: Application<C>,
@@ -27,7 +28,7 @@ where
 
 impl<C, S> AxumApplication<C, S>
 where
-    C: Config,
+    C: nakago::Config,
     S: State,
 {
     /// Create a new AxumApplication instance
@@ -57,7 +58,7 @@ where
 
 impl<C, S> Default for AxumApplication<C, S>
 where
-    C: Config,
+    C: nakago::Config,
     S: State,
 {
     fn default() -> Self {
@@ -67,7 +68,7 @@ where
 
 impl<C, S> Deref for AxumApplication<C, S>
 where
-    C: Config + Debug,
+    C: nakago::Config + Debug,
     S: State,
 {
     type Target = Application<C>;
@@ -79,7 +80,7 @@ where
 
 impl<C, S> DerefMut for AxumApplication<C, S>
 where
-    C: Config + Debug,
+    C: nakago::Config + Debug,
     S: State,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
@@ -89,7 +90,7 @@ where
 
 impl<C, S> AxumApplication<C, S>
 where
-    C: Config + Debug,
+    C: nakago::Config + Debug,
     S: State,
 {
     /// Run the server and return the bound address and a `Future`. Triggers the Startup lifecycle
@@ -101,9 +102,9 @@ where
     pub async fn run(
         &self,
         config_path: Option<PathBuf>,
-    ) -> InjectResult<Server<AddrIncoming, IntoMakeService<Router>>>
+    ) -> inject::Result<Server<AddrIncoming, IntoMakeService<Router>>>
     where
-        HttpConfig: FromRef<C>,
+        Config: FromRef<C>,
     {
         self.load(config_path).await?;
         self.init().await?;
@@ -112,7 +113,7 @@ where
         let router = self.get_router().await?;
         let config = self.get_config().await?;
 
-        let http = HttpConfig::from_ref(&*config);
+        let http = Config::from_ref(&*config);
 
         let server = Server::bind(
             &format!("0.0.0.0:{}", http.port)
@@ -124,7 +125,7 @@ where
         Ok(server)
     }
 
-    async fn get_router(&self) -> InjectResult<Router> {
+    async fn get_router(&self) -> inject::Result<Router> {
         let mut router = Router::<S>::new();
 
         if let Some(routes) = self.app.get_type_opt::<Mutex<Vec<Route<S>>>>().await? {

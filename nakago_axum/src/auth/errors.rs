@@ -4,7 +4,7 @@ use thiserror::Error;
 
 /// Expected Error Cases
 #[derive(Error, Debug)]
-pub enum AuthError {
+pub enum Error {
     /// The Authorizat ion header is not valid
     #[error("Invalid Authorization header")]
     InvalidAuthHeaderError,
@@ -18,14 +18,14 @@ pub enum AuthError {
     JWKSError,
 }
 
-impl IntoResponse for AuthError {
+impl IntoResponse for Error {
     fn into_response(self) -> Response {
         match self {
-            AuthError::JWKSError => (StatusCode::UNAUTHORIZED, self.to_string()).into_response(),
-            AuthError::JWTTokenError(err) => {
+            Error::JWKSError => (StatusCode::UNAUTHORIZED, self.to_string()).into_response(),
+            Error::JWTTokenError(err) => {
                 (StatusCode::BAD_REQUEST, format!("JWTTokenError: {err}")).into_response()
             }
-            AuthError::InvalidAuthHeaderError => {
+            Error::InvalidAuthHeaderError => {
                 (StatusCode::BAD_REQUEST, self.to_string()).into_response()
             }
         }

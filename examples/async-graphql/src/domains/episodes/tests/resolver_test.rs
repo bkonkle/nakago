@@ -9,29 +9,27 @@ use serde_json::json;
 use crate::domains::{
     episodes::{
         model::Episode,
-        schema::test::{ProvideEpisodesSchema, EPISODES_SCHEMA},
-        service::{MockEpisodesService, EPISODES_SERVICE},
+        schema::{self, test::SCHEMA},
+        service::{MockService, SERVICE},
     },
-    shows::service::SHOWS_SERVICE,
-    shows::{
-        loaders::{ProvideShowLoader, SHOW_LOADER},
-        service::test::ProvideMockShowsService,
-    },
+    shows,
 };
 
-async fn setup(service: MockEpisodesService) -> Result<Inject> {
+async fn setup(service: MockService) -> Result<Inject> {
     let i = Inject::default();
 
-    i.inject(&EPISODES_SERVICE, Box::new(service)).await?;
+    i.inject(&SERVICE, Box::new(service)).await?;
 
-    i.provide(&SHOWS_SERVICE, ProvideMockShowsService::default())
+    i.provide(
+        &shows::SERVICE,
+        shows::service::test::ProvideMock::default(),
+    )
+    .await?;
+
+    i.provide(&shows::LOADER, shows::loaders::Provide::default())
         .await?;
 
-    i.provide(&SHOW_LOADER, ProvideShowLoader::default())
-        .await?;
-
-    i.provide(&EPISODES_SCHEMA, ProvideEpisodesSchema::default())
-        .await?;
+    i.provide(&SCHEMA, schema::test::Provide::default()).await?;
 
     Ok(i)
 }
@@ -64,7 +62,7 @@ async fn test_episodes_resolver_get_simple() -> Result<()> {
     episode.title = episode_title.to_string();
     episode.show = Some(Faker.fake());
 
-    let mut service = MockEpisodesService::default();
+    let mut service = MockService::default();
     service
         .expect_get()
         .with(eq(episode_id), eq(&true))
@@ -73,7 +71,7 @@ async fn test_episodes_resolver_get_simple() -> Result<()> {
 
     let i = setup(service).await?;
 
-    let schema = i.get(&EPISODES_SCHEMA).await?;
+    let schema = i.get(&SCHEMA).await?;
 
     let result = schema
         .execute(

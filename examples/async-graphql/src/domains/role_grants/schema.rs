@@ -1,23 +1,21 @@
 use async_trait::async_trait;
-use nakago::{Hook, Inject, InjectResult};
+use nakago::{inject, Hook, Inject};
 
 use super::{
-    loaders::{ProvideRoleGrantLoader, ROLE_GRANT_LOADER},
-    service::{ProvideRoleGrantsService, ROLE_GRANTS_SERVICE},
+    loaders::{self, LOADER},
+    service::{self, SERVICE},
 };
 
 /// Provide dependencies needed for the RoleGrants domain
 #[derive(Default)]
-pub struct LoadRoleGrants {}
+pub struct Load {}
 
 #[async_trait]
-impl Hook for LoadRoleGrants {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        i.provide(&ROLE_GRANTS_SERVICE, ProvideRoleGrantsService::default())
-            .await?;
+impl Hook for Load {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        i.provide(&SERVICE, service::Provide::default()).await?;
 
-        i.provide(&ROLE_GRANT_LOADER, ProvideRoleGrantLoader::default())
-            .await?;
+        i.provide(&LOADER, loaders::Provide::default()).await?;
 
         Ok(())
     }

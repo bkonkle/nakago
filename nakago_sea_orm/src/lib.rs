@@ -7,8 +7,8 @@ pub mod connection;
 /// Database Config
 pub mod config;
 
-pub use config::{default_config_loaders, DatabaseConfig, DatabaseConfigLoader, DatabasePool};
-pub use connection::{ProvideConnection, DATABASE_CONNECTION};
+pub use config::{default_config_loaders, Config, DatabasePool, Loader};
+pub use connection::CONNECTION;
 
 // Re-exports
 pub use sea_orm::DatabaseConnection;

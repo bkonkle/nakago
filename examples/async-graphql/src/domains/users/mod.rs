@@ -24,3 +24,7 @@ pub const AUTHORIZATION: &str = include_str!("authorization.polar");
 /// Tests
 #[cfg(test)]
 mod tests;
+
+pub use loaders::{Loader, LOADER};
+pub use resolver::{Mutation, Query};
+pub use service::{Service, SERVICE};

@@ -1,5 +1,3 @@
-use backtrace::Backtrace;
-use crossterm::{execute, style::Print};
 use std::{
     io,
     marker::PhantomData,
@@ -8,13 +6,16 @@ use std::{
     path::PathBuf,
     sync::Arc,
 };
+
+use backtrace::Backtrace;
+use crossterm::{execute, style::Print};
 use tracing_subscriber::prelude::*;
 
 use crate::{
-    config::{Config, InitConfig},
-    inject::{Hook, Inject},
+    config,
+    inject::{self, Hook},
     lifecycle::Events,
-    EventType, InjectResult, Tag,
+    Config, EventType, Inject, Tag,
 };
 
 /// The top-level Application struct
@@ -74,7 +75,7 @@ where
     }
 
     /// Trigger the given lifecycle event
-    pub async fn trigger(&mut self, event: &EventType) -> InjectResult<()> {
+    pub async fn trigger(&mut self, event: &EventType) -> inject::Result<()> {
         self.events.trigger(event, self.i.clone()).await
     }
 
@@ -85,7 +86,7 @@ where
     ///
     /// **Consumes:**
     ///   - `Tag(ConfigLoaders)`
-    pub async fn load(&self, config_path: Option<PathBuf>) -> InjectResult<()> {
+    pub async fn load(&self, config_path: Option<PathBuf>) -> inject::Result<()> {
         // Trigger the Load lifecycle event
         self.events
             .trigger(&EventType::Load, self.i.clone())
@@ -93,14 +94,14 @@ where
 
         // Load the Config using the given path
         self.i
-            .handle(InitConfig::new(config_path, self.config_tag))
+            .handle(config::Init::new(config_path, self.config_tag))
             .await?;
 
         Ok(())
     }
 
     /// Initialize the App and provide the top-level Config. Triggers the Init lifecycle event.
-    pub async fn init(&self) -> InjectResult<()> {
+    pub async fn init(&self) -> inject::Result<()> {
         // Trigger the Init lifecycle event
         self.events
             .trigger(&EventType::Init, self.i.clone())
@@ -120,7 +121,7 @@ where
     }
 
     /// Trigger the Startup lifecycle event.
-    pub async fn start(&self) -> InjectResult<()> {
+    pub async fn start(&self) -> inject::Result<()> {
         self.events
             .trigger(&EventType::Startup, self.i.clone())
             .await?;
@@ -129,7 +130,7 @@ where
     }
 
     /// Trigger the Shutdown lifecycle event.
-    pub async fn stop(&self) -> InjectResult<()> {
+    pub async fn stop(&self) -> inject::Result<()> {
         self.events
             .trigger(&EventType::Shutdown, self.i.clone())
             .await?;
@@ -138,7 +139,7 @@ where
     }
 
     /// Get the top-level Config by tag or type
-    pub async fn get_config(&self) -> InjectResult<Arc<C>> {
+    pub async fn get_config(&self) -> inject::Result<Arc<C>> {
         let config = if let Some(tag) = self.config_tag {
             self.i.get(tag).await?
         } else {

@@ -2,14 +2,14 @@ use std::{any::Any, marker::PhantomData, sync::Arc};
 
 use async_graphql::{ObjectType, Schema, SchemaBuilder, SubscriptionType};
 use async_trait::async_trait;
-use nakago::{Hook, Inject, InjectResult, Provider, Tag};
+use nakago::{inject, Hook, Inject, Provider, Tag};
 use nakago_derive::Provider;
 
 /// Provides a SchemaBuilder that can be modified by hooks to initialize the GraphQL Schema
 ///
 /// **Provides:** `SchemaBuilder<Query, Mutation, Subscription>`
 #[derive(Default)]
-pub struct SchemaBuilderProvider<Query: Any, Mutation: Any, Subscription: Any> {
+pub struct ProvideBuilder<Query: Any, Mutation: Any, Subscription: Any> {
     _query: PhantomData<Query>,
     _mutation: PhantomData<Mutation>,
     _subscription: PhantomData<Subscription>,
@@ -18,7 +18,7 @@ pub struct SchemaBuilderProvider<Query: Any, Mutation: Any, Subscription: Any> {
 #[Provider]
 #[async_trait]
 impl<Query, Mutation, Subscription> Provider<SchemaBuilder<Query, Mutation, Subscription>>
-    for SchemaBuilderProvider<Query, Mutation, Subscription>
+    for ProvideBuilder<Query, Mutation, Subscription>
 where
     Query: ObjectType + Default + 'static,
     Mutation: ObjectType + Default + 'static,
@@ -27,7 +27,7 @@ where
     async fn provide(
         self: Arc<Self>,
         _i: Inject,
-    ) -> InjectResult<Arc<SchemaBuilder<Query, Mutation, Subscription>>> {
+    ) -> inject::Result<Arc<SchemaBuilder<Query, Mutation, Subscription>>> {
         Ok(Arc::new(Schema::build(
             Query::default(),
             Mutation::default(),
@@ -38,12 +38,12 @@ where
 
 /// Initialize the GraphQL Schema and inject it with the given Tag
 #[derive(Default)]
-pub struct InitSchema<Query: Any, Mutation: Any, Subscription: Any> {
+pub struct Init<Query: Any, Mutation: Any, Subscription: Any> {
     builder_tag: Option<&'static Tag<SchemaBuilder<Query, Mutation, Subscription>>>,
     schema_tag: Option<&'static Tag<Schema<Query, Mutation, Subscription>>>,
 }
 
-impl<Query: Any, Mutation: Any, Subscription: Any> InitSchema<Query, Mutation, Subscription> {
+impl<Query: Any, Mutation: Any, Subscription: Any> Init<Query, Mutation, Subscription> {
     /// Add a builder tag to the hook
     pub fn with_builder_tag(
         self,
@@ -65,13 +65,13 @@ impl<Query: Any, Mutation: Any, Subscription: Any> InitSchema<Query, Mutation, S
 }
 
 #[async_trait]
-impl<Query, Mutation, Subscription> Hook for InitSchema<Query, Mutation, Subscription>
+impl<Query, Mutation, Subscription> Hook for Init<Query, Mutation, Subscription>
 where
     Query: ObjectType + Default + 'static,
     Mutation: ObjectType + Default + 'static,
     Subscription: SubscriptionType + Default + 'static,
 {
-    async fn handle(&self, inject: Inject) -> InjectResult<()> {
+    async fn handle(&self, inject: Inject) -> inject::Result<()> {
         let schema_builder = if let Some(tag) = self.builder_tag {
             inject.consume(tag).await?
         } else {

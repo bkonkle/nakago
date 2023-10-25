@@ -4,14 +4,11 @@ use nakago::{Hook, Inject, InjectResult, Tag};
 
 use crate::{
     config::CONFIG,
-    domains::{
-        episodes::schema::InitGraphQLEpisodes, profiles::schema::InitGraphQLProfiles,
-        shows::schema::InitGraphQLShows, users::schema::InitGraphQLUsers,
-    },
+    domains::{episodes, profiles, shows, users},
 };
 use crate::{
     domains::{
-        episodes::resolver::{EpisodesMutation, EpisodesQuery},
+        episodes,
         profiles::resolver::{ProfilesMutation, ProfilesQuery},
         shows::resolver::{ShowsMutation, ShowsQuery},
         users::resolver::{UsersMutation, UsersQuery},
@@ -36,31 +33,31 @@ pub struct Mutation(
 pub type GraphQLSchema = Schema<Query, Mutation, EmptySubscription>;
 
 /// Tag(GraphQLSchema)
-pub const GRAPHQL_SCHEMA: Tag<GraphQLSchema> = Tag::new("GraphQLSchema");
+pub const SCHEMA: Tag<GraphQLSchema> = Tag::new("GraphQLSchema");
 
 /// Tag(GraphQLSchemaBuilder)
-pub const GRAPHQL_SCHEMA_BUILDER: Tag<SchemaBuilder<Query, Mutation, EmptySubscription>> =
+pub const SCHEMA_BUILDER: Tag<SchemaBuilder<Query, Mutation, EmptySubscription>> =
     Tag::new("GraphQLSchemaBuilder");
 
 /// Initializes the GraphQL schema builder
 #[derive(Default)]
-pub struct InitGraphQL {}
+pub struct Init {}
 
 #[async_trait]
-impl Hook for InitGraphQL {
+impl Hook for Init {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
         let config = i.get(&CONFIG).await?;
         let oso = i.get(&OSO).await?;
 
-        i.modify(&GRAPHQL_SCHEMA_BUILDER, |builder| {
+        i.modify(&SCHEMA_BUILDER, |builder| {
             Ok(builder.data(config.clone()).data((*oso).clone()))
         })
         .await?;
 
-        i.handle(InitGraphQLUsers::default()).await?;
-        i.handle(InitGraphQLProfiles::default()).await?;
-        i.handle(InitGraphQLShows::default()).await?;
-        i.handle(InitGraphQLEpisodes::default()).await?;
+        i.handle(users::schema::Init::default()).await?;
+        i.handle(profiles::schema::Init::default()).await?;
+        i.handle(shows::schema::Init::default()).await?;
+        i.handle(episodes::schema::Init::default()).await?;
 
         Ok(())
     }

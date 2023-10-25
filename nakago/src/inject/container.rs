@@ -10,10 +10,7 @@ use backtrace::Backtrace;
 use futures::{Future, FutureExt};
 use tokio::sync::RwLock;
 
-use super::{
-    injector::{Dependency, Injector},
-    Error, Key, Result,
-};
+use super::{Dependency, Error, Injector, Key, Result};
 
 /// The injection Container
 #[derive(Default, Clone)]

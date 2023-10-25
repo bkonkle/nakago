@@ -4,9 +4,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago::{inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
-use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
+use nakago_sea_orm::{DatabaseConnection, CONNECTION};
 use sea_orm::{entity::*, query::*, EntityTrait};
 
 use super::{
@@ -16,12 +16,12 @@ use super::{
 use crate::domains::role_grants::model as role_grant_model;
 
 /// Tag(UsersService)
-pub const USERS_SERVICE: Tag<Box<dyn UsersService>> = Tag::new("UsersService");
+pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("UsersService");
 
-/// A UsersService appliies business logic to a dynamic UsersRepository implementation.
+/// A Service appliies business logic to a dynamic UsersRepository implementation.
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait UsersService: Sync + Send {
+pub trait Service: Sync + Send {
     /// Get an individual `User` by id
     async fn get(&self, id: &str) -> Result<Option<User>>;
 
@@ -44,22 +44,22 @@ pub trait UsersService: Sync + Send {
     async fn delete(&self, id: &str) -> Result<()>;
 }
 
-/// The default `UsersService` implementation
-pub struct DefaultUsersService {
+/// The default `Service` implementation
+pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
 }
 
-/// The default `UsersService` implementation
-impl DefaultUsersService {
-    /// Create a new `DefaultUsersService` instance
+/// The default `Service` implementation
+impl DefaultService {
+    /// Create a new `DefaultService` instance
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 }
 
 #[async_trait]
-impl UsersService for DefaultUsersService {
+impl Service for DefaultService {
     async fn get(&self, id: &str) -> Result<Option<User>> {
         let user = model::Entity::find_by_id(id.to_owned())
             .one(&*self.db)
@@ -166,21 +166,21 @@ impl UsersService for DefaultUsersService {
     }
 }
 
-/// Provide the UsersService
+/// Provide the Service
 ///
-/// **Provides:** `Arc<dyn UsersServiceTrait>`
+/// **Provides:** `Arc<dyn ServiceTrait>`
 ///
 /// **Depends on:**
 ///   - `Tag(DatabaseConnection)`
 #[derive(Default)]
-pub struct ProvideUsersService {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<Box<dyn UsersService>> for ProvideUsersService {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn UsersService>>> {
-        let db = i.get(&DATABASE_CONNECTION).await?;
+impl Provider<Box<dyn Service>> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Box<dyn Service>>> {
+        let db = i.get(&CONNECTION).await?;
 
-        Ok(Arc::new(Box::new(DefaultUsersService::new(db))))
+        Ok(Arc::new(Box::new(DefaultService::new(db))))
     }
 }

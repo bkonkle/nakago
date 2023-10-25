@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use nakago::{Hook, Inject, InjectResult};
 
-use crate::{domains::profiles::service::PROFILES_SERVICE, graphql::GRAPHQL_SCHEMA_BUILDER};
+use crate::{domains::profiles, graphql};
 
 use super::{
-    loaders::{ProvideUserLoader, USER_LOADER},
-    service::{ProvideUsersService, USERS_SERVICE},
+    loaders::{self, LOADER},
+    service::{self, SERVICE},
 };
 
 /// Provide dependencies needed for the Users domain
@@ -15,11 +15,9 @@ pub struct LoadUsers {}
 #[async_trait]
 impl Hook for LoadUsers {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
-        i.provide(&USERS_SERVICE, ProvideUsersService::default())
-            .await?;
+        i.provide(&SERVICE, service::Provide::default()).await?;
 
-        i.provide(&USER_LOADER, ProvideUserLoader::default())
-            .await?;
+        i.provide(&LOADER, loaders::Provide::default()).await?;
 
         Ok(())
     }
@@ -37,10 +35,10 @@ pub struct InitGraphQLUsers {}
 #[async_trait]
 impl Hook for InitGraphQLUsers {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
-        let service = i.get(&USERS_SERVICE).await?;
-        let profiles = i.get(&PROFILES_SERVICE).await?;
+        let service = i.get(&SERVICE).await?;
+        let profiles = i.get(&profiles::SERVICE).await?;
 
-        i.modify(&GRAPHQL_SCHEMA_BUILDER, |builder| {
+        i.modify(&graphql::SCHEMA_BUILDER, |builder| {
             Ok(builder.data(service.clone()).data(profiles.clone()))
         })
         .await?;
@@ -53,44 +51,41 @@ impl Hook for InitGraphQLUsers {
 pub(crate) mod test {
     use std::sync::Arc;
 
-    use async_graphql::{EmptySubscription, Schema};
+    use async_graphql::{self, EmptySubscription};
     use nakago::{Provider, Tag};
 
-    use crate::domains::users::resolver::{UsersMutation, UsersQuery};
+    use crate::domains::users::resolver::{Mutation, Query};
 
     use super::*;
 
     /// Tag(UsersSchema)
     #[allow(dead_code)]
-    pub const USERS_SCHEMA: Tag<Box<UsersSchema>> = Tag::new("UsersSchema");
+    pub const SCHEMA: Tag<Box<Schema>> = Tag::new("UsersSchema");
 
-    /// The UsersSchema, covering just the Users domain. Useful for testing in isolation.
-    pub type UsersSchema = Schema<UsersQuery, UsersMutation, EmptySubscription>;
+    /// The Schema, covering just the Users domain. Useful for testing in isolation.
+    pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 
-    /// Provide the UsersSchema
+    /// Provide the Schema
     ///
-    /// **Provides:** `Arc<UsersSchema>`
+    /// **Provides:** `Arc<Schema>`
     ///
     /// **Depends on:**
     ///   - `Tag(UsersService)`
     ///   - `Tag(ProfilesService)`
     #[derive(Default)]
-    pub struct ProvideUsersSchema {}
+    pub struct ProvideSchema {}
 
     #[async_trait]
-    impl Provider<UsersSchema> for ProvideUsersSchema {
-        async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<UsersSchema>> {
-            let service = i.get(&USERS_SERVICE).await?;
-            let profiles = i.get(&PROFILES_SERVICE).await?;
+    impl Provider<Schema> for ProvideSchema {
+        async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Schema>> {
+            let service = i.get(&SERVICE).await?;
+            let profiles = i.get(&profiles::SERVICE).await?;
 
-            let schema: UsersSchema = Schema::build(
-                UsersQuery::default(),
-                UsersMutation::default(),
-                EmptySubscription,
-            )
-            .data(service)
-            .data(profiles)
-            .finish();
+            let schema: Schema =
+                Schema::build(Query::default(), Mutation::default(), EmptySubscription)
+                    .data(service)
+                    .data(profiles)
+                    .finish();
 
             Ok(Arc::new(schema))
         }

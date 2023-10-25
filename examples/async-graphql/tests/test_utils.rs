@@ -6,7 +6,7 @@ use anyhow::Result;
 use axum::http::HeaderValue;
 use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
-use nakago_axum::auth::{authenticate::ProvideUnverifiedAuthState, AUTH_STATE};
+use nakago_axum::auth::{state::ProvideUnverifiedAuthState, AUTH_STATE};
 use serde::Deserialize;
 use tokio::{net::TcpStream, time::timeout};
 use tokio_tungstenite::{

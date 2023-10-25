@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_graphql::MaybeUndefined;
 use fake::{Fake, Faker};
 use nakago::{Inject, InjectResult};
-use nakago_sea_orm::{connection::ProvideMockConnection, DATABASE_CONNECTION};
+use nakago_sea_orm::{connection, CONNECTION};
 use pretty_assertions::assert_eq;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction, Value};
 
@@ -11,7 +11,7 @@ use crate::{
         model::Show,
         mutations::{CreateShowInput, UpdateShowInput},
         queries::{ShowCondition, ShowsOrderBy},
-        service::{ProvideShowsService, SHOWS_SERVICE},
+        service::{self, SERVICE},
     },
     utils::pagination::ManyResponse,
 };
@@ -19,11 +19,10 @@ use crate::{
 async fn setup(db: MockDatabase) -> InjectResult<Inject> {
     let i = Inject::default();
 
-    i.provide(&DATABASE_CONNECTION, ProvideMockConnection::new(db))
+    i.provide(&CONNECTION, connection::ProvideMock::new(db))
         .await?;
 
-    i.provide(&SHOWS_SERVICE, ProvideShowsService::default())
-        .await?;
+    i.provide(&SERVICE, service::Provide::default()).await?;
 
     Ok(i)
 }
@@ -38,14 +37,14 @@ async fn test_shows_service_get() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&SHOWS_SERVICE).await?;
+    let service = i.get(&SERVICE).await?;
 
     let result = service.get(&show.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&CONNECTION).await?;
 
     assert_eq!(result, Some(show.clone()));
 
@@ -76,7 +75,7 @@ async fn test_shows_service_get_many() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&SHOWS_SERVICE).await?;
+    let service = i.get(&SERVICE).await?;
 
     let result = service
         .get_many(
@@ -93,7 +92,7 @@ async fn test_shows_service_get_many() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&CONNECTION).await?;
 
     assert_eq!(
         result,
@@ -151,7 +150,7 @@ async fn test_shows_service_get_many_pagination() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&SHOWS_SERVICE).await?;
+    let service = i.get(&SERVICE).await?;
 
     let result = service
         .get_many(
@@ -165,7 +164,7 @@ async fn test_shows_service_get_many_pagination() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&CONNECTION).await?;
 
     assert_eq!(
         result,
@@ -208,7 +207,7 @@ async fn test_shows_service_create() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&SHOWS_SERVICE).await?;
+    let service = i.get(&SERVICE).await?;
 
     let result = service
         .create(&CreateShowInput {
@@ -221,7 +220,7 @@ async fn test_shows_service_create() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&CONNECTION).await?;
 
     assert_eq!(result, show);
 
@@ -254,7 +253,7 @@ async fn test_shows_service_update() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&SHOWS_SERVICE).await?;
+    let service = i.get(&SERVICE).await?;
 
     let result = service
         .update(
@@ -270,7 +269,7 @@ async fn test_shows_service_update() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&CONNECTION).await?;
 
     assert_eq!(result, updated.clone());
 
@@ -309,14 +308,14 @@ async fn test_shows_service_delete() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&SHOWS_SERVICE).await?;
+    let service = i.get(&SERVICE).await?;
 
     service.delete(&show.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&CONNECTION).await?;
 
     // Check the transaction log
     assert_eq!(

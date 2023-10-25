@@ -1,10 +1,11 @@
 use async_graphql::{Enum, InputObject, SimpleObject};
 
-use super::model::{self, Episode};
 use crate::utils::{
     ordering::Ordering::{self, Asc, Desc},
     pagination::ManyResponse,
 };
+
+use super::model::{self, Episode};
 
 use EpisodesOrderBy::{
     CreatedAtAsc, CreatedAtDesc, IdAsc, IdDesc, ShowIdAsc, ShowIdDesc, TitleAsc, TitleDesc,

@@ -1,16 +1,17 @@
+use std::sync::Arc;
+
 use async_graphql::{Context, Object, Result};
 use hyper::StatusCode;
 use oso::Oso;
-use std::sync::Arc;
 
 use crate::{
     domains::{
-        role_grants::{model::CreateRoleGrantInput, service::RoleGrantsService},
+        role_grants::{self, model::CreateRoleGrantInput},
         shows::{
             model::Show,
             mutations::{CreateShowInput, MutateShowResult, UpdateShowInput},
             queries::{ShowCondition, ShowsOrderBy, ShowsPage},
-            service::ShowsService,
+            Service,
         },
         users::model::User,
     },
@@ -19,21 +20,21 @@ use crate::{
 
 /// The Query segment owned by the Shows library
 #[derive(Default)]
-pub struct ShowsQuery {}
+pub struct Query {}
 
 /// The Mutation segment for Shows
 #[derive(Default)]
-pub struct ShowsMutation {}
+pub struct Mutation {}
 
 /// Queries for the `Show` model
 #[Object]
-impl ShowsQuery {
+impl Query {
     async fn get_show(
         &self,
         ctx: &Context<'_>,
         #[graphql(desc = "The Show id")] id: String,
     ) -> Result<Option<Show>> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn ShowsService>>>();
+        let shows = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         Ok(shows.get(&id).await?)
     }
@@ -47,7 +48,7 @@ impl ShowsQuery {
         page: Option<u64>,
         page_size: Option<u64>,
     ) -> Result<ShowsPage> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn ShowsService>>>();
+        let shows = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         let response = shows
             .get_many(r#where, order_by, page, page_size)
@@ -63,15 +64,15 @@ impl ShowsQuery {
 
 /// Mutations for the Show model
 #[Object]
-impl ShowsMutation {
+impl Mutation {
     /// Create a new Show
     async fn create_show(
         &self,
         ctx: &Context<'_>,
         input: CreateShowInput,
     ) -> Result<MutateShowResult> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn ShowsService>>>();
-        let role_grants = ctx.data_unchecked::<Arc<Box<dyn RoleGrantsService>>>();
+        let shows = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
+        let role_grants = ctx.data_unchecked::<Arc<Box<dyn role_grants::Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
 
         // Check authorization
@@ -108,7 +109,7 @@ impl ShowsMutation {
         id: String,
         input: UpdateShowInput,
     ) -> Result<MutateShowResult> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn ShowsService>>>();
+        let shows = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
@@ -141,7 +142,7 @@ impl ShowsMutation {
 
     /// Remove an existing Show
     async fn delete_show(&self, ctx: &Context<'_>, id: String) -> Result<bool> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn ShowsService>>>();
+        let shows = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 

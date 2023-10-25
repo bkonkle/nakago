@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use http::{Method, Request};
 use hyper::{client::HttpConnector, Body, Client};
 use hyper_tls::HttpsConnector;
-use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago::{inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use serde_json::Value;
 
@@ -50,19 +50,19 @@ impl Http {
 
 /// A Tag for the Test HTTP Client
 ///   - Tag(AxumTestHttpClient)
-pub const HTTP_CLIENT: Tag<Client<HttpsConnector<HttpConnector>>> = Tag::new("AxumTestHttpClient");
+pub const CLIENT: Tag<Client<HttpsConnector<HttpConnector>>> = Tag::new("AxumTestHttpClient");
 
 /// A Dependency Injection provider for a simple Test HTTP client using hyper
 #[derive(Default)]
-pub struct HttpClientProvider {}
+pub struct ProvideClient {}
 
 #[Provider]
 #[async_trait]
-impl Provider<Client<HttpsConnector<HttpConnector>>> for HttpClientProvider {
+impl Provider<Client<HttpsConnector<HttpConnector>>> for ProvideClient {
     async fn provide(
         self: Arc<Self>,
         _i: Inject,
-    ) -> InjectResult<Arc<Client<HttpsConnector<HttpConnector>>>> {
+    ) -> inject::Result<Arc<Client<HttpsConnector<HttpConnector>>>> {
         Ok(Arc::new(
             Client::builder().build::<_, Body>(HttpsConnector::new()),
         ))

@@ -1,6 +1,6 @@
 [package]
 name = "nakago-axum"
-version = "0.12.2"
+version = "0.13.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "An Axum HTTP routes integration for Nakago"
@@ -25,7 +25,7 @@ hyper = "0.14"
 hyper-tls = "0.5"
 jsonwebtoken = "9.0"
 log = "0.4"
-nakago = "0.12"
+nakago = "0.13"
 nakago-derive = "0.8"
 pretty_env_logger = "0.5"
 rand = "0.8"

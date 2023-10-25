@@ -1,28 +1,23 @@
 use async_trait::async_trait;
-use nakago::{Hook, Inject, InjectResult};
+use nakago::{inject, Hook, Inject};
 
-use crate::{
-    domains::shows::{loaders::SHOW_LOADER, service::SHOWS_SERVICE},
-    graphql::GRAPHQL_SCHEMA_BUILDER,
-};
+use crate::{domains::shows, graphql};
 
 use super::{
-    loaders::{ProvideEpisodeLoader, EPISODE_LOADER},
-    service::{ProvideEpisodesService, EPISODES_SERVICE},
+    loaders::{self, LOADER},
+    service::{self, SERVICE},
 };
 
 /// Provide dependencies needed for the Episodes domain
 #[derive(Default)]
-pub struct LoadEpisodes {}
+pub struct Load {}
 
 #[async_trait]
-impl Hook for LoadEpisodes {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        i.provide(&EPISODES_SERVICE, ProvideEpisodesService::default())
-            .await?;
+impl Hook for Load {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        i.provide(&SERVICE, service::Provide::default()).await?;
 
-        i.provide(&EPISODE_LOADER, ProvideEpisodeLoader::default())
-            .await?;
+        i.provide(&LOADER, loaders::Provide::default()).await?;
 
         Ok(())
     }
@@ -36,16 +31,16 @@ impl Hook for LoadEpisodes {
 ///  - Tag(ShowLoader)
 ///  - Tag(GraphQLSchemaBuilder)
 #[derive(Default)]
-pub struct InitGraphQLEpisodes {}
+pub struct Init {}
 
 #[async_trait]
-impl Hook for InitGraphQLEpisodes {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        let episodes = i.get(&EPISODES_SERVICE).await?;
-        let shows = i.get(&SHOWS_SERVICE).await?;
-        let show_loader = i.get(&SHOW_LOADER).await?;
+impl Hook for Init {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        let episodes = i.get(&SERVICE).await?;
+        let shows = i.get(&shows::SERVICE).await?;
+        let show_loader = i.get(&shows::LOADER).await?;
 
-        i.modify(&GRAPHQL_SCHEMA_BUILDER, |builder| {
+        i.modify(&graphql::SCHEMA_BUILDER, |builder| {
             Ok(builder
                 .data(shows.clone())
                 .data(show_loader.clone())
@@ -61,46 +56,43 @@ impl Hook for InitGraphQLEpisodes {
 pub(crate) mod test {
     use std::sync::Arc;
 
-    use async_graphql::{dataloader::DataLoader, EmptySubscription, Schema};
+    use async_graphql::{self, dataloader::DataLoader, EmptySubscription};
     use nakago::{Provider, Tag};
     use nakago_derive::Provider;
 
-    use crate::domains::episodes::resolver::{EpisodesMutation, EpisodesQuery};
+    use crate::domains::episodes::resolver::{Mutation, Query};
 
     use super::*;
 
-    /// Tag(EpisodesSchema)
+    /// Tag(Schema)
     #[allow(dead_code)]
-    pub const EPISODES_SCHEMA: Tag<EpisodesSchema> = Tag::new("EpisodesSchema");
+    pub const SCHEMA: Tag<Schema> = Tag::new("EpisodesSchema");
 
-    /// The EpisodesSchema, covering just the Episodes domain. Useful for testing in isolation.
-    pub type EpisodesSchema = Schema<EpisodesQuery, EpisodesMutation, EmptySubscription>;
+    /// The Schema, covering just the Episodes domain. Useful for testing in isolation.
+    pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 
-    /// Provide the EpisodesSchema
+    /// Provide the Schema
     ///
-    /// **Provides:** `Arc<EpisodesSchema>`
+    /// **Provides:** `Arc<Schema>`
     ///
     /// **Depends on:**
     ///   - `Tag(EpisodesService)`
     ///   - `Tag(ShowLoader)`
     #[derive(Default)]
-    pub struct ProvideEpisodesSchema {}
+    pub struct Provide {}
 
     #[Provider]
     #[async_trait]
-    impl Provider<EpisodesSchema> for ProvideEpisodesSchema {
-        async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<EpisodesSchema>> {
-            let service = i.get(&EPISODES_SERVICE).await?;
-            let show_loader = i.get(&SHOW_LOADER).await?;
+    impl Provider<Schema> for Provide {
+        async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Schema>> {
+            let service = i.get(&SERVICE).await?;
+            let show_loader = i.get(&shows::LOADER).await?;
 
-            let schema: EpisodesSchema = Schema::build(
-                EpisodesQuery::default(),
-                EpisodesMutation::default(),
-                EmptySubscription,
-            )
-            .data(service)
-            .data(DataLoader::new(show_loader, tokio::spawn))
-            .finish();
+            let schema: Schema =
+                Schema::build(Query::default(), Mutation::default(), EmptySubscription)
+                    .data(service)
+                    .data(DataLoader::new(show_loader, tokio::spawn))
+                    .finish();
 
             Ok(Arc::new(schema))
         }

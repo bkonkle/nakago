@@ -1,15 +1,13 @@
-use nakago::{config::AddConfigLoaders, EventType, InjectResult};
-use nakago_async_graphql::schema::{InitSchema, SchemaBuilderProvider};
+use nakago::{config, inject, EventType};
+use nakago_async_graphql::schema;
 use nakago_axum::{
-    auth::{
-        ProvideAuthState, ProvideJwks, {AUTH_STATE, JWKS},
-    },
-    AxumApplication, InitRoute,
+    auth::{self, jwks, JWKS},
+    routes, AxumApplication,
 };
-use nakago_sea_orm::{ProvideConnection, DATABASE_CONNECTION};
+use nakago_sea_orm::{connection, CONNECTION};
 
 use crate::{
-    config::{AppConfig, CONFIG},
+    config::{Config, CONFIG},
     domains::{
         episodes::schema::LoadEpisodes, profiles::schema::LoadProfiles,
         role_grants::schema::LoadRoleGrants, shows::schema::LoadShows, users::schema::LoadUsers,
@@ -20,25 +18,25 @@ use crate::{
     graphql::{InitGraphQL, GRAPHQL_SCHEMA, GRAPHQL_SCHEMA_BUILDER},
     http::{
         routes::{new_events_route, new_graphql_route, new_health_route},
-        state::{AppState, ProvideAppState, STATE},
+        state::{self, State, STATE},
     },
     utils::authz::{LoadAuthz, ProvideOso, OSO},
 };
 
 /// Create a default AxumApplication instance
-pub async fn app() -> InjectResult<AxumApplication<AppConfig, AppState>> {
+pub async fn app() -> inject::Result<AxumApplication<Config, State>> {
     let mut app = AxumApplication::default()
         .with_config_tag(&CONFIG)
         .with_state_tag(&STATE);
 
     // Dependencies
 
-    app.provide(&JWKS, ProvideJwks::default().with_config_tag(&CONFIG))
+    app.provide(&JWKS, jwks::Provide::default().with_config_tag(&CONFIG))
         .await?;
 
     app.provide(
-        &DATABASE_CONNECTION,
-        ProvideConnection::default().with_config_tag(&CONFIG),
+        &CONNECTION,
+        connection::Provide::default().with_config_tag(&CONFIG),
     )
     .await?;
 
@@ -50,19 +48,19 @@ pub async fn app() -> InjectResult<AxumApplication<AppConfig, AppState>> {
     app.provide(&SOCKET_HANDLER, ProvideSocket::default())
         .await?;
 
-    app.provide(&GRAPHQL_SCHEMA_BUILDER, SchemaBuilderProvider::default())
+    app.provide(&GRAPHQL_SCHEMA_BUILDER, schema::ProvideBuilder::default())
         .await?;
 
-    app.provide(&AUTH_STATE, ProvideAuthState::default())
+    app.provide(&auth::STATE, auth::state::Provide::default())
         .await?;
 
-    app.provide(&STATE, ProvideAppState::default()).await?;
+    app.provide(&STATE, state::Provide::default()).await?;
 
     // Loading
 
     app.on(
         &EventType::Load,
-        AddConfigLoaders::new(nakago_sea_orm::default_config_loaders()),
+        config::AddLoaders::new(nakago_sea_orm::default_config_loaders()),
     );
 
     app.on(&EventType::Load, LoadUsers::default());
@@ -83,14 +81,14 @@ pub async fn app() -> InjectResult<AxumApplication<AppConfig, AppState>> {
 
     app.on(
         &EventType::Init,
-        InitSchema::default()
+        schema::Init::default()
             .with_builder_tag(&GRAPHQL_SCHEMA_BUILDER)
             .with_schema_tag(&GRAPHQL_SCHEMA),
     );
 
-    app.on(&EventType::Init, InitRoute::new(new_health_route));
-    app.on(&EventType::Init, InitRoute::new(new_graphql_route));
-    app.on(&EventType::Init, InitRoute::new(new_events_route));
+    app.on(&EventType::Init, routes::Init::new(new_health_route));
+    app.on(&EventType::Init, routes::Init::new(new_graphql_route));
+    app.on(&EventType::Init, routes::Init::new(new_events_route));
 
     Ok(app)
 }

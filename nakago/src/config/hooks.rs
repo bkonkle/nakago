@@ -2,31 +2,32 @@ use std::{marker::PhantomData, path::PathBuf, sync::Arc};
 
 use async_trait::async_trait;
 
-use super::loader::{Config, ConfigLoader, Loader};
 use crate::{Hook, Inject, InjectError, InjectResult, Tag};
 
+use super::loader::{Config, LoadAll, Loader};
+
 /// A Tag for Config loaders
-pub const CONFIG_LOADERS: Tag<Vec<Arc<dyn ConfigLoader>>> = Tag::new("ConfigLoaders");
+pub const LOADERS: Tag<Vec<Arc<dyn Loader>>> = Tag::new("ConfigLoaders");
 
 /// Add the given Config Loaders to the stack.
 ///
 /// **Provides or Modifies:**
 ///   - `Tag(ConfigLoaders)`
-pub struct AddConfigLoaders {
-    loaders: Vec<Arc<dyn ConfigLoader>>,
+pub struct AddLoaders {
+    loaders: Vec<Arc<dyn Loader>>,
 }
 
-impl AddConfigLoaders {
-    /// Create a new AddConfigLoaders instance
-    pub fn new(loaders: Vec<Arc<dyn ConfigLoader>>) -> Self {
+impl AddLoaders {
+    /// Create a new AddLoaders instance
+    pub fn new(loaders: Vec<Arc<dyn Loader>>) -> Self {
         Self { loaders }
     }
 }
 
 #[async_trait]
-impl Hook for AddConfigLoaders {
+impl Hook for AddLoaders {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
-        let loaders = match i.consume(&CONFIG_LOADERS).await {
+        let loaders = match i.consume(&LOADERS).await {
             Ok(loaders) => {
                 let mut updated = loaders.clone();
 
@@ -40,7 +41,7 @@ impl Hook for AddConfigLoaders {
             Err(_) => self.loaders.clone(),
         };
 
-        i.inject(&CONFIG_LOADERS, loaders).await?;
+        i.inject(&LOADERS, loaders).await?;
 
         Ok(())
     }
@@ -54,14 +55,14 @@ impl Hook for AddConfigLoaders {
 /// **Consumes:**
 ///   - `Tag(ConfigLoaders)`
 #[derive(Default)]
-pub struct InitConfig<C: Config> {
+pub struct Init<C: Config> {
     custom_path: Option<PathBuf>,
     tag: Option<&'static Tag<C>>,
     _phantom: PhantomData<C>,
 }
 
-impl<C: Config> InitConfig<C> {
-    /// Create a new InitConfig instance
+impl<C: Config> Init<C> {
+    /// Create a new Init instance
     pub fn new(custom_path: Option<PathBuf>, tag: Option<&'static Tag<C>>) -> Self {
         Self {
             custom_path,
@@ -88,10 +89,10 @@ impl<C: Config> InitConfig<C> {
 }
 
 #[async_trait]
-impl<C: Config> Hook for InitConfig<C> {
+impl<C: Config> Hook for Init<C> {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
-        let config_loaders = i.get(&CONFIG_LOADERS).await.unwrap_or_default().to_vec();
-        let loader = Loader::<C>::new(config_loaders);
+        let loaders = i.get(&LOADERS).await.unwrap_or_default().to_vec();
+        let loader = LoadAll::<C>::new(loaders);
 
         let config = loader
             .load(self.custom_path.clone())

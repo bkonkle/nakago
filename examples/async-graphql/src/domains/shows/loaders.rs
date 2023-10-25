@@ -1,36 +1,37 @@
+use std::{collections::HashMap, sync::Arc};
+
 use async_graphql::{
-    dataloader::{DataLoader, Loader},
+    dataloader::{self, DataLoader},
     FieldError,
 };
 use async_trait::async_trait;
-use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago::{inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
-use std::{collections::HashMap, sync::Arc};
 
 use super::{
     model::Show,
-    service::{ShowsService, SHOWS_SERVICE},
+    service::{Service, SERVICE},
 };
 
 /// Tag(ShowLoader)
-pub const SHOW_LOADER: Tag<DataLoader<ShowLoader>> = Tag::new("ShowLoader");
+pub const LOADER: Tag<DataLoader<Loader>> = Tag::new("ShowLoader");
 
 /// A dataloader for `Show` instances
-pub struct ShowLoader {
+pub struct Loader {
     /// The SeaOrm database connection
-    shows: Arc<Box<dyn ShowsService>>,
+    shows: Arc<Box<dyn Service>>,
 }
 
-/// The default implementation for the `ShowLoader`
-impl ShowLoader {
+/// The default implementation for the `Loader`
+impl Loader {
     /// Create a new instance
-    pub fn new(shows: Arc<Box<dyn ShowsService>>) -> Self {
+    pub fn new(shows: Arc<Box<dyn Service>>) -> Self {
         Self { shows }
     }
 }
 
 #[async_trait]
-impl Loader<String> for ShowLoader {
+impl dataloader::Loader<String> for Loader {
     type Value = Show;
     type Error = FieldError;
 
@@ -44,23 +45,23 @@ impl Loader<String> for ShowLoader {
     }
 }
 
-/// Provide the ShowLoader
+/// Provide the Loader
 ///
-/// **Provides:** `ShowLoader`
+/// **Provides:** `Loader`
 ///
 /// **Depends on:**
 ///  - `Tag(ShowsService)`
 #[derive(Default)]
-pub struct ProvideShowLoader {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<DataLoader<ShowLoader>> for ProvideShowLoader {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DataLoader<ShowLoader>>> {
-        let shows_service = i.get(&SHOWS_SERVICE).await?;
+impl Provider<DataLoader<Loader>> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<DataLoader<Loader>>> {
+        let service = i.get(&SERVICE).await?;
 
         Ok(Arc::new(DataLoader::new(
-            ShowLoader::new(shows_service.clone()),
+            Loader::new(service.clone()),
             tokio::spawn,
         )))
     }

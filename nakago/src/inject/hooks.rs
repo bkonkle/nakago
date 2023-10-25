@@ -1,5 +1,6 @@
-use async_trait::async_trait;
 use std::any::Any;
+
+use async_trait::async_trait;
 
 use super::{Inject, Result};
 

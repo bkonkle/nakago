@@ -1,22 +1,22 @@
 use std::sync::Arc;
 
 use figment::providers::Env;
-use nakago::ConfigLoader;
+use nakago::config;
 use serde::{Deserialize, Serialize};
 
-use crate::auth::config::AuthConfigLoader;
+use crate::auth;
 
 /// The default Axum HTTP Config Loaders
-pub fn default_http_config_loaders() -> Vec<Arc<dyn nakago::config::loader::ConfigLoader>> {
+pub fn default_loaders() -> Vec<Arc<dyn config::Loader>> {
     vec![
-        Arc::<HttpConfigLoader>::default(),
-        Arc::<AuthConfigLoader>::default(),
+        Arc::<Loader>::default(),
+        Arc::<auth::config::Loader>::default(),
     ]
 }
 
-/// HTTP Config
+/// Axum HTTP Config
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct HttpConfig {
+pub struct Config {
     /// The port to bind to
     pub port: u16,
 
@@ -24,9 +24,9 @@ pub struct HttpConfig {
     pub address: String,
 }
 
-impl Default for HttpConfig {
+impl Default for Config {
     fn default() -> Self {
-        HttpConfig {
+        Config {
             port: 0,
             address: "0.0.0.0".to_string(),
         }
@@ -35,9 +35,9 @@ impl Default for HttpConfig {
 
 /// The Axum HTTP Config Loader
 #[derive(Default)]
-pub struct HttpConfigLoader {}
+pub struct Loader {}
 
-impl ConfigLoader for HttpConfigLoader {
+impl config::Loader for Loader {
     fn load_env(&self, env: Env) -> Env {
         // Split the HTTP variables
         env.map(|key| key.as_str().replace("HTTP_", "HTTP.").into())

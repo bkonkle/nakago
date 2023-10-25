@@ -1,40 +1,39 @@
+use std::sync::Arc;
+
 use async_graphql::{dataloader::DataLoader, ComplexObject, Context, Object, Result};
 use hyper::StatusCode;
 use oso::Oso;
-use std::sync::Arc;
+
+use crate::{
+    domains::{shows, shows::model::Show, users::model::User},
+    utils::graphql::{as_graphql_error, graphql_error},
+};
 
 use super::{
     model::Episode,
     mutations::{CreateEpisodeInput, MutateEpisodeResult, UpdateEpisodeInput},
     queries::{EpisodeCondition, EpisodesOrderBy, EpisodesPage},
-    service::EpisodesService,
-};
-use crate::{
-    domains::{
-        shows::loaders::ShowLoader, shows::model::Show, shows::service::ShowsService,
-        users::model::User,
-    },
-    utils::graphql::{as_graphql_error, graphql_error},
+    Service,
 };
 
 /// The Query segment owned by the Episodes library
 #[derive(Default)]
-pub struct EpisodesQuery {}
+pub struct Query {}
 
 /// The Mutation segment for Episodes
 #[derive(Default)]
-pub struct EpisodesMutation {}
+pub struct Mutation {}
 
 /// Queries for the `Episode` model
 #[Object]
-impl EpisodesQuery {
+impl Query {
     /// Get a sincle Episode
     pub async fn get_episode(
         &self,
         ctx: &Context<'_>,
         #[graphql(desc = "The Episode id")] id: String,
     ) -> Result<Option<Episode>> {
-        let episodes = ctx.data_unchecked::<Arc<Box<dyn EpisodesService>>>();
+        let episodes = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Check to see if the associated Show is selected
         let with_show = ctx.look_ahead().field("show").exists();
@@ -57,7 +56,7 @@ impl EpisodesQuery {
         page: Option<u64>,
         page_size: Option<u64>,
     ) -> Result<EpisodesPage> {
-        let episodes = ctx.data_unchecked::<Arc<Box<dyn EpisodesService>>>();
+        let episodes = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Check to see if the associated Show is selected
         let with_show = ctx.look_ahead().field("data").field("show").exists();
@@ -76,15 +75,15 @@ impl EpisodesQuery {
 
 /// Mutations for the Episode model
 #[Object]
-impl EpisodesMutation {
+impl Mutation {
     /// Create a new Episode
     pub async fn create_episode(
         &self,
         ctx: &Context<'_>,
         input: CreateEpisodeInput,
     ) -> Result<MutateEpisodeResult> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn ShowsService>>>();
-        let episodes = ctx.data_unchecked::<Arc<Box<dyn EpisodesService>>>();
+        let shows = ctx.data_unchecked::<Arc<Box<dyn shows::Service>>>();
+        let episodes = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
@@ -130,7 +129,7 @@ impl EpisodesMutation {
         id: String,
         input: UpdateEpisodeInput,
     ) -> Result<MutateEpisodeResult> {
-        let episodes = ctx.data_unchecked::<Arc<Box<dyn EpisodesService>>>();
+        let episodes = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
@@ -178,7 +177,7 @@ impl EpisodesMutation {
 
     /// Remove an existing Episode
     pub async fn delete_episode(&self, ctx: &Context<'_>, id: String) -> Result<bool> {
-        let episodes = ctx.data_unchecked::<Arc<Box<dyn EpisodesService>>>();
+        let episodes = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
@@ -224,7 +223,7 @@ impl Episode {
             return Ok(Some(show));
         }
 
-        let loader = ctx.data_unchecked::<DataLoader<ShowLoader>>();
+        let loader = ctx.data_unchecked::<DataLoader<shows::Loader>>();
         let show = loader.load_one(self.show_id.clone()).await?;
 
         Ok(show)

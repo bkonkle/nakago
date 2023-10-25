@@ -1,29 +1,30 @@
+use std::sync::Arc;
+
 use async_graphql::{Context, Object, Result};
 use hyper::StatusCode;
 use nakago_axum::auth::Subject;
-use std::sync::Arc;
 
 use super::{
     model::User,
     mutations::{CreateUserInput, MutateUserResult, UpdateUserInput},
-    service::UsersService,
+    Service,
 };
 use crate::{
-    domains::profiles::{mutations::CreateProfileInput, service::ProfilesService},
+    domains::profiles::{self, mutations::CreateProfileInput},
     utils::graphql::{as_graphql_error, graphql_error},
 };
 
 /// The Query segment for Users
 #[derive(Default)]
-pub struct UsersQuery {}
+pub struct Query {}
 
 /// The Mutation segment for Users
 #[derive(Default)]
-pub struct UsersMutation {}
+pub struct Mutation {}
 
 /// Queries for the User model
 #[Object]
-impl UsersQuery {
+impl Query {
     /// Get the current User from the GraphQL context
     async fn get_current_user(&self, ctx: &Context<'_>) -> Result<Option<User>> {
         let user = ctx.data_unchecked::<Option<User>>();
@@ -34,7 +35,7 @@ impl UsersQuery {
 
 /// Mutations for the User model
 #[Object]
-impl UsersMutation {
+impl Mutation {
     /// Get or create the current User based on the current token username (the "sub" claim)
     async fn get_or_create_current_user(
         &self,
@@ -42,8 +43,8 @@ impl UsersMutation {
         input: CreateUserInput,
     ) -> Result<MutateUserResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let users = ctx.data_unchecked::<Arc<Box<dyn UsersService>>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn ProfilesService>>>();
+        let users = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
+        let profiles = ctx.data_unchecked::<Arc<Box<dyn profiles::Service>>>();
         let subject = ctx.data_unchecked::<Subject>();
 
         // If the User exists in the GraphQL context, simply return it
@@ -91,7 +92,7 @@ impl UsersMutation {
         input: UpdateUserInput,
     ) -> Result<MutateUserResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let users = ctx.data_unchecked::<Arc<Box<dyn UsersService>>>();
+        let users = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Check to see if the associated Profile is selected
         let with_roles = ctx.look_ahead().field("user").field("roles").exists();

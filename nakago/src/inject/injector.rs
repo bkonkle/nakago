@@ -3,7 +3,7 @@ use std::{any::Any, pin::Pin, sync::Arc};
 use futures::{future::Shared, Future, FutureExt};
 use tokio::sync::RwLock;
 
-use super::{provider::Provider, Result};
+use super::{Provider, Result};
 
 // An Injector holds a locked value that can be either a Provider or a Pending Future. The
 // Injector is responsible for providing a Pending Future to the container when requested, and

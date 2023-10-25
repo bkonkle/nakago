@@ -2,8 +2,9 @@ use async_graphql::{InputObject, MaybeUndefined, SimpleObject};
 use fake::{Dummy, Fake, Faker};
 use rand::Rng;
 
-use super::model::Episode;
 use crate::utils::graphql::dummy_maybe_undef;
+
+use super::model::Episode;
 
 /// The `CreateEpisodeInput` input type
 #[derive(Clone, Default, Dummy, Eq, PartialEq, InputObject)]

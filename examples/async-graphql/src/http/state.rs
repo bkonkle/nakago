@@ -2,11 +2,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use axum::extract::FromRef;
-use nakago::{Inject, InjectResult, Provider, Tag};
-use nakago_axum::{
-    app::State,
-    auth::{authenticate::AuthState, AUTH_STATE},
-};
+use nakago::{inject, Inject, Provider, Tag};
+use nakago_axum::{self, auth};
 use nakago_derive::Provider;
 
 use crate::{
@@ -16,21 +13,21 @@ use crate::{
 use super::handlers::{EventsState, GraphQLState};
 
 /// Tag(AppState)
-pub const STATE: Tag<AppState> = Tag::new("AppState");
+pub const STATE: Tag<State> = Tag::new("AppState");
 
 /// The top-level Application State
 #[derive(Clone, FromRef)]
-pub struct AppState {
-    auth: AuthState,
+pub struct State {
+    auth: auth::State,
     events: EventsState,
     graphql: GraphQLState,
 }
 
-impl State for AppState {}
+impl nakago_axum::State for State {}
 
-/// Provide the AppState for Axum
+/// Provide the State for Axum
 ///
-/// **Provides:** `AppState`
+/// **Provides:** `State`
 ///
 /// **Depends on:**
 ///   - `Tag(AuthState)`
@@ -38,13 +35,13 @@ impl State for AppState {}
 ///   - `Tag(SocketHandler)`
 ///   - `Tag(GraphQLSchema)`
 #[derive(Default)]
-pub struct ProvideAppState {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<AppState> for ProvideAppState {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<AppState>> {
-        let auth = i.get(&AUTH_STATE).await?;
+impl Provider<State> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<State>> {
+        let auth = i.get(&auth::STATE).await?;
         let users = i.get(&USERS_SERVICE).await?;
         let handler = i.get(&SOCKET_HANDLER).await?;
         let schema = i.get(&GRAPHQL_SCHEMA).await?;
@@ -52,7 +49,7 @@ impl Provider<AppState> for ProvideAppState {
         let events = EventsState::new(users.clone(), handler.clone());
         let graphql = GraphQLState::new(users, schema);
 
-        Ok(Arc::new(AppState {
+        Ok(Arc::new(State {
             auth: (*auth).clone(),
             events,
             graphql,
