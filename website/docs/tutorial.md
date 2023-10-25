@@ -130,7 +130,7 @@ use nakago_axum::auth::authenticate::AUTH_STATE;
 #[Provider]
 #[async_trait]
 impl Provider<AppState> for ProvideAppState {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<AppState>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<AppState>> {
         let auth = i.get(&AUTH_STATE).await?;
 
         Ok(Arc::new(AppState {

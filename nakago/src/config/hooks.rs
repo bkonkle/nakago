@@ -2,7 +2,7 @@ use std::{marker::PhantomData, path::PathBuf, sync::Arc};
 
 use async_trait::async_trait;
 
-use crate::{Hook, Inject, InjectError, InjectResult, Tag};
+use crate::{inject, Hook, Inject, InjectError, Tag};
 
 use super::loader::{Config, LoadAll, Loader};
 
@@ -26,7 +26,7 @@ impl AddLoaders {
 
 #[async_trait]
 impl Hook for AddLoaders {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
         let loaders = match i.consume(&LOADERS).await {
             Ok(loaders) => {
                 let mut updated = loaders.clone();
@@ -90,7 +90,7 @@ impl<C: Config> Init<C> {
 
 #[async_trait]
 impl<C: Config> Hook for Init<C> {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
         let loaders = i.get(&LOADERS).await.unwrap_or_default().to_vec();
         let loader = LoadAll::<C>::new(loaders);
 

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use fake::{Fake, Faker};
-use nakago::{Inject, InjectResult};
+use nakago::{inject, Inject};
 use nakago_sea_orm::{connection, CONNECTION};
 use pretty_assertions::assert_eq;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction};
@@ -13,7 +13,7 @@ use crate::domains::{
     users::model::User,
 };
 
-async fn setup(db: MockDatabase) -> InjectResult<Inject> {
+async fn setup(db: MockDatabase) -> inject::Result<Inject> {
     let i = Inject::default();
 
     i.provide(&CONNECTION, connection::ProvideMock::new(db))

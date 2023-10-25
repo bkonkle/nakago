@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use nakago::{Hook, Inject, InjectResult};
+use nakago::{inject, Hook, Inject};
 
 use crate::{domains::role_grants, graphql};
 
@@ -14,7 +14,7 @@ pub struct Load {}
 
 #[async_trait]
 impl Hook for Load {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
         i.provide(&SERVICE, service::Provide::default()).await?;
 
         i.provide(&LOADER, loaders::Provide::default()).await?;
@@ -34,7 +34,7 @@ pub struct Init {}
 
 #[async_trait]
 impl Hook for Init {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
         let role_grants = i.get(&role_grants::SERVICE).await?;
         let service = i.get(&SERVICE).await?;
 
@@ -77,7 +77,7 @@ pub(crate) mod test {
 
     #[async_trait]
     impl Provider<Schema> for ProvideSchema {
-        async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Schema>> {
+        async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Schema>> {
             let service = i.get(&SERVICE).await?;
 
             let schema: Schema =

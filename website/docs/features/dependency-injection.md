@@ -121,7 +121,7 @@ To provide a dependency, create a Provider that implements the `inject::Provider
 
 ```rust
 use async_trait::async_trait;
-use nakago::inject::{Provider, Inject, InjectResult};
+use nakago::inject::{Provider, Inject, inject};
 use sqlx::{Pool, Postgres};
 
 #[derive(Default)]
@@ -130,7 +130,7 @@ pub struct PostgresRepositoryProvider {}
 #[Provider]
 #[async_trait]
 impl Provider<Box<dyn Repository>> for PostgresRepositoryProvider {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn Repository>>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Box<dyn Repository>>> {
         let pool = i.get_type::<Pool<Postgres>>().await?;
 
         Ok(Arc::new(Box::new(PostgresRepository::new(pool.clone()))))
@@ -140,7 +140,7 @@ impl Provider<Box<dyn Repository>> for PostgresRepositoryProvider {
 
 The `PostgresRepositoryProvider` struct is empty, and just exists so that we can implement the `Provider<T>` trait. It uses `#[derive(Default)]` because it doesn't need to initialize any config properties or context. It doesn't _have_ to be empty, though, and can carry information for the provider that is passed in on initialization and held until the Provider is invoked.
 
-The result is wrapped in an `InjectResult` so that an `Err` can be returned to handle things like a failed `i.get()` call or a failed database connection initialization.
+The result is wrapped in an `inject::Result` so that an `Err` can be returned to handle things like a failed `i.get()` call or a failed database connection initialization.
 
 In this particular case since `Pool<Postgres>` is a known Sized type, it's safe to provide it without Boxing it to handle Unsized dynamic trait implementations. In many cases, however, you'll be working with `dyn Trait` implementations so that you can swap between implementations easily. You'll want to make sure to box it up like `Box<dyn Trait>` so that it can later be wrapped in the Shared Future and held across await points.
 
@@ -155,7 +155,7 @@ If you want to provide it manually instead, you can:
 ```rust
 #[async_trait]
 impl Provider<Dependency> for PostgresRepositoryProvider {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Dependency>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Dependency>> {
         let provider = self as Arc<dyn Provider<Box<dyn Repository>>>;
 
         Ok(provider.provide(i).await?)

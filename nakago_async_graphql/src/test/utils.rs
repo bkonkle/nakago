@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use axum::extract::FromRef;
-use nakago::{Config, InjectResult};
+use nakago::{inject, Config};
 use nakago_axum::{self, app::State, auth, AxumApplication};
 
 use super::http::GraphQL;
@@ -29,7 +29,7 @@ impl<C: Config, S: State> Utils<C, S> {
         config_path: &str,
         base_url: &str,
         graphql_url: &str,
-    ) -> InjectResult<Self>
+    ) -> inject::Result<Self>
     where
         C: Config,
         S: State,

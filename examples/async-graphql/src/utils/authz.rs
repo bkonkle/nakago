@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use nakago::{to_provider_error, Hook, Inject, InjectResult, Provider, Tag};
+use nakago::{inject, to_provider_error, Hook, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use oso::Oso;
 use oso::PolarClass;
@@ -25,7 +25,7 @@ pub struct ProvideOso {}
 #[Provider]
 #[async_trait]
 impl Provider<Oso> for ProvideOso {
-    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Oso>> {
+    async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<Oso>> {
         Ok(Arc::new(Oso::new()))
     }
 }
@@ -39,7 +39,7 @@ pub struct LoadAuthz {}
 
 #[async_trait]
 impl Hook for LoadAuthz {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
         // Set up authorization
         let mut oso = (*i.get(&OSO).await?).clone();
 

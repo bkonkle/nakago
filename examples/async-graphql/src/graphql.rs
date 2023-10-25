@@ -1,6 +1,6 @@
 use async_graphql::{self, EmptySubscription, MergedObject, SchemaBuilder};
 use async_trait::async_trait;
-use nakago::{Hook, Inject, InjectResult, Tag};
+use nakago::{inject, Hook, Inject, Tag};
 
 use crate::{
     config::CONFIG,
@@ -37,7 +37,7 @@ pub struct Init {}
 
 #[async_trait]
 impl Hook for Init {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
         let config = i.get(&CONFIG).await?;
         let oso = i.get(&OSO).await?;
 

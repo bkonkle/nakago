@@ -12,7 +12,9 @@ use tokio::sync::RwLock;
 
 use super::{Dependency, Error, Injector, Key, Result};
 
-/// The injection Container
+/// A Dependency Injection container based on the concept of Shared Futures, which multiple
+/// independent threads can await. The container holds a map of Keys to Injectors, and provides
+/// methods for retrieving, injecting, and removing Dependencies and Providers.
 #[derive(Default, Clone)]
 pub struct Inject(pub(crate) Arc<RwLock<HashMap<Key, Injector>>>);
 

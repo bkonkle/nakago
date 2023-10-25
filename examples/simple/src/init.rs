@@ -1,4 +1,4 @@
-use nakago::{config, EventType, InjectResult};
+use nakago::{config, inject, EventType};
 use nakago_axum::{
     auth::{self, jwks, JWKS},
     config::default_loaders,
@@ -14,7 +14,7 @@ use crate::{
 };
 
 /// Create a default AxumApplication instance
-pub async fn app() -> InjectResult<AxumApplication<Config, State>> {
+pub async fn app() -> inject::Result<AxumApplication<Config, State>> {
     let mut app = AxumApplication::default()
         .with_config_tag(&CONFIG)
         .with_state_tag(&STATE);
