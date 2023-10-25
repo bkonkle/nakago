@@ -18,15 +18,15 @@ use super::{
 
 /// The Query segment owned by the Episodes library
 #[derive(Default)]
-pub struct Query {}
+pub struct EpisodesQuery {}
 
 /// The Mutation segment for Episodes
 #[derive(Default)]
-pub struct Mutation {}
+pub struct EpisodesMutation {}
 
 /// Queries for the `Episode` model
 #[Object]
-impl Query {
+impl EpisodesQuery {
     /// Get a sincle Episode
     pub async fn get_episode(
         &self,
@@ -75,7 +75,7 @@ impl Query {
 
 /// Mutations for the Episode model
 #[Object]
-impl Mutation {
+impl EpisodesMutation {
     /// Create a new Episode
     pub async fn create_episode(
         &self,

@@ -16,15 +16,15 @@ use crate::{
 
 /// The Query segment for Users
 #[derive(Default)]
-pub struct Query {}
+pub struct UsersQuery {}
 
 /// The Mutation segment for Users
 #[derive(Default)]
-pub struct Mutation {}
+pub struct UsersMutation {}
 
 /// Queries for the User model
 #[Object]
-impl Query {
+impl UsersQuery {
     /// Get the current User from the GraphQL context
     async fn get_current_user(&self, ctx: &Context<'_>) -> Result<Option<User>> {
         let user = ctx.data_unchecked::<Option<User>>();
@@ -35,7 +35,7 @@ impl Query {
 
 /// Mutations for the User model
 #[Object]
-impl Mutation {
+impl UsersMutation {
     /// Get or create the current User based on the current token username (the "sub" claim)
     async fn get_or_create_current_user(
         &self,

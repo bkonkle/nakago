@@ -6,9 +6,7 @@ use nakago::{inject, Inject, Provider, Tag};
 use nakago_axum::{self, auth};
 use nakago_derive::Provider;
 
-use crate::{
-    domains::users::service::USERS_SERVICE, events::SOCKET_HANDLER, graphql::GRAPHQL_SCHEMA,
-};
+use crate::{domains::users, events::SOCKET_HANDLER, graphql};
 
 use super::handlers::{EventsState, GraphQLState};
 
@@ -42,9 +40,9 @@ pub struct Provide {}
 impl Provider<State> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<State>> {
         let auth = i.get(&auth::STATE).await?;
-        let users = i.get(&USERS_SERVICE).await?;
+        let users = i.get(&users::SERVICE).await?;
         let handler = i.get(&SOCKET_HANDLER).await?;
-        let schema = i.get(&GRAPHQL_SCHEMA).await?;
+        let schema = i.get(&graphql::SCHEMA).await?;
 
         let events = EventsState::new(users.clone(), handler.clone());
         let graphql = GraphQLState::new(users, schema);

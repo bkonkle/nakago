@@ -1,43 +1,35 @@
-use async_graphql::{EmptySubscription, MergedObject, Schema, SchemaBuilder};
+use async_graphql::{self, EmptySubscription, MergedObject, SchemaBuilder};
 use async_trait::async_trait;
 use nakago::{Hook, Inject, InjectResult, Tag};
 
 use crate::{
     config::CONFIG,
     domains::{episodes, profiles, shows, users},
-};
-use crate::{
-    domains::{
-        episodes,
-        profiles::resolver::{ProfilesMutation, ProfilesQuery},
-        shows::resolver::{ShowsMutation, ShowsQuery},
-        users::resolver::{UsersMutation, UsersQuery},
-    },
     utils::authz::OSO,
 };
 
 /// The GraphQL top-level Query type
 #[derive(MergedObject, Default)]
-pub struct Query(UsersQuery, ProfilesQuery, ShowsQuery, EpisodesQuery);
+pub struct Query(users::Query, profiles::Query, shows::Query, episodes::Query);
 
 /// The GraphQL top-level Mutation type
 #[derive(MergedObject, Default)]
 pub struct Mutation(
-    UsersMutation,
-    ProfilesMutation,
-    ShowsMutation,
-    EpisodesMutation,
+    users::Mutation,
+    profiles::Mutation,
+    shows::Mutation,
+    episodes::Mutation,
 );
 
 /// The application's top-level merged GraphQL schema
-pub type GraphQLSchema = Schema<Query, Mutation, EmptySubscription>;
+pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 
 /// Tag(GraphQLSchema)
-pub const SCHEMA: Tag<GraphQLSchema> = Tag::new("GraphQLSchema");
+pub const SCHEMA: Tag<Schema> = Tag::new("GraphQLSchema");
 
-/// Tag(GraphQLSchemaBuilder)
+/// Tag(SchemaBuilder)
 pub const SCHEMA_BUILDER: Tag<SchemaBuilder<Query, Mutation, EmptySubscription>> =
-    Tag::new("GraphQLSchemaBuilder");
+    Tag::new("SchemaBuilder");
 
 /// Initializes the GraphQL schema builder
 #[derive(Default)]

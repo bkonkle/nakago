@@ -8,14 +8,11 @@ use nakago_sea_orm::{connection, CONNECTION};
 
 use crate::{
     config::{Config, CONFIG},
-    domains::{
-        episodes::schema::LoadEpisodes, profiles::schema::LoadProfiles,
-        role_grants::schema::LoadRoleGrants, shows::schema::LoadShows, users::schema::LoadUsers,
-    },
+    domains::{episodes, profiles, role_grants, shows, users},
     events::{
         ProvideConnections, ProvideSocket, {CONNECTIONS, SOCKET_HANDLER},
     },
-    graphql::{InitGraphQL, GRAPHQL_SCHEMA, GRAPHQL_SCHEMA_BUILDER},
+    graphql,
     http::{
         routes::{new_events_route, new_graphql_route, new_health_route},
         state::{self, State, STATE},
@@ -48,7 +45,7 @@ pub async fn app() -> inject::Result<AxumApplication<Config, State>> {
     app.provide(&SOCKET_HANDLER, ProvideSocket::default())
         .await?;
 
-    app.provide(&GRAPHQL_SCHEMA_BUILDER, schema::ProvideBuilder::default())
+    app.provide(&graphql::SCHEMA_BUILDER, schema::ProvideBuilder::default())
         .await?;
 
     app.provide(&auth::STATE, auth::state::Provide::default())
@@ -63,27 +60,27 @@ pub async fn app() -> inject::Result<AxumApplication<Config, State>> {
         config::AddLoaders::new(nakago_sea_orm::default_config_loaders()),
     );
 
-    app.on(&EventType::Load, LoadUsers::default());
+    app.on(&EventType::Load, users::schema::Load::default());
 
-    app.on(&EventType::Load, LoadRoleGrants::default());
+    app.on(&EventType::Load, role_grants::schema::Load::default());
 
-    app.on(&EventType::Load, LoadProfiles::default());
+    app.on(&EventType::Load, profiles::schema::Load::default());
 
-    app.on(&EventType::Load, LoadShows::default());
+    app.on(&EventType::Load, shows::schema::Load::default());
 
-    app.on(&EventType::Load, LoadEpisodes::default());
+    app.on(&EventType::Load, episodes::schema::Load::default());
 
     app.on(&EventType::Load, LoadAuthz::default());
 
     // Initialization
 
-    app.on(&EventType::Init, InitGraphQL::default());
+    app.on(&EventType::Init, graphql::Init::default());
 
     app.on(
         &EventType::Init,
         schema::Init::default()
-            .with_builder_tag(&GRAPHQL_SCHEMA_BUILDER)
-            .with_schema_tag(&GRAPHQL_SCHEMA),
+            .with_builder_tag(&graphql::SCHEMA_BUILDER)
+            .with_schema_tag(&graphql::SCHEMA),
     );
 
     app.on(&EventType::Init, routes::Init::new(new_health_route));

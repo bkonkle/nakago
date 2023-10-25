@@ -3,7 +3,7 @@
 use anyhow::Result;
 use fake::{faker::internet::en::FreeEmail, Fake};
 use hyper::body::to_bytes;
-use nakago_examples_async_graphql::domains::users::service::USERS_SERVICE;
+use nakago_examples_async_graphql::domains::users;
 use pretty_assertions::assert_eq;
 use serde_json::{json, Value};
 use ulid::Ulid;
@@ -11,7 +11,7 @@ use ulid::Ulid;
 #[cfg(test)]
 mod test_utils;
 
-use test_utils::TestUtils;
+use test_utils::Utils;
 
 /***
  * Mutation: `createProfile`
@@ -36,14 +36,14 @@ const CREATE_PROFILE: &str = "
 /// It creates a new user profile
 #[tokio::test]
 async fn test_profile_create_simple() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
-    let users = utils.app.get(&USERS_SERVICE).await?;
+    let users = utils.app.get(&users::SERVICE).await?;
     let user = users.create(&username).await?;
 
     let req = utils.graphql.query(
@@ -76,7 +76,7 @@ async fn test_profile_create_simple() -> Result<()> {
 /// It requires an email address and a userId
 #[tokio::test]
 async fn test_profile_create_requires_email_user_id() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -127,7 +127,7 @@ async fn test_profile_create_requires_email_user_id() -> Result<()> {
 /// It requires authentication
 #[tokio::test]
 async fn test_profile_create_authn() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let req = utils.graphql.query(
         CREATE_PROFILE,
@@ -156,14 +156,14 @@ async fn test_profile_create_authn() -> Result<()> {
 /// It requires authorization
 #[tokio::test]
 async fn test_profile_create_authz() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
-    let users = utils.app.get(&USERS_SERVICE).await?;
+    let users = utils.app.get(&users::SERVICE).await?;
     let _ = users.create(&username).await?;
 
     let req = utils.graphql.query(
@@ -212,7 +212,7 @@ const GET_PROFILE: &str = "
 /// It retrieves an existing user profile
 #[tokio::test]
 async fn test_profile_get_simple() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -246,13 +246,13 @@ async fn test_profile_get_simple() -> Result<()> {
 /// It returns nothing when no profile is found
 #[tokio::test]
 async fn test_profile_get_empty() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
-    let users = utils.app.get(&USERS_SERVICE).await?;
+    let users = utils.app.get(&users::SERVICE).await?;
     let _ = users.create(&username).await?;
 
     let req = utils
@@ -275,7 +275,7 @@ async fn test_profile_get_empty() -> Result<()> {
 /// It censors responses for anonymous users
 #[tokio::test]
 async fn test_profile_get_authn() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -307,7 +307,7 @@ async fn test_profile_get_authn() -> Result<()> {
 /// It censors responses for unauthorized users
 #[tokio::test]
 async fn test_profile_get_authz() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -378,7 +378,7 @@ const GET_MANY_PROFILES: &str = "
 /// It queries existing profiles and censors responses for unauthorized users
 #[tokio::test]
 async fn test_profile_get_many_simple() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -437,7 +437,7 @@ async fn test_profile_get_many_simple() -> Result<()> {
 /// It censors responses for anonymous users
 #[tokio::test]
 async fn test_profile_get_many_anon() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -496,7 +496,7 @@ const UPDATE_PROFILE: &str = "
 /// It updates an existing user profile
 #[tokio::test]
 async fn test_profile_update_simple() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -539,7 +539,7 @@ async fn test_profile_update_simple() -> Result<()> {
 /// It requires authentication
 #[tokio::test]
 async fn test_profile_update_authn() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -575,7 +575,7 @@ async fn test_profile_update_authn() -> Result<()> {
 /// It returns an error if no existing profile was found
 #[tokio::test]
 async fn test_profile_update_not_found() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let req = utils.graphql.query(
         UPDATE_PROFILE,
@@ -607,7 +607,7 @@ async fn test_profile_update_not_found() -> Result<()> {
 /// It requires authorization
 #[tokio::test]
 async fn test_profile_update_authz() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -661,7 +661,7 @@ const DELETE_PROFILE: &str = "
 /// It deletes an existing user profile
 #[tokio::test]
 async fn test_profile_delete_simple() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -690,7 +690,7 @@ async fn test_profile_delete_simple() -> Result<()> {
 /// It requires authentication
 #[tokio::test]
 async fn test_profile_delete_authn() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -719,7 +719,7 @@ async fn test_profile_delete_authn() -> Result<()> {
 /// It returns an error if no existing profile was found
 #[tokio::test]
 async fn test_profile_delete_not_found() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let req = utils
         .graphql
@@ -744,7 +744,7 @@ async fn test_profile_delete_not_found() -> Result<()> {
 /// It requires authorization
 #[tokio::test]
 async fn test_profile_delete_authz() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();

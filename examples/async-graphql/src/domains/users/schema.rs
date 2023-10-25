@@ -10,10 +10,10 @@ use super::{
 
 /// Provide dependencies needed for the Users domain
 #[derive(Default)]
-pub struct LoadUsers {}
+pub struct Load {}
 
 #[async_trait]
-impl Hook for LoadUsers {
+impl Hook for Load {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
         i.provide(&SERVICE, service::Provide::default()).await?;
 
@@ -30,10 +30,10 @@ impl Hook for LoadUsers {
 ///  - Tag(ProfilesService)
 ///  - Tag(GraphQLSchemaBuilder)
 #[derive(Default)]
-pub struct InitGraphQLUsers {}
+pub struct Init {}
 
 #[async_trait]
-impl Hook for InitGraphQLUsers {
+impl Hook for Init {
     async fn handle(&self, i: Inject) -> InjectResult<()> {
         let service = i.get(&SERVICE).await?;
         let profiles = i.get(&profiles::SERVICE).await?;
@@ -54,7 +54,7 @@ pub(crate) mod test {
     use async_graphql::{self, EmptySubscription};
     use nakago::{Provider, Tag};
 
-    use crate::domains::users::resolver::{Mutation, Query};
+    use crate::domains::users::{Mutation, Query};
 
     use super::*;
 
@@ -73,10 +73,10 @@ pub(crate) mod test {
     ///   - `Tag(UsersService)`
     ///   - `Tag(ProfilesService)`
     #[derive(Default)]
-    pub struct ProvideSchema {}
+    pub struct Provide {}
 
     #[async_trait]
-    impl Provider<Schema> for ProvideSchema {
+    impl Provider<Schema> for Provide {
         async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Schema>> {
             let service = i.get(&SERVICE).await?;
             let profiles = i.get(&profiles::SERVICE).await?;

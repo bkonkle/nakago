@@ -20,15 +20,15 @@ use crate::{
 
 /// The Query segment owned by the Shows library
 #[derive(Default)]
-pub struct Query {}
+pub struct ShowsQuery {}
 
 /// The Mutation segment for Shows
 #[derive(Default)]
-pub struct Mutation {}
+pub struct ShowsMutation {}
 
 /// Queries for the `Show` model
 #[Object]
-impl Query {
+impl ShowsQuery {
     async fn get_show(
         &self,
         ctx: &Context<'_>,
@@ -64,7 +64,7 @@ impl Query {
 
 /// Mutations for the Show model
 #[Object]
-impl Mutation {
+impl ShowsMutation {
     /// Create a new Show
     async fn create_show(
         &self,

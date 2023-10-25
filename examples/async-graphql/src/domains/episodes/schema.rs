@@ -60,7 +60,7 @@ pub(crate) mod test {
     use nakago::{Provider, Tag};
     use nakago_derive::Provider;
 
-    use crate::domains::episodes::resolver::{Mutation, Query};
+    use crate::domains::episodes::{Mutation, Query};
 
     use super::*;
 

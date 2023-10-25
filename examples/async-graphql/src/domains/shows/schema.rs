@@ -54,7 +54,7 @@ pub(crate) mod test {
     use async_graphql::{self, EmptySubscription};
     use nakago::{Provider, Tag};
 
-    use crate::domains::shows::resolver::{Mutation, Query};
+    use crate::domains::shows::{Mutation, Query};
 
     use super::*;
 

@@ -17,15 +17,15 @@ use super::{
 
 /// The Query segment for Profiles
 #[derive(Default)]
-pub struct Query {}
+pub struct ProfilesQuery {}
 
 /// The Mutation segment for Profiles
 #[derive(Default)]
-pub struct Mutation {}
+pub struct ProfilesMutation {}
 
 /// Queries for the `Profile` model
 #[Object]
-impl Query {
+impl ProfilesQuery {
     /// Get a single Profile
     async fn get_profile(&self, ctx: &Context<'_>, id: String) -> Result<Option<Profile>> {
         let user = ctx.data_unchecked::<Option<User>>();
@@ -91,7 +91,7 @@ impl Query {
 
 /// Mutations for the Profile model
 #[Object]
-impl Mutation {
+impl ProfilesMutation {
     /// Create a new Profile
     async fn create_profile(
         &self,

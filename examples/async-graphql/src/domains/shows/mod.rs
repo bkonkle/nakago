@@ -29,5 +29,5 @@ pub const AUTHORIZATION: &str = include_str!("authorization.polar");
 mod tests;
 
 pub use loaders::{Loader, LOADER};
-pub use resolver::{Mutation, Query};
+pub use resolver::{ShowsMutation as Mutation, ShowsQuery as Query};
 pub use service::{Service, SERVICE};

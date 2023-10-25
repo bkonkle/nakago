@@ -7,11 +7,11 @@ use tokio_tungstenite::tungstenite::Message;
 use ulid::Ulid;
 
 mod test_utils;
-use test_utils::TestUtils;
+use test_utils::Utils;
 
 #[tokio::test]
 async fn test_ping() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;

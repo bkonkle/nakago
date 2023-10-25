@@ -10,7 +10,7 @@ use axum::{
 use nakago_axum::auth::Subject;
 use serde::{Deserialize, Serialize};
 
-use crate::{domains::users::service::UsersService, events::SocketHandler, graphql::GraphQLSchema};
+use crate::{domains::users, events::SocketHandler, graphql};
 
 // Health
 // ------
@@ -39,13 +39,13 @@ pub async fn health_handler() -> Json<HealthResponse> {
 /// State for the GraphQL Handler
 #[derive(Clone)]
 pub struct GraphQLState {
-    users: Arc<Box<dyn UsersService>>,
-    schema: Arc<GraphQLSchema>,
+    users: Arc<Box<dyn users::Service>>,
+    schema: Arc<graphql::Schema>,
 }
 
 impl GraphQLState {
     /// Create a new GraphQLState instance
-    pub fn new(users: Arc<Box<dyn UsersService>>, schema: Arc<GraphQLSchema>) -> Self {
+    pub fn new(users: Arc<Box<dyn users::Service>>, schema: Arc<graphql::Schema>) -> Self {
         Self { users, schema }
     }
 }
@@ -84,13 +84,13 @@ pub async fn graphql_handler(
 /// State for the WebSocket Events Handler
 #[derive(Clone)]
 pub struct EventsState {
-    users: Arc<Box<dyn UsersService>>,
+    users: Arc<Box<dyn users::Service>>,
     handler: Arc<SocketHandler>,
 }
 
 impl EventsState {
     /// Create a new EventsState instance
-    pub fn new(users: Arc<Box<dyn UsersService>>, handler: Arc<SocketHandler>) -> Self {
+    pub fn new(users: Arc<Box<dyn users::Service>>, handler: Arc<SocketHandler>) -> Self {
         Self { users, handler }
     }
 }
