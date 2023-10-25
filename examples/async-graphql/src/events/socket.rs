@@ -11,7 +11,7 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 /// The SocketHandler Tag
-pub const SOCKET_HANDLER: Tag<SocketHandler> = Tag::new("SocketHandler");
+pub const SOCKET_HANDLER: Tag<SocketHandler> = Tag::new("events::SocketHandler");
 
 use super::{
     connections::{Connections, CONNECTIONS},
@@ -115,11 +115,10 @@ impl SocketHandler {
 
 /// Provide a new WebSocket Event Handler
 ///
-/// **Provides:** `SocketHandler`
+/// **Provides:** `events::SocketHandler`
 ///
 /// **Depends on:**
-///   - `Tag(Connections)`
-///   - `Tag(CommandsController)`
+///   - `Tag(events::Connections)`
 #[derive(Default)]
 pub struct ProvideSocket {}
 

@@ -7,12 +7,12 @@ use crate::{inject, Hook, Inject, InjectError, Tag};
 use super::loader::{Config, LoadAll, Loader};
 
 /// A Tag for Config loaders
-pub const LOADERS: Tag<Vec<Arc<dyn Loader>>> = Tag::new("ConfigLoaders");
+pub const LOADERS: Tag<Vec<Arc<dyn Loader>>> = Tag::new("config::Loaders");
 
 /// Add the given Config Loaders to the stack.
 ///
 /// **Provides or Modifies:**
-///   - `Tag(ConfigLoaders)`
+///   - `Tag(config::Loaders)`
 pub struct AddLoaders {
     loaders: Vec<Arc<dyn Loader>>,
 }
@@ -50,10 +50,10 @@ impl Hook for AddLoaders {
 /// A Config Initializer
 ///
 /// **Provides:**
-///   - `C: Config`
+///   - `Config`
 ///
 /// **Consumes:**
-///   - `Tag(ConfigLoaders)`
+///   - `Tag(config::Loaders)`
 #[derive(Default)]
 pub struct Init<C: Config> {
     custom_path: Option<PathBuf>,

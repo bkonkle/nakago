@@ -11,8 +11,8 @@ use sea_orm::{entity::*, query::*, Condition, EntityTrait};
 
 use super::model::{self, CreateRoleGrantInput, RoleGrant};
 
-/// Tag(Service)
-pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("RoleGrantsService");
+/// Tag(role_grants::Service)
+pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("role_grants::Service");
 
 /// A Service appliies business logic to a dynamic RoleGrantsRepository implementation.
 #[cfg_attr(test, automock)]
@@ -100,10 +100,10 @@ impl Service for DefaultService {
 
 /// Provide the Service
 ///
-/// **Provides:** `Arc<dyn Service>`
+/// **Provides:** `Arc<Box<dyn role_grants::Service>>`
 ///
 /// **Depends on:**
-///   - `Tag(DatabaseConnection)`
+///   - `nakago_sea_orm::DatabaseConnection`
 #[derive(Default)]
 pub struct Provide {}
 

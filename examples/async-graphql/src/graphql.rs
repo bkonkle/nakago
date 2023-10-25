@@ -24,12 +24,12 @@ pub struct Mutation(
 /// The application's top-level merged GraphQL schema
 pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 
-/// Tag(GraphQLSchema)
-pub const SCHEMA: Tag<Schema> = Tag::new("GraphQLSchema");
+/// Tag(graphql::Schema)
+pub const SCHEMA: Tag<Schema> = Tag::new("graphql::Schema");
 
-/// Tag(SchemaBuilder)
+/// Tag(graphql::SchemaBuilder)
 pub const SCHEMA_BUILDER: Tag<SchemaBuilder<Query, Mutation, EmptySubscription>> =
-    Tag::new("SchemaBuilder");
+    Tag::new("graphql::SchemaBuilder");
 
 /// Initializes the GraphQL schema builder
 #[derive(Default)]

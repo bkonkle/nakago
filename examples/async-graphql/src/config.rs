@@ -5,8 +5,8 @@ use nakago_sea_orm::{self, config::DatabasePool};
 use serde::Serialize;
 use serde_derive::Deserialize;
 
-/// Tag(AppConfig)
-pub const CONFIG: Tag<Config> = Tag::new("AppConfig");
+/// Tag(Config)
+pub const CONFIG: Tag<Config> = Tag::new("app::Config");
 
 /// Server Config
 #[derive(Debug, Serialize, Deserialize, Clone, FromRef)]

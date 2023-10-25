@@ -156,9 +156,9 @@ pub(crate) mod test {
 
     use super::*;
 
-    pub const SERVICE_TAG: Tag<TestService> = Tag::new("InMemoryTestService");
-    pub const OTHER_TAG: Tag<OtherService> = Tag::new("InMemoryOtherService");
-    pub const DYN_TAG: Tag<Box<dyn HasId>> = Tag::new("DynHasIdService");
+    pub const SERVICE_TAG: Tag<TestService> = Tag::new("in_memory::test::Service");
+    pub const OTHER_TAG: Tag<OtherService> = Tag::new("in_memory::other::Service");
+    pub const DYN_TAG: Tag<Box<dyn HasId>> = Tag::new("dyn::has_id::Service");
 
     trait DynamicService: Sync + Send {
         fn test_fn(&self) {}

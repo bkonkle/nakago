@@ -6,8 +6,8 @@ use nakago::{inject, Inject, Provider, Tag};
 use nakago_axum::{self, auth};
 use nakago_derive::Provider;
 
-/// Tag(AppState)
-pub const STATE: Tag<State> = Tag::new("AppState");
+/// Tag(app::State)
+pub const STATE: Tag<State> = Tag::new("app::State");
 
 /// The top-level Application State
 #[derive(Clone, FromRef)]
@@ -19,10 +19,10 @@ impl nakago_axum::State for State {}
 
 /// Provide the State for Axum
 ///
-/// **Provides:** `State`
+/// **Provides:** `app::State`
 ///
 /// **Depends on:**
-///   - `Tag(AuthState)`
+///   - `Tag(auth::State)`
 #[derive(Default)]
 pub struct Provide {}
 

@@ -21,7 +21,7 @@ use super::{
     queries::{EpisodeCondition, EpisodesOrderBy},
 };
 
-/// Tag(EpisodesService)
+/// Tag(episodes::Service)
 pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("episodes::Service");
 
 /// An Service applies business logic to a dynamic EpisodesRepository implementation.
@@ -283,10 +283,10 @@ impl Service for DefaultService {
 
 /// Provide the Service
 ///
-/// **Provides:** `Arc<dyn Service>`
+/// **Provides:** `Arc<Box<dyn episodes::Service>>`
 ///
 /// **Depends on:**
-///   - `Tag(DatabaseConnection)`
+///   - `Tag(nakago_sea_orm::DatabaseConnection)`
 #[derive(Default)]
 pub struct Provide {}
 
@@ -306,7 +306,7 @@ pub(crate) mod test {
 
     /// Provide the Mocked Service for testing
     ///
-    /// **Provides:** `Arc<dyn Service>`
+    /// **Provides:** `Arc<Box<dyn episodes::Service>>`
     #[derive(Default)]
     pub struct ProvideMock {}
 

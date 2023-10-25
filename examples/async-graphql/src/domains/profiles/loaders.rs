@@ -13,8 +13,8 @@ use super::{
     service::{Service, SERVICE},
 };
 
-/// Tag(ProfileLoader)
-pub const LOADER: Tag<DataLoader<Loader>> = Tag::new("ProfileLoader");
+/// Tag(profiles::Loader)
+pub const LOADER: Tag<DataLoader<Loader>> = Tag::new("profiles::Loader");
 
 /// A dataloader for `Profile` instances
 pub struct Loader {
@@ -47,10 +47,10 @@ impl dataloader::Loader<String> for Loader {
 
 /// Provide the Loader
 ///
-/// **Provides:** `Loader`
+/// **Provides:** `Arc<DataLoader<profiles::Loader>>`
 ///
 /// **Depends on:**
-///  - `Tag(Service)`
+///  - `Tag(profiles::Service)`
 #[derive(Default)]
 pub struct Provide {}
 

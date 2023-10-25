@@ -21,8 +21,8 @@ use super::{
     Error::{self, InvalidAuthHeaderError},
 };
 
-/// The AuthState Tag
-pub const STATE: Tag<State> = Tag::new("AuthState");
+/// Tag(auth::State)
+pub const STATE: Tag<State> = Tag::new("auth::State");
 
 const BEARER: &str = "Bearer ";
 
@@ -103,10 +103,10 @@ pub fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>,
 
 /// Provide the State needed in order to use the `Subject` extractor in an Axum handler
 ///
-/// **Provides:** `State`
+/// **Provides:** `auth::State`
 ///
 /// **Depends on:**
-///   - `Tag(JWKS)`
+///   - `Tag(auth::JWKS)`
 #[derive(Default)]
 pub struct Provide {}
 
@@ -125,7 +125,7 @@ impl Provider<State> for Provide {
 ///
 /// **WARNING: This is insecure and should only be used in testing**
 ///
-/// **Provides:** `AuthState`
+/// **Provides:** `auth::State`
 #[derive(Default)]
 pub struct ProvideUnverified {}
 

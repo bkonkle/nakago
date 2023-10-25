@@ -14,11 +14,11 @@ use crate::domains::{
 };
 
 /// The Oso Tag
-pub const OSO: Tag<Oso> = Tag::new("Oso");
+pub const OSO: Tag<Oso> = Tag::new("auth::Oso");
 
 /// Provide an Oso authorization instance
 ///
-/// **Provides:** `Oso`
+/// **Provides:** `auth::Oso`
 #[derive(Default)]
 pub struct ProvideOso {}
 
@@ -33,7 +33,7 @@ impl Provider<Oso> for ProvideOso {
 /// Load the authorization system. Must be invoked before the GraphQL Schema is initialized.
 ///
 /// **Depends on (and modifies):**
-///   - `Tag(Oso)`
+///   - `Tag(auth::Oso)`
 #[derive(Default)]
 pub struct LoadAuthz {}
 

@@ -14,7 +14,7 @@ use ulid::Ulid;
 use crate::domains::users::model::User;
 
 /// The Connections Tag
-pub const CONNECTIONS: Tag<Connections> = Tag::new("Connections");
+pub const CONNECTIONS: Tag<Connections> = Tag::new("events::Connections");
 
 /// User Connection for WebSocket connections
 pub struct Connection {
@@ -114,7 +114,7 @@ impl Session {
 
 /// Provide the default Connections implementation
 ///
-/// **Provides:** `Arc<Connections>`
+/// **Provides:** `Arc<events::Connections>`
 #[derive(Default)]
 pub struct ProvideConnections {}
 

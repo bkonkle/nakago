@@ -49,8 +49,9 @@ impl Http {
 }
 
 /// A Tag for the Test HTTP Client
-///   - Tag(AxumTestHttpClient)
-pub const CLIENT: Tag<Client<HttpsConnector<HttpConnector>>> = Tag::new("AxumTestHttpClient");
+///   - Tag(nakago_axum::test::HttpClient)
+pub const CLIENT: Tag<Client<HttpsConnector<HttpConnector>>> =
+    Tag::new("nakago_axum::test::HttpClient");
 
 /// A Dependency Injection provider for a simple Test HTTP client using hyper
 #[derive(Default)]

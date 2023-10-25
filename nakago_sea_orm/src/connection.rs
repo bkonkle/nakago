@@ -11,15 +11,15 @@ use sea_orm::{DatabaseBackend, DatabaseConnection, MockDatabase, MockDatabaseTra
 
 use crate::Config;
 
-/// Tag(SeaORM:DatabaseConnection)
-pub const CONNECTION: Tag<DatabaseConnection> = Tag::new("SeaORM:DatabaseConnection");
+/// Tag(nakago_sea_orm::DatabaseConnection)
+pub const CONNECTION: Tag<DatabaseConnection> = Tag::new("nakago_sea_orm::DatabaseConnection");
 
 /// Provide a SeaOrm Database connection
 ///
-/// **Provides:** `Arc<DatabaseConnection>`
+/// **Provides:** `Arc<nakago_sea_orm::DatabaseConnection>`
 ///
 /// **Depends on:**
-///   - `<C: nakago::Config>` - requires that `C` fulfills the `Config: FromRef<C>` constraint
+///   - `<Config>` - requires that `C` fulfills the `Config: FromRef<C>` constraint
 #[derive(Default)]
 pub struct Provide<C: nakago::Config> {
     config_tag: Option<&'static Tag<C>>,
@@ -69,7 +69,7 @@ where
 
 /// Provide a Mock Database Connection for use in unit testing
 ///
-/// **Provides:** `Arc<DatabaseConnection>`
+/// **Provides:** `Arc<nakago_sea_orm::DatabaseConnection>`
 pub struct ProvideMock {
     db: Mutex<MockDatabase>,
 }

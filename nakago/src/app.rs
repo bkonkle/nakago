@@ -80,12 +80,6 @@ where
     }
 
     /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
-    ///
-    /// **Provides:**
-    ///   - `C: Config`
-    ///
-    /// **Consumes:**
-    ///   - `Tag(ConfigLoaders)`
     pub async fn load(&self, config_path: Option<PathBuf>) -> inject::Result<()> {
         // Trigger the Load lifecycle event
         self.events

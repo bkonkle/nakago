@@ -10,8 +10,8 @@ use crate::{domains::users, events::SOCKET_HANDLER, graphql};
 
 use super::handlers::{EventsState, GraphQLState};
 
-/// Tag(AppState)
-pub const STATE: Tag<State> = Tag::new("AppState");
+/// Tag(app::State)
+pub const STATE: Tag<State> = Tag::new("app::State");
 
 /// The top-level Application State
 #[derive(Clone, FromRef)]
@@ -25,13 +25,13 @@ impl nakago_axum::State for State {}
 
 /// Provide the State for Axum
 ///
-/// **Provides:** `State`
+/// **Provides:** `app::State`
 ///
 /// **Depends on:**
-///   - `Tag(AuthState)`
-///   - `Tag(UsersService)`
-///   - `Tag(SocketHandler)`
-///   - `Tag(GraphQLSchema)`
+///   - `Tag(auth::State)`
+///   - `Tag(users::Service)`
+///   - `Tag(events::SocketHandler)`
+///   - `Tag(praphql::Schema)`
 #[derive(Default)]
 pub struct Provide {}
 

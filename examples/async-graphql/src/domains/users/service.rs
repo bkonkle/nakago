@@ -15,8 +15,8 @@ use super::{
 };
 use crate::domains::role_grants::model as role_grant_model;
 
-/// Tag(UsersService)
-pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("UsersService");
+/// Tag(users::Service)
+pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("users::Service");
 
 /// A Service appliies business logic to a dynamic UsersRepository implementation.
 #[cfg_attr(test, automock)]
@@ -168,10 +168,10 @@ impl Service for DefaultService {
 
 /// Provide the Service
 ///
-/// **Provides:** `Arc<dyn ServiceTrait>`
+/// **Provides:** `Arc<Box<dyn users::Service>>`
 ///
 /// **Depends on:**
-///   - `Tag(DatabaseConnection)`
+///   - `nakago_sea_orm::DatabaseConnection`
 #[derive(Default)]
 pub struct Provide {}
 

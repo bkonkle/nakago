@@ -21,8 +21,8 @@ use super::{
     queries::{ProfileCondition, ProfilesOrderBy},
 };
 
-/// Tag(ProfilesService)
-pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("ProfilesService");
+/// Tag(profiles::Service)
+pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("profiles::Service");
 
 /// A Service applies business logic to a dynamic ProfilesRepository implementation.
 #[cfg_attr(test, automock)]
@@ -353,10 +353,10 @@ impl Service for DefaultService {
 
 /// Provide the Service
 ///
-/// **Provides:** `Arc<dyn Service>`
+/// **Provides:** `Arc<Box<dyn profiles::Service>>`
 ///
 /// **Depends on:**
-///   - `Tag(DatabaseConnection)`
+///   - `nakago_sea_orm::DatabaseConnection`
 #[derive(Default)]
 pub struct Provide {}
 

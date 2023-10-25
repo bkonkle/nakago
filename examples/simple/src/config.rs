@@ -4,8 +4,8 @@ use nakago_axum::{self, auth};
 use serde::Serialize;
 use serde_derive::Deserialize;
 
-/// Tag(AppConfig)
-pub const CONFIG: Tag<Config> = Tag::new("AppConfig");
+/// Tag(app::Config)
+pub const CONFIG: Tag<Config> = Tag::new("app::Config");
 
 /// Server Config
 #[derive(Default, Debug, Serialize, Deserialize, Clone, FromRef)]

@@ -17,7 +17,7 @@ use thiserror::Error;
 use super::{Config, Error};
 
 /// The JWKS Tag
-pub const JWKS: Tag<JWKSet<Empty>> = Tag::new("JWKS");
+pub const JWKS: Tag<JWKSet<Empty>> = Tag::new("auth::JWKS");
 
 /// Get the default set of JWKS keys
 pub async fn init(config: Config) -> JWKSet<Empty> {
@@ -156,10 +156,10 @@ pub enum ClientError {
 
 /// Provide the Json Web Key Set
 ///
-/// **Provides:** `Arc<jwks::JWKS>`
+/// **Provides:** `Arc<JWKSet<Empty>>`
 ///
 /// **Depends on:**
-///   - `<C: Config>` - requires that `C` fulfills the `Config: FromRef<C>` constraint
+///   - `<Config>` - requires that `C` fulfills the `Config: FromRef<C>` constraint
 #[derive(Default)]
 pub struct Provide<C: nakago::Config> {
     config_tag: Option<&'static Tag<C>>,

@@ -87,9 +87,9 @@ Available:
 **Tags** carry the underlying type around with them, meaning it can be inferred by the compiler in most cases. They also allow you to inject multiple instances of the same type, with different keys. If you have multiple Database Configs, for example, you can inject them into the container with separate tags even though they contain the same type.
 
 ```rust
-pub const POSTGRES_REPO: Tag<PostgresRepository> = Tag::new("PostgresEntityRepository");
-pub const DYNAMO_REPO: Tag<DynamoRepository> = Tag::new("DynamoEntityRepository");
-pub const REPO: Tag<Box<dyn Repository>> = Tag::new("EntityRepository");
+pub const POSTGRES_REPO: Tag<PostgresRepository> = Tag::new("postgres::EntityRepository");
+pub const DYNAMO_REPO: Tag<DynamoRepository> = Tag::new("dynamo::EntityRepository");
+pub const REPO: Tag<Box<dyn Repository>> = Tag::new("dyn::EntityRepository");
 ```
 
 Instead of requesting the type explicitly like this:

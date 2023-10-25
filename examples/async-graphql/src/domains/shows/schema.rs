@@ -58,20 +58,19 @@ pub(crate) mod test {
 
     use super::*;
 
-    /// Tag(ShowsSchema)
+    /// Tag(shows::Schema)
     #[allow(dead_code)]
-    pub const SCHEMA: Tag<Box<Schema>> = Tag::new("ShowsSchema");
+    pub const SCHEMA: Tag<Box<Schema>> = Tag::new("shows::Schema");
 
     /// The Schema, covering just the Shows domain. Useful for testing in isolation.
     pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 
     /// Provide the Schema
     ///
-    /// **Provides:** `Arc<Schema>`
+    /// **Provides:** `Arc<shows::Schema>`
     ///
     /// **Depends on:**
-    ///   - `Tag(ShowsService)`
-    ///   - `Tag(ShowLoader)`
+    ///   - `Tag(shows::Service)`
     #[derive(Default)]
     pub struct ProvideSchema {}
 
