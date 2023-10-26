@@ -6,8 +6,9 @@ use nakago_examples_async_graphql::events::{IncomingMessage, OutgoingMessage};
 use tokio_tungstenite::tungstenite::Message;
 use ulid::Ulid;
 
-mod test_utils;
-use test_utils::Utils;
+mod utils;
+
+use utils::Utils;
 
 #[tokio::test]
 async fn test_ping() -> Result<()> {

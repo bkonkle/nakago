@@ -21,16 +21,16 @@ The `Startup` Hook for an Axum Application uses the State with the provided Rout
 To start your application, pass in your top-level Config type and create an instance. Attach Hooks in the order that they should be executed:
 
 ```rust
-let mut app = AxumApplication::<AppConfig>::default();
-app.on(&EventType::Init, InitDomains::default());
-app.on(&EventType::Init, InitApp::default());
-app.on(&EventType::Startup, InitAuthz::default());
+let mut app = AxumApplication::<Config>::default();
+app.on(&EventType::Load, users::schema::Load::default());
+app.on(&EventType::Load, authz::Load::default());
+app.on(&EventType::Init, routes::Init::new(new_health_route));
 ```
 
 Then, use `run` to start the application and return the connection details.
 
 ```rust
-let server = app.run::<AppState>(args.config_path).await?;
+let server = app.run::<State>(args.config_path).await?;
 let addr = server.local_addr();
 
 info!("Started on port: {port}", port = addr.port());

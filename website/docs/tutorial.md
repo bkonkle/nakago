@@ -113,27 +113,27 @@ Add the real details to your own `config/local.toml` file, which should be exclu
 Before you can use the `Subject` request extension with your Axum routes, you'll need to add the `AuthState` to your `AppState` in your `http/state.rs` file:
 
 ```rust
-use nakago_axum::auth::authenticate::AuthState;
+use nakago_axum::auth;
 
 /// The top-level Application State
 #[derive(Clone, FromRef)]
-pub struct AppState {
-    auth: AuthState,
+pub struct State {
+    auth: auth::State,
 }
 ```
 
 Then you can update the `ProvideAppState` provider to retrieve the `AuthState` you provided earlier and use it when creating the `AppState`:
 
 ```rust
-use nakago_axum::auth::authenticate::AUTH_STATE;
+use nakago_axum::auth;
 
 #[Provider]
 #[async_trait]
-impl Provider<AppState> for ProvideAppState {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<AppState>> {
-        let auth = i.get(&AUTH_STATE).await?;
+impl Provider<State> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<State>> {
+        let auth = i.get(&auth::STATE).await?;
 
-        Ok(Arc::new(AppState {
+        Ok(Arc::new(State {
             auth: (*auth).clone(),
         }))
     }
@@ -146,21 +146,21 @@ You'll probably also want to add a note to the docstring for your `ProvideAppSta
 
 ```rust
 /// **Depends on:**
-///   - `Tag(AuthState)`
+///   - `Tag(auth::State)`
 ```
 
 In your `init.rs` file, you should use `ProvideJwks` and `ProvideAuthState` to provide the AuthState that the custom `ProvideAppState` provider unique to your app will use to populate that property.
 
 ```rust
-use nakago_axum::auth::{ProvideAuthState, ProvideJwks, AUTH_STATE, JWKS};
+use nakago_axum::auth::{self, jwks, JWKS};
 
-app.provide(&JWKS, ProvideJwks::default().with_config_tag(&CONFIG))
+app.provide(&JWKS, jwks::Provide::default().with_config_tag(&CONFIG))
     .await?;
 
-app.provide(&AUTH_STATE, ProvideAuthState::default())
+app.provide(&auth::STATE, auth::state::Provide::default())
     .await?;
 
-app.provide(&STATE, ProvideAppState::default()).await?; // <-- this line should already be there
+app.provide(&STATE, state::Provide::default()).await?; // <-- this line should already be there
 ```
 
 The `.with_config_tag(&CONFIG)` provides the custom Tag for your `AppConfig`, which will be unique to your app.
@@ -208,7 +208,7 @@ Now add a route that uses the handler to `http/routes.rs`:
 use super::handlers::get_username_handler;
 
 /// Initialize the User route
-pub fn new_user_route(_: Inject) -> Route<AppState> {
+pub fn new_user_route(_: Inject) -> Route<State> {
     Route::new("/", Router::new().route("/username", get(get_username_handler)))
 }
 ```
@@ -222,8 +222,8 @@ use crate::https::routes::new_user_route;
 
 // Routes
 
-app.on(&EventType::Init, InitRoute::new(new_health_route));
-app.on(&EventType::Init, InitRoute::new(new_user_route)); // <-- the new route
+app.on(&EventType::Init, routes::Init::new(new_health_route));
+app.on(&EventType::Init, routes::Init::new(new_user_route)); // <-- the new route
 
 Ok(app)
 ```
@@ -276,27 +276,27 @@ Now that you have a simple route that requires authentication, you'll want to ad
 
 ### Test Utils
 
-Nakago Axum's HTTP `TestUtils` class is based on the idea of extending the base `TestUtils` class you'll find in `nakago_axum::test::utils::TestUtils` with additional functionality, like adding a `graphql` property if you're using `nakago-async-graphql` or adding convenience methods around your app-specific data.
+Nakago Axum's HTTP `Utils` class is based on the idea of extending the base test `Utils` class you'll find in `nakago_axum::test::Utils` with additional functionality, like adding a `graphql` property if you're using `nakago-async-graphql` or adding convenience methods around your app-specific data.
 
 To start out with, create a `tests` folder alongside your `src`. This will be used by Cargo as an ["integration test"](<https://doc.rust-lang.org/book/ch11-03-test-organization.html#integration-tests>) module, and will be excluded from your final binary. It allows you to import the module in your `src` as if it were an external package, with access only to the public exports. You don't need to add a `lib.rs`, `mod.rs`, or `main.rs` - each file in the `tests` folder will be auto-discovered and treated as a separate entry point with its own module.
 
-For the purposes of your own application, you'll want to create a `tests/test_utils.rs` file that wraps the `nakago_axum::test::utils::TestUtils` so that you can override any dependencies that you need or add convenience methods to build test data easily for your tests. Start out with a newtype like this:
+For the purposes of your own application, you'll want to create a `tests/utils.rs` file that wraps the `nakago_axum::test::Utils` so that you can override any dependencies that you need or add convenience methods to build test data easily for your tests. Start out with a newtype like this:
 
 ```rust
 use simple::{config::AppConfig, http::state::AppState};
 
-pub struct TestUtils(nakago_axum::test::utils::TestUtils<AppConfig, AppState>);
+pub struct Utils(nakago_axum::test::utils::Utils<AppConfig, AppState>);
 ```
 
 Replace `simple` with your actual project name.
 
-To make it easy to access the fields on the inner `TestUtils`, you can implement the `Deref` trait for your newtype. This isn't generally a good practice for newtypes in Production because it can result in some easy-to-miss implicit conversion behind the scenes, but in testing it's a nice convenience:
+To make it easy to access the fields on the inner `Utils`, you can implement the `Deref` trait for your newtype. This isn't generally a good practice for newtypes in Production because it can result in some easy-to-miss implicit conversion behind the scenes, but in testing it's a nice convenience:
 
 ```rust
 use std::ops::Deref;
 
-impl Deref for TestUtils {
-    type Target = nakago_axum::test::utils::TestUtils<AppConfig, AppState>;
+impl Deref for Utils {
+    type Target = nakago_axum::test::Utils<AppConfig, AppState>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -304,25 +304,25 @@ impl Deref for TestUtils {
 }
 ```
 
-Now, you can implement an `init()` method for your app-specific `TestUtils` wrapper:
+Now, you can implement an `init()` method for your app-specific `Utils` wrapper:
 
 ```rust
 use anyhow::Result;
-use nakago_axum::auth::{authenticate::ProvideUnverifiedAuthState, AUTH_STATE};
+use nakago_axum::auth;
 
 use simple::init;
 
-impl TestUtils {
+impl Utils {
     pub async fn init() -> Result<Self> {
         let app = init::app().await?;
 
-        app.replace_with(&AUTH_STATE, ProvideUnverifiedAuthState::default())
+        app.replace_with(&auth::STATE, auth::state::ProvideUnverified::default())
             .await?;
 
         let config_path =
             std::env::var("CONFIG_PATH").unwrap_or_else(|_| "config/test.toml".to_string());
 
-        let utils = nakago_axum::test::utils::TestUtils::init(app, &config_path, "/").await?;
+        let utils = nakago_axum::test::Utils::init(app, &config_path, "/").await?;
 
         Ok(Self(utils))
     }
@@ -336,11 +336,11 @@ Now, create a `test_users_int.rs` to represent your User integration tests, whic
 ```rust
 #![cfg(feature = "integration")]
 
-use test_utils::TestUtils;
+use test_utils::Utils;
 
 #[tokio::test]
 async fn test_get_username_success() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     todo!("unimplemented")
 }
@@ -359,7 +359,7 @@ use ulid::Ulid;
 
 #[tokio::test]
 async fn test_get_username_success() -> Result<()> {
-    let utils = TestUtils::init().await?; // <-- this line should already be there
+    let utils = Utils::init().await?; // <-- this line should already be there
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
@@ -404,12 +404,12 @@ mod test_utils;
 
 use hyper::body::to_bytes;
 use serde_json::Value;
-use test_utils::TestUtils;
+use test_utils::Utils;
 use ulid::Ulid;
 
 #[tokio::test]
 async fn test_get_username_success() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;

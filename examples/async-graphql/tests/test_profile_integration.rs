@@ -9,9 +9,9 @@ use serde_json::{json, Value};
 use ulid::Ulid;
 
 #[cfg(test)]
-mod test_utils;
+mod utils;
 
-use test_utils::Utils;
+use utils::Utils;
 
 /***
  * Mutation: `createProfile`

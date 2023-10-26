@@ -35,10 +35,10 @@ impl Provider<Oso> for ProvideOso {
 /// **Depends on (and modifies):**
 ///   - `Tag(auth::Oso)`
 #[derive(Default)]
-pub struct LoadAuthz {}
+pub struct Load {}
 
 #[async_trait]
-impl Hook for LoadAuthz {
+impl Hook for Load {
     async fn handle(&self, i: Inject) -> inject::Result<()> {
         // Set up authorization
         let mut oso = (*i.get(&OSO).await?).clone();

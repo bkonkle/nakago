@@ -17,7 +17,7 @@ use crate::{
         routes::{new_events_route, new_graphql_route, new_health_route},
         state::{self, State, STATE},
     },
-    utils::authz::{LoadAuthz, ProvideOso, OSO},
+    utils::authz::{self, ProvideOso, OSO},
 };
 
 /// Create a default AxumApplication instance
@@ -70,7 +70,7 @@ pub async fn app() -> inject::Result<AxumApplication<Config, State>> {
 
     app.on(&EventType::Load, episodes::schema::Load::default());
 
-    app.on(&EventType::Load, LoadAuthz::default());
+    app.on(&EventType::Load, authz::Load::default());
 
     // Initialization
 

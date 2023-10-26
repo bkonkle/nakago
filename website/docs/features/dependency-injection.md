@@ -14,7 +14,7 @@ One quirk of Any is that values need to have the `'static` lifetime, meaning the
 
 ## Async
 
-Nakago's `Inject` framework is built on [Tokio](https://tokio.rs/) with [Shared Futures](https://docs.rs/futures/latest/futures/future/struct.Shared.html), allowing multiple threads to request and await the same dependency and use Arc to hold on to it across await points without worrying about lifetimes.
+Nakago's `Inject` framework is built on [Tokio](https://tokio.rs/) with [Shared Futures](https://docs.rs/futures/latest/futures/future/struct.Shared.html), allowing multiple threads to request and await the same dependency and use an Arc to hold on to it across await points without worrying about lifetimes.
 
 It uses Providers that implement the async `Provider` trait and use the provider's instance for configuration or context, and the Inject container to request other dependencies you require. Providers are lazily invoked - they are stored internally but not invoked until they are requested. They are then converted into a pending Shared Future that can be polled by multiple threads at the same time. This allows multiple resources to wait for the same Provider invocation without duplicaiton.
 
@@ -87,9 +87,9 @@ Available:
 **Tags** carry the underlying type around with them, meaning it can be inferred by the compiler in most cases. They also allow you to inject multiple instances of the same type, with different keys. If you have multiple Database Configs, for example, you can inject them into the container with separate tags even though they contain the same type.
 
 ```rust
-pub const POSTGRES_REPO: Tag<PostgresRepository> = Tag::new("postgres::EntityRepository");
-pub const DYNAMO_REPO: Tag<DynamoRepository> = Tag::new("dynamo::EntityRepository");
-pub const REPO: Tag<Box<dyn Repository>> = Tag::new("dyn::EntityRepository");
+pub const POSTGRES_REPO: Tag<PostgresRepository> = Tag::new("entity::PostgresRepository");
+pub const DYNAMO_REPO: Tag<DynamoRepository> = Tag::new("entity::DynamoRepository");
+pub const REPO: Tag<Box<dyn Repository>> = Tag::new("entity::Repository");
 ```
 
 Instead of requesting the type explicitly like this:
@@ -121,7 +121,7 @@ To provide a dependency, create a Provider that implements the `inject::Provider
 
 ```rust
 use async_trait::async_trait;
-use nakago::inject::{Provider, Inject, inject};
+use nakago::inject::{inject, Provider, Inject};
 use sqlx::{Pool, Postgres};
 
 #[derive(Default)]
