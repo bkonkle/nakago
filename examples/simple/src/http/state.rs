@@ -2,40 +2,37 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use axum::extract::FromRef;
-use nakago::{Inject, InjectResult, Provider, Tag};
-use nakago_axum::{
-    app::State,
-    auth::{authenticate::AuthState, AUTH_STATE},
-};
+use nakago::{inject, Inject, Provider, Tag};
+use nakago_axum::{self, auth};
 use nakago_derive::Provider;
 
-/// Tag(AppState)
-pub const STATE: Tag<AppState> = Tag::new("AppState");
+/// Tag(app::State)
+pub const STATE: Tag<State> = Tag::new("app::State");
 
 /// The top-level Application State
 #[derive(Clone, FromRef)]
-pub struct AppState {
-    auth: AuthState,
+pub struct State {
+    auth: auth::State,
 }
 
-impl State for AppState {}
+impl nakago_axum::State for State {}
 
-/// Provide the AppState for Axum
+/// Provide the State for Axum
 ///
-/// **Provides:** `AppState`
+/// **Provides:** `app::State`
 ///
 /// **Depends on:**
-///   - `Tag(AuthState)`
+///   - `Tag(auth::State)`
 #[derive(Default)]
-pub struct ProvideAppState {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<AppState> for ProvideAppState {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<AppState>> {
-        let auth = i.get(&AUTH_STATE).await?;
+impl Provider<State> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<State>> {
+        let auth = i.get(&auth::STATE).await?;
 
-        Ok(Arc::new(AppState {
+        Ok(Arc::new(State {
             auth: (*auth).clone(),
         }))
     }

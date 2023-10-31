@@ -10,12 +10,11 @@ use backtrace::Backtrace;
 use futures::{Future, FutureExt};
 use tokio::sync::RwLock;
 
-use super::{
-    injector::{Dependency, Injector},
-    Error, Key, Result,
-};
+use super::{Dependency, Error, Injector, Key, Result};
 
-/// The injection Container
+/// A Dependency Injection container based on the concept of Shared Futures, which multiple
+/// independent threads can await. The container holds a map of Keys to Injectors, and provides
+/// methods for retrieving, injecting, and removing Dependencies and Providers.
 #[derive(Default, Clone)]
 pub struct Inject(pub(crate) Arc<RwLock<HashMap<Key, Injector>>>);
 
@@ -152,7 +151,7 @@ impl Inject {
 
     /// Temporarily remove a dependency from the container and try to unwrap it from the Arc, which
     /// will only succeed if there are no other strong pointers to the value. Then, apply a function
-    /// to it, and then inject sit back into the container.
+    /// to it, and then injects it back into the container.
     pub async fn modify_key<T, F>(&self, key: Key, modify: F) -> Result<()>
     where
         T: Any + Send + Sync,

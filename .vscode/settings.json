@@ -1,4 +1,5 @@
 {
     "rust-analyzer.linkedProjects": ["./nakago/derive/Cargo.toml"],
-    "rust-analyzer.showUnlinkedFileNotification": false
+    "rust-analyzer.showUnlinkedFileNotification": false,
+    "rust-analyzer.cargo.features": "all"
 }

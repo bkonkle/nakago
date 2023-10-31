@@ -1,37 +1,37 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_graphql::{
-    dataloader::{DataLoader, Loader},
+    dataloader::{self, DataLoader},
     FieldError,
 };
 use async_trait::async_trait;
-use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago::{inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
 
 use super::{
     model::Profile,
-    service::{ProfilesService, PROFILES_SERVICE},
+    service::{Service, SERVICE},
 };
 
-/// Tag(ProfileLoader)
-pub const PROFILE_LOADER: Tag<DataLoader<ProfileLoader>> = Tag::new("ProfileLoader");
+/// Tag(profiles::Loader)
+pub const LOADER: Tag<DataLoader<Loader>> = Tag::new("profiles::Loader");
 
 /// A dataloader for `Profile` instances
-pub struct ProfileLoader {
+pub struct Loader {
     /// The SeaOrm database connection
-    profiles: Arc<Box<dyn ProfilesService>>,
+    profiles: Arc<Box<dyn Service>>,
 }
 
-/// The default implementation for the `ProfileLoader`
-impl ProfileLoader {
+/// The default implementation for the `Loader`
+impl Loader {
     /// Create a new instance
-    pub fn new(profiles: Arc<Box<dyn ProfilesService>>) -> Self {
+    pub fn new(profiles: Arc<Box<dyn Service>>) -> Self {
         Self { profiles }
     }
 }
 
 #[async_trait]
-impl Loader<String> for ProfileLoader {
+impl dataloader::Loader<String> for Loader {
     type Value = Profile;
     type Error = FieldError;
 
@@ -45,23 +45,23 @@ impl Loader<String> for ProfileLoader {
     }
 }
 
-/// Provide the ProfileLoader
+/// Provide the Loader
 ///
-/// **Provides:** `ProfileLoader`
+/// **Provides:** `Arc<DataLoader<profiles::Loader>>`
 ///
 /// **Depends on:**
-///  - `Tag(ProfilesService)`
+///  - `Tag(profiles::Service)`
 #[derive(Default)]
-pub struct ProvideProfileLoader {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<DataLoader<ProfileLoader>> for ProvideProfileLoader {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DataLoader<ProfileLoader>>> {
-        let profiles_service = i.get(&PROFILES_SERVICE).await?;
+impl Provider<DataLoader<Loader>> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<DataLoader<Loader>>> {
+        let service = i.get(&SERVICE).await?;
 
         Ok(Arc::new(DataLoader::new(
-            ProfileLoader::new(profiles_service.clone()),
+            Loader::new(service.clone()),
             tokio::spawn,
         )))
     }

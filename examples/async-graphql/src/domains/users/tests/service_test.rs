@@ -1,24 +1,23 @@
 use anyhow::Result;
 use fake::{Fake, Faker};
-use nakago::{Inject, InjectResult};
-use nakago_sea_orm::{connection::ProvideMockConnection, DATABASE_CONNECTION};
+use nakago::{inject, Inject};
+use nakago_sea_orm::{connection, CONNECTION};
 use pretty_assertions::assert_eq;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction};
 
 use crate::domains::users::{
     model::User,
     mutations::UpdateUserInput,
-    service::{ProvideUsersService, USERS_SERVICE},
+    service::{self, SERVICE},
 };
 
-async fn setup(db: MockDatabase) -> InjectResult<Inject> {
+async fn setup(db: MockDatabase) -> inject::Result<Inject> {
     let i = Inject::default();
 
-    i.provide(&DATABASE_CONNECTION, ProvideMockConnection::new(db))
+    i.provide(&CONNECTION, connection::ProvideMock::new(db))
         .await?;
 
-    i.provide(&USERS_SERVICE, ProvideUsersService::default())
-        .await?;
+    i.provide(&SERVICE, service::Provide::default()).await?;
 
     Ok(i)
 }
@@ -34,14 +33,14 @@ async fn test_users_service_get() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&USERS_SERVICE).await?;
+    let service = i.get(&SERVICE).await?;
 
     let result = service.get(&user.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&CONNECTION).await?;
 
     assert_eq!(result, Some(user.clone()));
 
@@ -69,14 +68,14 @@ async fn test_users_service_get_by_username() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&USERS_SERVICE).await?;
+    let service = i.get(&SERVICE).await?;
 
     let result = service.get_by_username(&user.username, &false).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&CONNECTION).await?;
 
     assert_eq!(result, Some(user));
 
@@ -106,14 +105,14 @@ async fn test_users_service_create() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&USERS_SERVICE).await?;
+    let service = i.get(&SERVICE).await?;
 
     let result = service.create(&user.username).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&CONNECTION).await?;
 
     assert_eq!(result, user);
 
@@ -147,7 +146,7 @@ async fn test_users_service_update() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&USERS_SERVICE).await?;
+    let service = i.get(&SERVICE).await?;
 
     let result = service
         .update(
@@ -163,7 +162,7 @@ async fn test_users_service_update() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&CONNECTION).await?;
 
     assert_eq!(result, updated.clone());
 
@@ -204,14 +203,14 @@ async fn test_users_service_delete() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&USERS_SERVICE).await?;
+    let service = i.get(&SERVICE).await?;
 
     service.delete(&user.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&DATABASE_CONNECTION).await?;
+    let db = i.eject(&CONNECTION).await?;
 
     // Check the transaction log
     assert_eq!(

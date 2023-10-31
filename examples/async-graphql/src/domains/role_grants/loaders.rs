@@ -1,37 +1,37 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_graphql::{
-    dataloader::{DataLoader, Loader},
+    dataloader::{self, DataLoader},
     FieldError,
 };
 use async_trait::async_trait;
-use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago::{inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
 
 use super::{
     model::RoleGrant,
-    service::{RoleGrantsService, ROLE_GRANTS_SERVICE},
+    service::{Service, SERVICE},
 };
 
-/// Tag(RoleGrantLoader)
-pub const ROLE_GRANT_LOADER: Tag<DataLoader<RoleGrantLoader>> = Tag::new("RoleGrantLoader");
+/// Tag(role_grants::Loader)
+pub const LOADER: Tag<DataLoader<Loader>> = Tag::new("role_grants::Loader");
 
 /// A dataloader for `RoleGrant` instances
-pub struct RoleGrantLoader {
+pub struct Loader {
     /// The SeaOrm database connection
-    role_grants: Arc<Box<dyn RoleGrantsService>>,
+    role_grants: Arc<Box<dyn Service>>,
 }
 
-/// The default implementation for the `RoleGrantLoader`
-impl RoleGrantLoader {
+/// The default implementation for the `Loader`
+impl Loader {
     /// Create a new instance
-    pub fn new(role_grants: Arc<Box<dyn RoleGrantsService>>) -> Self {
+    pub fn new(role_grants: Arc<Box<dyn Service>>) -> Self {
         Self { role_grants }
     }
 }
 
 #[async_trait]
-impl Loader<String> for RoleGrantLoader {
+impl dataloader::Loader<String> for Loader {
     type Value = RoleGrant;
     type Error = FieldError;
 
@@ -45,23 +45,23 @@ impl Loader<String> for RoleGrantLoader {
     }
 }
 
-/// Provide the RoleGrantLoader
+/// Provide the Loader
 ///
-/// **Provides:** `RoleGrantLoader`
+/// **Provides:** `Arc<DataLoader<role_grants::Loader>>`
 ///
 /// **Depends on:**
-///  - `Tag(RoleGrantsService)`
+///  - `Tag(role_grants::Service)`
 #[derive(Default)]
-pub struct ProvideRoleGrantLoader {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<DataLoader<RoleGrantLoader>> for ProvideRoleGrantLoader {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<DataLoader<RoleGrantLoader>>> {
-        let role_grants_service = i.get(&ROLE_GRANTS_SERVICE).await?;
+impl Provider<DataLoader<Loader>> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<DataLoader<Loader>>> {
+        let service = i.get(&SERVICE).await?;
 
         Ok(Arc::new(DataLoader::new(
-            RoleGrantLoader::new(role_grants_service.clone()),
+            Loader::new(service.clone()),
             tokio::spawn,
         )))
     }

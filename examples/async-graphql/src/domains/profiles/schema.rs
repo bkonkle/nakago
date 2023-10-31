@@ -1,25 +1,23 @@
 use async_trait::async_trait;
-use nakago::{Hook, Inject, InjectResult};
+use nakago::{inject, Hook, Inject};
 
-use crate::{domains::users::loaders::USER_LOADER, graphql::GRAPHQL_SCHEMA_BUILDER};
+use crate::{domains::users, graphql};
 
 use super::{
-    loaders::{ProvideProfileLoader, PROFILE_LOADER},
-    service::{ProvideProfilesService, PROFILES_SERVICE},
+    loaders::{self, LOADER},
+    service::{self, SERVICE},
 };
 
 /// Provide dependencies needed for the Profiles domain
 #[derive(Default)]
-pub struct LoadProfiles {}
+pub struct Load {}
 
 #[async_trait]
-impl Hook for LoadProfiles {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        i.provide(&PROFILES_SERVICE, ProvideProfilesService::default())
-            .await?;
+impl Hook for Load {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        i.provide(&SERVICE, service::Provide::default()).await?;
 
-        i.provide(&PROFILE_LOADER, ProvideProfileLoader::default())
-            .await?;
+        i.provide(&LOADER, loaders::Provide::default()).await?;
 
         Ok(())
     }
@@ -32,15 +30,15 @@ impl Hook for LoadProfiles {
 ///  - Tag(UserLoader)
 ///  - Tag(GraphQLSchemaBuilder)
 #[derive(Default)]
-pub struct InitGraphQLProfiles {}
+pub struct Init {}
 
 #[async_trait]
-impl Hook for InitGraphQLProfiles {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        let profiles = i.get(&PROFILES_SERVICE).await?;
-        let user_loader = i.get(&USER_LOADER).await?;
+impl Hook for Init {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        let profiles = i.get(&SERVICE).await?;
+        let user_loader = i.get(&users::LOADER).await?;
 
-        i.modify(&GRAPHQL_SCHEMA_BUILDER, |builder| {
+        i.modify(&graphql::SCHEMA_BUILDER, |builder| {
             Ok(builder.data(profiles.clone()).data(user_loader.clone()))
         })
         .await?;
@@ -53,44 +51,41 @@ impl Hook for InitGraphQLProfiles {
 pub(crate) mod test {
     use std::sync::Arc;
 
-    use async_graphql::{dataloader::DataLoader, EmptySubscription, Schema};
+    use async_graphql::{self, dataloader::DataLoader, EmptySubscription};
     use nakago::{Provider, Tag};
 
-    use crate::domains::profiles::resolver::{ProfilesMutation, ProfilesQuery};
+    use crate::domains::profiles::{Mutation, Query};
 
     use super::*;
 
-    /// Tag(ProfilesSchema)
+    /// Tag(profiles::Schema)
     #[allow(dead_code)]
-    pub const PROFILES_SCHEMA: Tag<Box<ProfilesSchema>> = Tag::new("ProfilesSchema");
+    pub const SCHEMA: Tag<Box<Schema>> = Tag::new("profiles::Schema");
 
-    /// The ProfilesSchema, covering just the Profiles domain. Useful for testing in isolation.
-    pub type ProfilesSchema = Schema<ProfilesQuery, ProfilesMutation, EmptySubscription>;
+    /// The Schema, covering just the Profiles domain. Useful for testing in isolation.
+    pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 
-    /// Provide the ProfilesSchema
+    /// Provide the Schema
     ///
-    /// **Provides:** `Arc<ProfilesSchema>`
+    /// **Provides:** `Arc<profiles::Schema>`
     ///
     /// **Depends on:**
-    ///   - `Tag(ProfilesService)`
-    ///   - `Tag(ShowLoader)`
+    ///   - `Tag(profiles::Service)`
+    ///   - `Tag(users::Loader)`
     #[derive(Default)]
-    pub struct ProvideProfilesSchema {}
+    pub struct Provide {}
 
     #[async_trait]
-    impl Provider<ProfilesSchema> for ProvideProfilesSchema {
-        async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<ProfilesSchema>> {
-            let service = i.get(&PROFILES_SERVICE).await?;
-            let user_loader = i.get(&USER_LOADER).await?;
+    impl Provider<Schema> for Provide {
+        async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Schema>> {
+            let service = i.get(&SERVICE).await?;
+            let user_loader = i.get(&users::LOADER).await?;
 
-            let schema: ProfilesSchema = Schema::build(
-                ProfilesQuery::default(),
-                ProfilesMutation::default(),
-                EmptySubscription,
-            )
-            .data(service)
-            .data(DataLoader::new(user_loader, tokio::spawn))
-            .finish();
+            let schema: Schema =
+                Schema::build(Query::default(), Mutation::default(), EmptySubscription)
+                    .data(service)
+                    .data(DataLoader::new(user_loader, tokio::spawn))
+                    .finish();
 
             Ok(Arc::new(schema))
         }

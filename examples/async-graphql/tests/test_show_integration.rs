@@ -4,18 +4,18 @@ use anyhow::Result;
 use fake::{faker::internet::en::FreeEmail, Fake, Faker};
 use hyper::body::to_bytes;
 use nakago_examples_async_graphql::domains::{
-    role_grants::{model::CreateRoleGrantInput, service::ROLE_GRANTS_SERVICE},
-    shows::{mutations::CreateShowInput, service::SHOWS_SERVICE},
-    users::service::USERS_SERVICE,
+    role_grants::{self, model::CreateRoleGrantInput},
+    shows::{self, mutations::CreateShowInput},
+    users,
 };
 use pretty_assertions::assert_eq;
 use serde_json::{json, Value};
 use ulid::Ulid;
 
 #[cfg(test)]
-mod test_utils;
+mod utils;
 
-use test_utils::TestUtils;
+use utils::Utils;
 
 /***
  * Mutation: `createShow`
@@ -37,7 +37,7 @@ const CREATE_SHOW: &str = "
 /// It creates a new show
 #[tokio::test]
 async fn test_show_create_simple() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -74,7 +74,7 @@ async fn test_show_create_simple() -> Result<()> {
 /// It requires a title
 #[tokio::test]
 async fn test_show_create_requires_title() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
@@ -101,7 +101,7 @@ async fn test_show_create_requires_title() -> Result<()> {
 /// It requires authentication
 #[tokio::test]
 async fn test_show_create_requires_authn() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
@@ -147,7 +147,7 @@ const GET_SHOW: &str = "
 /// It retrieves an existing show
 #[tokio::test]
 async fn test_show_get_simple() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
@@ -155,7 +155,7 @@ async fn test_show_get_simple() -> Result<()> {
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let req = utils
@@ -181,7 +181,7 @@ async fn test_show_get_simple() -> Result<()> {
 /// It returns nothing when no show is found
 #[tokio::test]
 async fn test_show_get_empty() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
@@ -236,13 +236,13 @@ const GET_MANY_SHOWS: &str = "
 /// It queries existing shows
 #[tokio::test]
 async fn test_show_get_many() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
     show_input.summary = Some("test-summary".to_string());
 
-    let shows = utils.app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let mut other_show_input: CreateShowInput = Faker.fake();
@@ -309,23 +309,23 @@ const UPDATE_SHOW: &str = "
 /// It updates an existing show
 #[tokio::test]
 async fn test_show_update_simple() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
     // Create a User
-    let users = utils.app.get(&USERS_SERVICE).await?;
+    let users = utils.app.get(&users::SERVICE).await?;
     let user = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     // Grant the admin role to this User for this Show
-    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE).await?;
+    let role_grants = utils.app.get(&role_grants::SERVICE).await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "admin".to_string(),
@@ -367,7 +367,7 @@ async fn test_show_update_simple() -> Result<()> {
 /// It returns an error if no existing show is found
 #[tokio::test]
 async fn test_show_update_not_found() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let req = utils.graphql.query(
         UPDATE_SHOW,
@@ -396,12 +396,12 @@ async fn test_show_update_not_found() -> Result<()> {
 /// It requires authentication
 #[tokio::test]
 async fn test_show_update_requires_authn() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let req = utils.graphql.query(
@@ -431,19 +431,19 @@ async fn test_show_update_requires_authn() -> Result<()> {
 /// It requires authorization
 #[tokio::test]
 async fn test_show_update_requires_authz() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
     // Create a User
-    let users = utils.app.get(&USERS_SERVICE).await?;
+    let users = utils.app.get(&users::SERVICE).await?;
     let _ = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let req = utils.graphql.query(
@@ -484,23 +484,23 @@ const DELETE_SHOW: &str = "
 /// It deletes an existing show
 #[tokio::test]
 async fn test_show_delete_simple() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
     // Create a User
-    let users = utils.app.get(&USERS_SERVICE).await?;
+    let users = utils.app.get(&users::SERVICE).await?;
     let user = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     // Grant the admin role to this User for this Show
-    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE).await?;
+    let role_grants = utils.app.get(&role_grants::SERVICE).await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "admin".to_string(),
@@ -530,7 +530,7 @@ async fn test_show_delete_simple() -> Result<()> {
 /// It returns an error if no existing show is found
 #[tokio::test]
 async fn test_show_delete_not_found() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let req = utils
         .graphql
@@ -552,12 +552,12 @@ async fn test_show_delete_not_found() -> Result<()> {
 /// It requires authentication
 #[tokio::test]
 async fn test_show_delete_requires_authn() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let req = utils
@@ -580,19 +580,19 @@ async fn test_show_delete_requires_authn() -> Result<()> {
 /// It requires authorization
 #[tokio::test]
 async fn test_show_delete_requires_authz() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
     // Create a User
-    let users = utils.app.get(&USERS_SERVICE).await?;
+    let users = utils.app.get(&users::SERVICE).await?;
     let _ = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get(&SHOWS_SERVICE).await?;
+    let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
     let req = utils

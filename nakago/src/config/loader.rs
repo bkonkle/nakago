@@ -1,14 +1,15 @@
+use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf, sync::Arc};
+
 use figment::{
     providers::{Env, Format, Json, Serialized, Toml, Yaml},
     Figment,
 };
 use serde::{Deserialize, Serialize};
-use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf, sync::Arc};
 
-/// A ConfigLoader uses hooks to augment the Config loaded for the application
+/// A Loader uses hooks to augment the Config loaded for the application
 ///
 /// TODO: Add more hooks! 🙂
-pub trait ConfigLoader: Any + Send + Sync {
+pub trait Loader: Any + Send + Sync {
     /// Apply transformations to the environment variables loaded by Figment
     fn load_env(&self, env: Env) -> Env;
 }
@@ -20,14 +21,14 @@ pub trait Config:
 }
 
 /// An extensible Config loader based on Figment
-pub struct Loader<C: Config> {
-    loaders: Vec<Arc<dyn ConfigLoader>>,
+pub struct LoadAll<C: Config> {
+    loaders: Vec<Arc<dyn Loader>>,
     _phantom: PhantomData<C>,
 }
 
-impl<C: Config> Loader<C> {
+impl<C: Config> LoadAll<C> {
     /// Create a new Config instance with the given loaders
-    pub fn new(loaders: Vec<Arc<dyn ConfigLoader>>) -> Self {
+    pub fn new(loaders: Vec<Arc<dyn Loader>>) -> Self {
         Self {
             loaders,
             _phantom: Default::default(),
@@ -71,5 +72,37 @@ impl<C: Config> Loader<C> {
 
         // Serialize and freeze
         config.extract()
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod test {
+    use anyhow::Result;
+
+    use super::*;
+
+    #[derive(Default, Debug, Serialize, Deserialize, Clone)]
+    pub struct Config {}
+
+    impl crate::Config for Config {}
+
+    #[tokio::test]
+    async fn test_load_all_success() -> Result<()> {
+        let loader = LoadAll::<Config>::new(vec![]);
+
+        loader.load(None)?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_all_custom_path() -> Result<()> {
+        let loader = LoadAll::<Config>::new(vec![]);
+
+        let custom_path = PathBuf::from("config.toml");
+
+        loader.load(Some(custom_path))?;
+
+        Ok(())
     }
 }

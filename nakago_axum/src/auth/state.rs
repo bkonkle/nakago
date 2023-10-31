@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use axum::{
-    extract::{FromRef, FromRequestParts, State},
+    extract::{FromRef, FromRequestParts},
     Extension,
 };
 use biscuit::{
@@ -13,30 +13,30 @@ use biscuit::{
     ClaimsSet, Empty, JWT,
 };
 use http::{header::AUTHORIZATION, request::Parts, HeaderMap, HeaderValue};
-use nakago::{Dependency, Inject, InjectResult, Provider, Tag};
+use nakago::{inject, Dependency, Inject, Provider, Tag};
 use nakago_derive::Provider;
 
 use super::{
-    errors::AuthError::{self, InvalidAuthHeaderError},
-    jwks::{get_secret_from_key_set, JWKSValidator, JWKS},
+    jwks::{get_secret_from_key_set, Validator, JWKS},
+    Error::{self, InvalidAuthHeaderError},
 };
 
-/// The AuthState Tag
-pub const AUTH_STATE: Tag<AuthState> = Tag::new("AuthState");
+/// Tag(auth::State)
+pub const STATE: Tag<State> = Tag::new("auth::State");
 
 const BEARER: &str = "Bearer ";
 
 /// The state interface needed for Authentication
 #[derive(Clone)]
 #[allow(dead_code)]
-pub struct AuthState {
+pub struct State {
     /// The JWKS Validator
-    pub jwks: JWKSValidator,
+    pub jwks: Validator,
 }
 
-impl AuthState {
-    /// Create a new AuthState instance
-    pub(crate) fn new(jwks: JWKSValidator) -> Self {
+impl State {
+    /// Create a new State instance
+    pub(crate) fn new(jwks: Validator) -> Self {
         Self { jwks }
     }
 }
@@ -51,15 +51,15 @@ pub struct Subject(pub Option<String>);
 impl<S> FromRequestParts<S> for Subject
 where
     S: Send + Sync,
-    AuthState: FromRef<S>,
+    State: FromRef<S>,
 {
-    type Rejection = AuthError;
+    type Rejection = Error;
 
     async fn from_request_parts(
         parts: &mut Parts,
         state: &S,
     ) -> std::result::Result<Self, Self::Rejection> {
-        let state = AuthState::from_ref(state);
+        let state = State::from_ref(state);
 
         match jwt_from_header(&parts.headers) {
             Ok(Some(jwt)) => {
@@ -78,7 +78,7 @@ where
 
 /// If an authorization header is provided, make sure it's in the expected format, and
 /// return it as a String.
-pub fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>, AuthError> {
+pub fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>, Error> {
     let header = if let Some(value) = headers.get(AUTHORIZATION) {
         value
     } else {
@@ -101,21 +101,21 @@ pub fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>,
     Ok(Some(auth_header.trim_start_matches(BEARER)))
 }
 
-/// Provide the AuthState needed in order to use the `Subject` extractor in an Axum handler
+/// Provide the State needed in order to use the `Subject` extractor in an Axum handler
 ///
-/// **Provides:** `AuthState`
+/// **Provides:** `auth::State`
 ///
 /// **Depends on:**
-///   - `Tag(JWKS)`
+///   - `Tag(auth::JWKS)`
 #[derive(Default)]
-pub struct ProvideAuthState {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<AuthState> for ProvideAuthState {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<AuthState>> {
+impl Provider<State> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<State>> {
         let jwks = i.get(&JWKS).await?;
-        let auth_state = AuthState::new(JWKSValidator::KeySet(jwks));
+        let auth_state = State::new(Validator::KeySet(jwks));
 
         Ok(Arc::new(auth_state))
     }
@@ -125,15 +125,15 @@ impl Provider<AuthState> for ProvideAuthState {
 ///
 /// **WARNING: This is insecure and should only be used in testing**
 ///
-/// **Provides:** `AuthState`
+/// **Provides:** `auth::State`
 #[derive(Default)]
-pub struct ProvideUnverifiedAuthState {}
+pub struct ProvideUnverified {}
 
 #[Provider]
 #[async_trait]
-impl Provider<AuthState> for ProvideUnverifiedAuthState {
-    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<AuthState>> {
-        let auth_state = AuthState::new(JWKSValidator::Unverified);
+impl Provider<State> for ProvideUnverified {
+    async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<State>> {
+        let auth_state = State::new(Validator::Unverified);
 
         Ok(Arc::new(auth_state))
     }

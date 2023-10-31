@@ -69,7 +69,7 @@ impl Inject {
 
     /// Temporarily remove a dependency from the container and try to unwrap it from the Arc, which
     /// will only succeed if there are no other strong pointers to the value. Then, apply a function
-    /// to it, and then inject sit back into the container.
+    /// to it, and then injects it back into the container.
     pub async fn modify_type<T, F>(&self, modify: F) -> Result<()>
     where
         T: Any + Send + Sync,
@@ -522,6 +522,22 @@ pub(crate) mod test {
     }
 
     #[tokio::test]
+    async fn test_consume_type_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let result = i
+            .consume_type::<TestService>()
+            .await
+            .expect_err("Did not error as expected");
+
+        assert!(result
+            .to_string()
+            .starts_with("nakago::inject::container::test::TestService"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_consume_type_pending_multiple() -> Result<()> {
         let i = Inject::default();
 
@@ -607,6 +623,66 @@ pub(crate) mod test {
     }
 
     #[tokio::test]
+    async fn test_remove_type_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let result = i
+            .remove_type::<TestService>()
+            .await
+            .expect_err("Did not error as expected");
+
+        assert!(result
+            .to_string()
+            .starts_with("nakago::inject::container::test::TestService"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_modify_type_success() -> Result<()> {
+        let i = Inject::default();
+
+        let initial: String = fake::uuid::UUIDv4.fake();
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide_type::<TestService>(TestServiceProvider::new(initial.clone()))
+            .await?;
+
+        i.modify_type::<TestService, _>(|mut t| {
+            t.id = expected.clone();
+
+            Ok(t)
+        })
+        .await?;
+
+        let result = i.get_type::<TestService>().await?;
+
+        assert_eq!(result.id, expected);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_modify_type_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let result = i
+            .modify_type::<TestService, _>(|mut t| {
+                t.id = "test".to_string();
+
+                Ok(t)
+            })
+            .await
+            .expect_err("Did not error as expected");
+
+        assert!(result
+            .to_string()
+            .starts_with("nakago::inject::container::test::TestService"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_eject_key_pending_success() -> Result<()> {
         let i = Inject::default();
 
@@ -639,6 +715,22 @@ pub(crate) mod test {
         let service = i.eject_type::<TestService>().await?;
 
         assert_eq!(service.id, expected);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eject_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let result = i
+            .eject_type::<TestService>()
+            .await
+            .expect_err("Did not error as expected");
+
+        assert!(result
+            .to_string()
+            .starts_with("nakago::inject::container::test::TestService"));
 
         Ok(())
     }

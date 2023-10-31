@@ -4,18 +4,18 @@ use anyhow::Result;
 use fake::{faker::internet::en::FreeEmail, Fake};
 use hyper::body::to_bytes;
 use nakago_examples_async_graphql::domains::{
-    profiles::service::PROFILES_SERVICE,
-    role_grants::{model::CreateRoleGrantInput, service::ROLE_GRANTS_SERVICE},
-    users::service::USERS_SERVICE,
+    profiles,
+    role_grants::{self, model::CreateRoleGrantInput},
+    users,
 };
 use pretty_assertions::assert_eq;
 use serde_json::{json, Value};
 
 #[cfg(test)]
-mod test_utils;
+mod utils;
 
-use test_utils::TestUtils;
 use ulid::Ulid;
+use utils::Utils;
 
 /***
  * Query: `getCurrentUser`
@@ -38,17 +38,17 @@ const GET_CURRENT_USER: &str = "
 
 #[tokio::test]
 async fn test_user_get_current_simple() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
-    let users = utils.app.get(&USERS_SERVICE).await?;
+    let users = utils.app.get(&users::SERVICE).await?;
     let user = users.create(&username).await?;
 
     // Create a sample RoleGrant to test the relation
-    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE).await?;
+    let role_grants = utils.app.get(&role_grants::SERVICE).await?;
     let role_grant = role_grants
         .create(&CreateRoleGrantInput {
             user_id: user.id.clone(),
@@ -83,7 +83,7 @@ async fn test_user_get_current_simple() -> Result<()> {
 
 #[tokio::test]
 async fn test_user_get_current_no_user() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
@@ -127,17 +127,17 @@ const GET_OR_CREATE_CURRENT_USER: &str = "
 
 #[tokio::test]
 async fn test_user_get_or_create_current_existing() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
     // Create a user
-    let users = utils.app.get(&USERS_SERVICE).await?;
+    let users = utils.app.get(&users::SERVICE).await?;
     let user = users.get_or_create(&username).await?;
 
     // Create a sample RoleGrant to test the relation
-    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE).await?;
+    let role_grants = utils.app.get(&role_grants::SERVICE).await?;
     let role_grant = role_grants
         .create(&CreateRoleGrantInput {
             user_id: user.id.clone(),
@@ -173,7 +173,7 @@ async fn test_user_get_or_create_current_existing() -> Result<()> {
 
 #[tokio::test]
 async fn test_user_get_or_create_current_create() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let email: String = FreeEmail().fake();
     let username = Ulid::new().to_string();
@@ -203,7 +203,7 @@ async fn test_user_get_or_create_current_create() -> Result<()> {
     let user_id = json_user["id"].as_str().expect("No user id found");
 
     // Ensure that a related Profile was created inline
-    let profiles = utils.app.get(&PROFILES_SERVICE).await?;
+    let profiles = utils.app.get(&profiles::SERVICE).await?;
     profiles
         .get_by_user_id(user_id, &false)
         .await?
@@ -214,7 +214,7 @@ async fn test_user_get_or_create_current_create() -> Result<()> {
 
 #[tokio::test]
 async fn test_user_get_or_create_current_requires_authn() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let req = utils
         .graphql
@@ -255,17 +255,17 @@ const UPDATE_CURRENT_USER: &str = "
 
 #[tokio::test]
 async fn test_user_update_current() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
-    let users = utils.app.get(&USERS_SERVICE).await?;
+    let users = utils.app.get(&users::SERVICE).await?;
     let user = users.get_or_create(&username).await?;
 
     // Create a sample RoleGrant to test the relation
-    let role_grants = utils.app.get(&ROLE_GRANTS_SERVICE).await?;
+    let role_grants = utils.app.get(&role_grants::SERVICE).await?;
     let role_grant = role_grants
         .create(&CreateRoleGrantInput {
             user_id: user.id.clone(),
@@ -302,7 +302,7 @@ async fn test_user_update_current() -> Result<()> {
 
 #[tokio::test]
 async fn test_user_update_current_requires_authn() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let req = utils.graphql.query(
         UPDATE_CURRENT_USER,
@@ -327,7 +327,7 @@ async fn test_user_update_current_requires_authn() -> Result<()> {
 
 #[tokio::test]
 async fn test_user_update_current_requires_user() -> Result<()> {
-    let utils = TestUtils::init().await?;
+    let utils = Utils::init().await?;
 
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;

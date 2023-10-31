@@ -3,10 +3,7 @@ use std::{any::Any, collections::hash_map::Entry, sync::Arc};
 use async_trait::async_trait;
 use backtrace::Backtrace;
 
-use super::{
-    injector::{Dependency, Injector},
-    Error, Inject, Key, Result,
-};
+use super::{Dependency, Error, Inject, Injector, Key, Result};
 
 /// A trait for async injection Providers
 #[async_trait]

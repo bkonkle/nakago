@@ -29,3 +29,5 @@ pub use injector::{Dependency, Pending};
 pub use key::{Id, Key};
 pub use provider::{to_provider_error, Provider};
 pub use tag::Tag;
+
+pub(crate) use injector::Injector;

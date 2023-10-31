@@ -6,7 +6,7 @@ use anyhow::Result;
 use axum::http::HeaderValue;
 use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
-use nakago_axum::auth::{authenticate::ProvideUnverifiedAuthState, AUTH_STATE};
+use nakago_axum::auth;
 use serde::Deserialize;
 use tokio::{net::TcpStream, time::timeout};
 use tokio_tungstenite::{
@@ -16,41 +16,38 @@ use tokio_tungstenite::{
 };
 
 use nakago_examples_async_graphql::{
-    config::AppConfig,
     domains::{
-        episodes::{model::Episode, mutations::CreateEpisodeInput, service::EPISODES_SERVICE},
-        profiles::{model::Profile, mutations::CreateProfileInput, service::PROFILES_SERVICE},
-        shows::{model::Show, mutations::CreateShowInput, service::SHOWS_SERVICE},
-        users::{model::User, service::USERS_SERVICE},
+        episodes::{self, model::Episode, mutations::CreateEpisodeInput},
+        profiles::{self, model::Profile, mutations::CreateProfileInput},
+        shows::{self, model::Show, mutations::CreateShowInput},
+        users::{self, model::User},
     },
-    http::state::AppState,
-    init,
+    init, Config, State,
 };
 
 /// Test utils, extended for application-specific helpers
-pub struct TestUtils(nakago_async_graphql::test::utils::TestUtils<AppConfig, AppState>);
+pub struct Utils(nakago_async_graphql::test::Utils<Config, State>);
 
-impl Deref for TestUtils {
-    type Target = nakago_async_graphql::test::utils::TestUtils<AppConfig, AppState>;
+impl Deref for Utils {
+    type Target = nakago_async_graphql::test::Utils<Config, State>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl TestUtils {
+impl Utils {
     pub async fn init() -> Result<Self> {
         let app = init::app().await?;
 
-        app.replace_with(&AUTH_STATE, ProvideUnverifiedAuthState::default())
+        app.replace_with(&auth::STATE, auth::state::ProvideUnverified::default())
             .await?;
 
         let config_path = std::env::var("CONFIG_PATH_ASYNC_GRAPHQL")
             .unwrap_or_else(|_| "examples/async-graphql/config/test.toml".to_string());
 
         let utils =
-            nakago_async_graphql::test::utils::TestUtils::init(app, &config_path, "/", "/graphql")
-                .await?;
+            nakago_async_graphql::test::Utils::init(app, &config_path, "/", "/graphql").await?;
 
         Ok(Self(utils))
     }
@@ -62,14 +59,14 @@ impl TestUtils {
         username: &str,
         email: &str,
     ) -> Result<(User, Profile)> {
-        let users = self.app.get(&USERS_SERVICE).await?;
+        let users = self.app.get(&users::SERVICE).await?;
         let user = users.create(username).await?;
 
         let mut profile_input: CreateProfileInput = Faker.fake();
         profile_input.user_id = user.id.clone();
         profile_input.email = email.to_string();
 
-        let profiles = self.app.get(&PROFILES_SERVICE).await?;
+        let profiles = self.app.get(&profiles::SERVICE).await?;
         let profile = profiles.create(&profile_input, &false).await?;
 
         Ok((user, profile))
@@ -87,7 +84,7 @@ impl TestUtils {
             ..Default::default()
         };
 
-        let shows = self.app.get(&SHOWS_SERVICE).await?;
+        let shows = self.app.get(&shows::SERVICE).await?;
         let show = shows.create(&show_input).await?;
 
         let episode_input = CreateEpisodeInput {
@@ -96,7 +93,7 @@ impl TestUtils {
             ..Default::default()
         };
 
-        let episodes = self.app.get(&EPISODES_SERVICE).await?;
+        let episodes = self.app.get(&episodes::SERVICE).await?;
         let episode = episodes.create(&episode_input, &false).await?;
 
         Ok((show, episode))

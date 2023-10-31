@@ -14,7 +14,7 @@ pub mod app;
 pub mod lifecycle;
 
 pub use app::Application;
-pub use config::loader::{Config, ConfigLoader};
+pub use config::Config;
 pub use inject::{
     to_provider_error, Dependency, Error as InjectError, Hook, Inject, Provider,
     Result as InjectResult, Tag,

@@ -1,25 +1,23 @@
 use async_trait::async_trait;
-use nakago::{Hook, Inject, InjectResult};
+use nakago::{inject, Hook, Inject};
 
-use crate::{domains::role_grants::service::ROLE_GRANTS_SERVICE, graphql::GRAPHQL_SCHEMA_BUILDER};
+use crate::{domains::role_grants, graphql};
 
 use super::{
-    loaders::{ProvideShowLoader, SHOW_LOADER},
-    service::{ProvideShowsService, SHOWS_SERVICE},
+    loaders::{self, LOADER},
+    service::{self, SERVICE},
 };
 
 /// Provide dependencies needed for the Shows domain
 #[derive(Default)]
-pub struct LoadShows {}
+pub struct Load {}
 
 #[async_trait]
-impl Hook for LoadShows {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        i.provide(&SHOWS_SERVICE, ProvideShowsService::default())
-            .await?;
+impl Hook for Load {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        i.provide(&SERVICE, service::Provide::default()).await?;
 
-        i.provide(&SHOW_LOADER, ProvideShowLoader::default())
-            .await?;
+        i.provide(&LOADER, loaders::Provide::default()).await?;
 
         Ok(())
     }
@@ -32,16 +30,16 @@ impl Hook for LoadShows {
 ///  - Tag(ShowsService)
 ///  - Tag(GraphQLSchemaBuilder)
 #[derive(Default)]
-pub struct InitGraphQLShows {}
+pub struct Init {}
 
 #[async_trait]
-impl Hook for InitGraphQLShows {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        let role_grants = i.get(&ROLE_GRANTS_SERVICE).await?;
-        let shows = i.get(&SHOWS_SERVICE).await?;
+impl Hook for Init {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        let role_grants = i.get(&role_grants::SERVICE).await?;
+        let service = i.get(&SERVICE).await?;
 
-        i.modify(&GRAPHQL_SCHEMA_BUILDER, |builder| {
-            Ok(builder.data(role_grants.clone()).data(shows.clone()))
+        i.modify(&graphql::SCHEMA_BUILDER, |builder| {
+            Ok(builder.data(role_grants.clone()).data(service.clone()))
         })
         .await?;
 
@@ -53,42 +51,38 @@ impl Hook for InitGraphQLShows {
 pub(crate) mod test {
     use std::sync::Arc;
 
-    use async_graphql::{EmptySubscription, Schema};
+    use async_graphql::{self, EmptySubscription};
     use nakago::{Provider, Tag};
 
-    use crate::domains::shows::resolver::{ShowsMutation, ShowsQuery};
+    use crate::domains::shows::{Mutation, Query};
 
     use super::*;
 
-    /// Tag(ShowsSchema)
+    /// Tag(shows::Schema)
     #[allow(dead_code)]
-    pub const SHOWS_SCHEMA: Tag<Box<ShowsSchema>> = Tag::new("ShowsSchema");
+    pub const SCHEMA: Tag<Box<Schema>> = Tag::new("shows::Schema");
 
-    /// The ShowsSchema, covering just the Shows domain. Useful for testing in isolation.
-    pub type ShowsSchema = Schema<ShowsQuery, ShowsMutation, EmptySubscription>;
+    /// The Schema, covering just the Shows domain. Useful for testing in isolation.
+    pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 
-    /// Provide the ShowsSchema
+    /// Provide the Schema
     ///
-    /// **Provides:** `Arc<ShowsSchema>`
+    /// **Provides:** `Arc<shows::Schema>`
     ///
     /// **Depends on:**
-    ///   - `Tag(ShowsService)`
-    ///   - `Tag(ShowLoader)`
+    ///   - `Tag(shows::Service)`
     #[derive(Default)]
-    pub struct ProvideShowsSchema {}
+    pub struct ProvideSchema {}
 
     #[async_trait]
-    impl Provider<ShowsSchema> for ProvideShowsSchema {
-        async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<ShowsSchema>> {
-            let service = i.get(&SHOWS_SERVICE).await?;
+    impl Provider<Schema> for ProvideSchema {
+        async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Schema>> {
+            let service = i.get(&SERVICE).await?;
 
-            let schema: ShowsSchema = Schema::build(
-                ShowsQuery::default(),
-                ShowsMutation::default(),
-                EmptySubscription,
-            )
-            .data(service)
-            .finish();
+            let schema: Schema =
+                Schema::build(Query::default(), Mutation::default(), EmptySubscription)
+                    .data(service)
+                    .finish();
 
             Ok(Arc::new(schema))
         }

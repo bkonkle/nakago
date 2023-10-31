@@ -5,13 +5,13 @@ use async_trait::async_trait;
 use axum::extract::ws::WebSocket;
 use futures::{SinkExt, StreamExt, TryFutureExt};
 use log::error;
-use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago::{inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 /// The SocketHandler Tag
-pub const SOCKET_HANDLER: Tag<SocketHandler> = Tag::new("SocketHandler");
+pub const SOCKET_HANDLER: Tag<SocketHandler> = Tag::new("events::SocketHandler");
 
 use super::{
     connections::{Connections, CONNECTIONS},
@@ -115,18 +115,17 @@ impl SocketHandler {
 
 /// Provide a new WebSocket Event Handler
 ///
-/// **Provides:** `SocketHandler`
+/// **Provides:** `events::SocketHandler`
 ///
 /// **Depends on:**
-///   - `Tag(Connections)`
-///   - `Tag(CommandsController)`
+///   - `Tag(events::Connections)`
 #[derive(Default)]
 pub struct ProvideSocket {}
 
 #[Provider]
 #[async_trait]
 impl Provider<SocketHandler> for ProvideSocket {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<SocketHandler>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<SocketHandler>> {
         let connections = i.get(&CONNECTIONS).await?;
 
         Ok(Arc::new(SocketHandler::new(connections)))

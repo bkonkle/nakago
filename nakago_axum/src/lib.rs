@@ -19,5 +19,6 @@ pub mod test;
 #[macro_use]
 extern crate log;
 
-pub use app::AxumApplication;
-pub use routes::{InitRoute, Route};
+pub use app::{AxumApplication, State};
+pub use config::Config;
+pub use routes::Route;

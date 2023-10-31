@@ -4,32 +4,22 @@ sidebar_position: 2
 
 # Application Lifecycle
 
-To manage the lifecycle of an application, the top-level `nakago::Application` struct provides Init and Startup hooks and a system to trigger them. More hooks - like a Shutdown hook - are coming soon.
+To manage the lifecycle of an application, the top-level `nakago::Application` struct provides a set of lifecycle hooks and an injection container that can be used to initialize and start the application.
 
-Applications are currently very simple:
-
-```rust
-pub struct Application<C: Config> {
-    events: Events,
-    i: inject::Inject,
-    _phantom: PhantomData<C>,
-}
-```
-
-First, they carry a PhantomData reference to the custom `Config` type that your project uses. This Config borrows [Axum](https://github.com/tokio-rs/axum)'s [FromRef](https://docs.rs/axum/latest/axum/extract/trait.FromRef.html) strategy to allow the framework to find pieces of the config it needs embedded in the custom structure that works best for your program.
+Applications carry a reference to the custom `Config` type that your project uses, and an optional Tag to refer to it. This Config borrows [Axum](https://github.com/tokio-rs/axum)'s [FromRef](https://docs.rs/axum/latest/axum/extract/trait.FromRef.html) strategy to allow the framework to find pieces of the config it needs embedded in the custom structure that works best for your program.
 
 ```rust
 /// Server Config
 #[derive(Debug, Serialize, Deserialize, Clone, FromRef)]
-pub struct AppConfig {
+pub struct Config {
     /// HTTP config
-    pub http: HttpConfig,
+    pub http: nakago_axum::Config,
 
     /// HTTP Auth Config
-    pub auth: AuthConfig,
+    pub auth: auth::Config,
 
     /// Database config
-    pub database: DatabaseConfig,
+    pub database: nakago_sea_orm::Config,
 }
 ```
 
@@ -37,29 +27,38 @@ pub struct AppConfig {
 
 Hooks are invoked when a [lifecycle event](https://github.com/bkonkle/nakago/blob/main/nakago/src/lifecycle.rs) is triggered.
 
+### Load
+
+The `Load` event is triggered before the Application loads dependencies and configuration. During this phase, Hooks should provide any dependencies or config loaders that are necessary to initialize and start the App.
+
 ### Init
 
-The `Init` Hook is invoked before the Config Loaders are requested from the container and the loaders are used to initialize the Config. Anything that is needed to initialize your application's Config should go here. Each Hook is triggered in order when a lifecycle event is triggered.
+The `Init` event is triggered before the dependencies and configuration are initialized. During this phase, Hooks should perform any initialization steps and construct anything necessary to start the App.
 
 ### Startup
 
-The `Startup` Hook is invoked after the Config is loaded, but before the Application is run.
+The `Startup` event is triggered after the Config is loaded, but before the Application is run. During this phase, the Application should start any background tasks or other long-running processes necessary to keep the App running.
+
+### Shutdown
+
+The `Shutdown` event is triggered before the Application shuts down. During this phase, Hooks should perform any cleanup necessary to cleanly stop the App.
 
 ## Starting the Application
 
 To start your application, pass in your top-level Config type and create an instance. Attach Hooks in the order that they should be executed:
 
 ```rust
-let mut app = AxumApplication::<AppConfig>::default();
-app.on(&EventType::Init, InitDomains::default());
-app.on(&EventType::Init, InitApp::default());
-app.on(&EventType::Startup, InitAuthz::default());
+let mut app = AxumApplication::<Config>::default();
+app.on(&EventType::Load, users::schema::Load::default());
+app.on(&EventType::Load, authz::Load::default());
+app.on(&EventType::Init, routes::Init::new(new_health_route));
 ```
 
 Then, use the underlying server library - Axum in this example - to start listening:
 
 ```rust
-let server = app.run::<AppState>(args.config_path).await?;
+let server = app.run(args.config_path).await?;
+
 let addr = server.local_addr();
 
 info!("Started on port: {port}", port = addr.port());

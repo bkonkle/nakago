@@ -4,20 +4,20 @@ use anyhow::Result;
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago::{inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
-use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
+use nakago_sea_orm::{DatabaseConnection, CONNECTION};
 use sea_orm::{entity::*, query::*, Condition, EntityTrait};
 
 use super::model::{self, CreateRoleGrantInput, RoleGrant};
 
-/// Tag(RoleGrantsService)
-pub const ROLE_GRANTS_SERVICE: Tag<Box<dyn RoleGrantsService>> = Tag::new("RoleGrantsService");
+/// Tag(role_grants::Service)
+pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("role_grants::Service");
 
-/// A RoleGrantsService appliies business logic to a dynamic RoleGrantsRepository implementation.
+/// A Service appliies business logic to a dynamic RoleGrantsRepository implementation.
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait RoleGrantsService: Sync + Send {
+pub trait Service: Sync + Send {
     /// Get an individual `RoleGrant` by id
     async fn get(&self, id: &str) -> Result<Option<RoleGrant>>;
 
@@ -31,22 +31,22 @@ pub trait RoleGrantsService: Sync + Send {
     async fn delete(&self, id: &str) -> Result<()>;
 }
 
-/// The default `RoleGrantsService` struct.
-pub struct DefaultRoleGrantsService {
+/// The default `Service` struct.
+pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
 }
 
-/// The default `RoleGrantsService` implementation
-impl DefaultRoleGrantsService {
-    /// Create a new `RoleGrantsService` instance
+/// The default `Service` implementation
+impl DefaultService {
+    /// Create a new `Service` instance
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 }
 
 #[async_trait]
-impl RoleGrantsService for DefaultRoleGrantsService {
+impl Service for DefaultService {
     async fn get(&self, id: &str) -> Result<Option<RoleGrant>> {
         let query = model::Entity::find_by_id(id.to_owned());
 
@@ -98,21 +98,21 @@ impl RoleGrantsService for DefaultRoleGrantsService {
     }
 }
 
-/// Provide the RoleGrantsService
+/// Provide the Service
 ///
-/// **Provides:** `Arc<dyn RoleGrantsService>`
+/// **Provides:** `Arc<Box<dyn role_grants::Service>>`
 ///
 /// **Depends on:**
-///   - `Tag(DatabaseConnection)`
+///   - `nakago_sea_orm::DatabaseConnection`
 #[derive(Default)]
-pub struct ProvideRoleGrantsService {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<Box<dyn RoleGrantsService>> for ProvideRoleGrantsService {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn RoleGrantsService>>> {
-        let db = i.get(&DATABASE_CONNECTION).await?;
+impl Provider<Box<dyn Service>> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Box<dyn Service>>> {
+        let db = i.get(&CONNECTION).await?;
 
-        Ok(Arc::new(Box::new(DefaultRoleGrantsService::new(db))))
+        Ok(Arc::new(Box::new(DefaultService::new(db))))
     }
 }

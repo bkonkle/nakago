@@ -2,8 +2,9 @@ use async_graphql::{InputObject, MaybeUndefined, SimpleObject};
 use fake::{faker::internet::en::FreeEmail, Dummy, Fake, Faker};
 use rand::Rng;
 
-use super::model::Profile;
 use crate::utils::graphql::dummy_maybe_undef;
+
+use super::model::Profile;
 
 /// The `CreateProfileInput` input type
 #[derive(Clone, Default, Dummy, Eq, PartialEq, InputObject)]

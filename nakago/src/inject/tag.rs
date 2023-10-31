@@ -114,7 +114,7 @@ impl Inject {
 
     /// Temporarily remove a dependency from the container and try to unwrap it from the Arc, which
     /// will only succeed if there are no other strong pointers to the value. Then, apply a function
-    /// to it, and then inject sit back into the container.
+    /// to it, and then injects it back into the container.
     pub async fn modify<T, F>(&self, tag: &'static Tag<T>, modify: F) -> Result<()>
     where
         T: Any + Send + Sync,
@@ -156,9 +156,9 @@ pub(crate) mod test {
 
     use super::*;
 
-    pub const SERVICE_TAG: Tag<TestService> = Tag::new("InMemoryTestService");
-    pub const OTHER_TAG: Tag<OtherService> = Tag::new("InMemoryOtherService");
-    pub const DYN_TAG: Tag<Box<dyn HasId>> = Tag::new("DynHasIdService");
+    pub const SERVICE_TAG: Tag<TestService> = Tag::new("in_memory::test::Service");
+    pub const OTHER_TAG: Tag<OtherService> = Tag::new("in_memory::other::Service");
+    pub const DYN_TAG: Tag<Box<dyn HasId>> = Tag::new("dyn::has_id::Service");
 
     trait DynamicService: Sync + Send {
         fn test_fn(&self) {}
@@ -604,6 +604,102 @@ pub(crate) mod test {
     }
 
     #[tokio::test]
+    async fn test_consume_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let result = i
+            .consume(&SERVICE_TAG)
+            .await
+            .expect_err("Did not error as expected");
+
+        assert!(result
+            .to_string()
+            .starts_with("Tag(in_memory::test::Service) was not found"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_consume_opt_provider_success() -> Result<()> {
+        let i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+            .await?;
+
+        if let Some(result) = i.consume_opt(&SERVICE_TAG).await? {
+            assert_eq!(result.id, expected);
+
+            assert!(
+                !i.0.read().await.contains_key(&Key::from_tag(&SERVICE_TAG)),
+                "key still exists in injection container"
+            );
+        } else {
+            panic!("did not return a Some as expected")
+        };
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_consume_opt_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let result = i.consume_opt(&SERVICE_TAG).await?;
+
+        if result.is_some() {
+            panic!("did not return a None as expected")
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_modify_success() -> Result<()> {
+        let i = Inject::default();
+
+        let initial: String = fake::uuid::UUIDv4.fake();
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide(&SERVICE_TAG, TestServiceProvider::new(initial.clone()))
+            .await?;
+
+        i.modify(&SERVICE_TAG, |mut t| {
+            t.id = expected.clone();
+
+            Ok(t)
+        })
+        .await?;
+
+        let result = i.get(&SERVICE_TAG).await?;
+
+        assert_eq!(result.id, expected);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_modify_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let result = i
+            .modify(&SERVICE_TAG, |mut t| {
+                t.id = "test".to_string();
+
+                Ok(t)
+            })
+            .await
+            .expect_err("Did not error as expected");
+
+        assert!(result
+            .to_string()
+            .starts_with("Tag(in_memory::test::Service) was not found"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_remove_provider_success() -> Result<()> {
         let i = Inject::default();
 
@@ -645,6 +741,22 @@ pub(crate) mod test {
     }
 
     #[tokio::test]
+    async fn test_remove_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let result = i
+            .remove(&SERVICE_TAG)
+            .await
+            .expect_err("Did not error as expected");
+
+        assert!(result
+            .to_string()
+            .starts_with("Tag(in_memory::test::Service) was not found"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_eject_pending_success() -> Result<()> {
         let i = Inject::default();
 
@@ -677,6 +789,22 @@ pub(crate) mod test {
         let service = i.eject(&SERVICE_TAG).await?;
 
         assert_eq!(service.id, expected);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eject_not_found() -> Result<()> {
+        let i = Inject::default();
+
+        let result = i
+            .eject(&SERVICE_TAG)
+            .await
+            .expect_err("Did not error as expected");
+
+        assert!(result
+            .to_string()
+            .starts_with("Tag(in_memory::test::Service) was not found"));
 
         Ok(())
     }

@@ -5,28 +5,29 @@ use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago::{inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
-use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
+use nakago_sea_orm::{DatabaseConnection, CONNECTION};
 use sea_orm::{entity::*, query::*, EntityTrait};
+
+use crate::{
+    domains::users::model as user_model,
+    utils::{ordering::Ordering, pagination::ManyResponse},
+};
 
 use super::{
     model::{self, Profile, ProfileList, ProfileOption},
     mutations::{CreateProfileInput, UpdateProfileInput},
     queries::{ProfileCondition, ProfilesOrderBy},
 };
-use crate::{
-    domains::users::model as user_model,
-    utils::{ordering::Ordering, pagination::ManyResponse},
-};
 
-/// Tag(ProfilesService)
-pub const PROFILES_SERVICE: Tag<Box<dyn ProfilesService>> = Tag::new("ProfilesService");
+/// Tag(profiles::Service)
+pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("profiles::Service");
 
-/// A ProfilesService applies business logic to a dynamic ProfilesRepository implementation.
+/// A Service applies business logic to a dynamic ProfilesRepository implementation.
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait ProfilesService: Sync + Send {
+pub trait Service: Sync + Send {
     /// Get an individual `Profile` by id
     async fn get(&self, id: &str, with_user: &bool) -> Result<Option<Profile>>;
 
@@ -69,22 +70,22 @@ pub trait ProfilesService: Sync + Send {
     async fn delete(&self, id: &str) -> Result<()>;
 }
 
-/// The default `ProfilesService` struct
-pub struct DefaultProfilesService {
+/// The default `Service` struct
+pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
 }
 
-/// The default `ProfilesService` implementation
-impl DefaultProfilesService {
-    /// Create a new `ProfilesService` instance
+/// The default `Service` implementation
+impl DefaultService {
+    /// Create a new `Service` instance
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 }
 
 #[async_trait]
-impl ProfilesService for DefaultProfilesService {
+impl Service for DefaultService {
     async fn get(&self, id: &str, with_user: &bool) -> Result<Option<Profile>> {
         let query = model::Entity::find_by_id(id.to_owned());
 
@@ -350,21 +351,21 @@ impl ProfilesService for DefaultProfilesService {
     }
 }
 
-/// Provide the ProfilesService
+/// Provide the Service
 ///
-/// **Provides:** `Arc<dyn ProfilesService>`
+/// **Provides:** `Arc<Box<dyn profiles::Service>>`
 ///
 /// **Depends on:**
-///   - `Tag(DatabaseConnection)`
+///   - `nakago_sea_orm::DatabaseConnection`
 #[derive(Default)]
-pub struct ProvideProfilesService {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<Box<dyn ProfilesService>> for ProvideProfilesService {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn ProfilesService>>> {
-        let db = i.get(&DATABASE_CONNECTION).await?;
+impl Provider<Box<dyn Service>> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Box<dyn Service>>> {
+        let db = i.get(&CONNECTION).await?;
 
-        Ok(Arc::new(Box::new(DefaultProfilesService::new(db))))
+        Ok(Arc::new(Box::new(DefaultService::new(db))))
     }
 }

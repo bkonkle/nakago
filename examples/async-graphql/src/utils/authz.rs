@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use nakago::{to_provider_error, Hook, Inject, InjectResult, Provider, Tag};
+use nakago::{inject, to_provider_error, Hook, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use oso::Oso;
 use oso::PolarClass;
@@ -14,18 +14,18 @@ use crate::domains::{
 };
 
 /// The Oso Tag
-pub const OSO: Tag<Oso> = Tag::new("Oso");
+pub const OSO: Tag<Oso> = Tag::new("auth::Oso");
 
 /// Provide an Oso authorization instance
 ///
-/// **Provides:** `Oso`
+/// **Provides:** `auth::Oso`
 #[derive(Default)]
 pub struct ProvideOso {}
 
 #[Provider]
 #[async_trait]
 impl Provider<Oso> for ProvideOso {
-    async fn provide(self: Arc<Self>, _i: Inject) -> InjectResult<Arc<Oso>> {
+    async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<Oso>> {
         Ok(Arc::new(Oso::new()))
     }
 }
@@ -33,13 +33,13 @@ impl Provider<Oso> for ProvideOso {
 /// Load the authorization system. Must be invoked before the GraphQL Schema is initialized.
 ///
 /// **Depends on (and modifies):**
-///   - `Tag(Oso)`
+///   - `Tag(auth::Oso)`
 #[derive(Default)]
-pub struct LoadAuthz {}
+pub struct Load {}
 
 #[async_trait]
-impl Hook for LoadAuthz {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
+impl Hook for Load {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
         // Set up authorization
         let mut oso = (*i.get(&OSO).await?).clone();
 

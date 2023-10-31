@@ -1,66 +1,55 @@
-use async_graphql::{EmptySubscription, MergedObject, Schema, SchemaBuilder};
+use async_graphql::{self, EmptySubscription, MergedObject, SchemaBuilder};
 use async_trait::async_trait;
-use nakago::{Hook, Inject, InjectResult, Tag};
+use nakago::{inject, Hook, Inject, Tag};
 
 use crate::{
     config::CONFIG,
-    domains::{
-        episodes::schema::InitGraphQLEpisodes, profiles::schema::InitGraphQLProfiles,
-        shows::schema::InitGraphQLShows, users::schema::InitGraphQLUsers,
-    },
-};
-use crate::{
-    domains::{
-        episodes::resolver::{EpisodesMutation, EpisodesQuery},
-        profiles::resolver::{ProfilesMutation, ProfilesQuery},
-        shows::resolver::{ShowsMutation, ShowsQuery},
-        users::resolver::{UsersMutation, UsersQuery},
-    },
+    domains::{episodes, profiles, shows, users},
     utils::authz::OSO,
 };
 
 /// The GraphQL top-level Query type
 #[derive(MergedObject, Default)]
-pub struct Query(UsersQuery, ProfilesQuery, ShowsQuery, EpisodesQuery);
+pub struct Query(users::Query, profiles::Query, shows::Query, episodes::Query);
 
 /// The GraphQL top-level Mutation type
 #[derive(MergedObject, Default)]
 pub struct Mutation(
-    UsersMutation,
-    ProfilesMutation,
-    ShowsMutation,
-    EpisodesMutation,
+    users::Mutation,
+    profiles::Mutation,
+    shows::Mutation,
+    episodes::Mutation,
 );
 
 /// The application's top-level merged GraphQL schema
-pub type GraphQLSchema = Schema<Query, Mutation, EmptySubscription>;
+pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 
-/// Tag(GraphQLSchema)
-pub const GRAPHQL_SCHEMA: Tag<GraphQLSchema> = Tag::new("GraphQLSchema");
+/// Tag(graphql::Schema)
+pub const SCHEMA: Tag<Schema> = Tag::new("graphql::Schema");
 
-/// Tag(GraphQLSchemaBuilder)
-pub const GRAPHQL_SCHEMA_BUILDER: Tag<SchemaBuilder<Query, Mutation, EmptySubscription>> =
-    Tag::new("GraphQLSchemaBuilder");
+/// Tag(graphql::SchemaBuilder)
+pub const SCHEMA_BUILDER: Tag<SchemaBuilder<Query, Mutation, EmptySubscription>> =
+    Tag::new("graphql::SchemaBuilder");
 
 /// Initializes the GraphQL schema builder
 #[derive(Default)]
-pub struct InitGraphQL {}
+pub struct Init {}
 
 #[async_trait]
-impl Hook for InitGraphQL {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
+impl Hook for Init {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
         let config = i.get(&CONFIG).await?;
         let oso = i.get(&OSO).await?;
 
-        i.modify(&GRAPHQL_SCHEMA_BUILDER, |builder| {
+        i.modify(&SCHEMA_BUILDER, |builder| {
             Ok(builder.data(config.clone()).data((*oso).clone()))
         })
         .await?;
 
-        i.handle(InitGraphQLUsers::default()).await?;
-        i.handle(InitGraphQLProfiles::default()).await?;
-        i.handle(InitGraphQLShows::default()).await?;
-        i.handle(InitGraphQLEpisodes::default()).await?;
+        i.handle(users::schema::Init::default()).await?;
+        i.handle(profiles::schema::Init::default()).await?;
+        i.handle(shows::schema::Init::default()).await?;
+        i.handle(episodes::schema::Init::default()).await?;
 
         Ok(())
     }

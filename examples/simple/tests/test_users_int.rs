@@ -3,12 +3,12 @@
 use anyhow::Result;
 
 #[cfg(test)]
-mod test_utils;
+mod utils;
 
 use hyper::{body::to_bytes, Method};
 use serde_json::Value;
-use test_utils::TestUtils;
 use ulid::Ulid;
+use utils::TestUtils;
 
 #[tokio::test]
 async fn test_get_username_success() -> Result<()> {

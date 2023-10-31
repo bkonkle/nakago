@@ -8,20 +8,17 @@ use biscuit::{
 };
 use hyper::{client::HttpConnector, Client};
 use hyper_tls::HttpsConnector;
-use nakago::{Config, InjectResult};
+use nakago::{self, inject};
 use tokio::time::sleep;
 
-use crate::{app::State, auth::config::AuthConfig, config::HttpConfig, AxumApplication};
+use crate::{app::State, auth, AxumApplication, Config};
 
-use super::{
-    http::{Http, HTTP_CLIENT},
-    HttpClientProvider,
-};
+use super::http::{Http, ProvideClient, CLIENT};
 
 /// Common test utils
-pub struct TestUtils<C, S>
+pub struct Utils<C, S>
 where
-    C: Config,
+    C: nakago::Config,
     S: State,
 {
     /// The Application instance
@@ -37,21 +34,20 @@ where
     pub http_client: Arc<Client<HttpsConnector<HttpConnector>>>,
 }
 
-impl<C, S> TestUtils<C, S>
+impl<C, S> Utils<C, S>
 where
-    C: Config,
+    C: nakago::Config,
     S: State,
-    HttpConfig: FromRef<C>,
-    AuthConfig: FromRef<C>,
+    Config: FromRef<C>,
+    auth::Config: FromRef<C>,
 {
     /// Initialize a new set of utils
     pub async fn init(
         app: AxumApplication<C, S>,
         config_path: &str,
         base_url: &str,
-    ) -> InjectResult<Self> {
-        app.provide(&HTTP_CLIENT, HttpClientProvider::default())
-            .await?;
+    ) -> inject::Result<Self> {
+        app.provide(&CLIENT, ProvideClient::default()).await?;
 
         let server = app.run(Some(config_path.into())).await?;
         let addr = server.local_addr();
@@ -68,9 +64,9 @@ where
             base_url = base_url,
         ));
 
-        let http_client = app.get(&HTTP_CLIENT).await?;
+        let http_client = app.get(&CLIENT).await?;
 
-        Ok(TestUtils {
+        Ok(Utils {
             app,
             addr,
             http,
@@ -79,9 +75,9 @@ where
     }
 
     /// Create a test JWT token with a dummy secret
-    pub async fn create_jwt(&self, username: &str) -> InjectResult<String> {
+    pub async fn create_jwt(&self, username: &str) -> inject::Result<String> {
         let config = self.app.get_config().await?;
-        let auth = AuthConfig::from_ref(&*config);
+        let auth = auth::Config::from_ref(&*config);
 
         let expected_claims = ClaimsSet::<Empty> {
             registered: RegisteredClaims {

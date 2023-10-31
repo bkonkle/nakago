@@ -4,4 +4,4 @@ pub mod http;
 /// TestUtils - general-purpose test utilities
 pub mod utils;
 
-pub use http::HttpClientProvider;
+pub use utils::Utils;

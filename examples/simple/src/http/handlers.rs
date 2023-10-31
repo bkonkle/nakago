@@ -16,7 +16,7 @@ pub struct HealthResponse {
 }
 
 /// Handle health check requests
-pub async fn health_handler() -> Json<HealthResponse> {
+pub async fn health() -> Json<HealthResponse> {
     Json(HealthResponse {
         code: 200,
         success: true,
@@ -37,7 +37,7 @@ pub struct UsernameResponse {
 }
 
 /// Handle Get Username requests
-pub async fn get_username_handler(sub: Subject) -> Json<UsernameResponse> {
+pub async fn get_username(sub: Subject) -> Json<UsernameResponse> {
     let username = if let Subject(Some(username)) = sub {
         username.clone()
     } else {

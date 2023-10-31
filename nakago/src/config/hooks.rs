@@ -2,31 +2,32 @@ use std::{marker::PhantomData, path::PathBuf, sync::Arc};
 
 use async_trait::async_trait;
 
-use super::loader::{Config, ConfigLoader, Loader};
-use crate::{Hook, Inject, InjectError, InjectResult, Tag};
+use crate::{inject, Hook, Inject, InjectError, Tag};
+
+use super::loader::{Config, LoadAll, Loader};
 
 /// A Tag for Config loaders
-pub const CONFIG_LOADERS: Tag<Vec<Arc<dyn ConfigLoader>>> = Tag::new("ConfigLoaders");
+pub const LOADERS: Tag<Vec<Arc<dyn Loader>>> = Tag::new("config::Loaders");
 
 /// Add the given Config Loaders to the stack.
 ///
 /// **Provides or Modifies:**
-///   - `Tag(ConfigLoaders)`
-pub struct AddConfigLoaders {
-    loaders: Vec<Arc<dyn ConfigLoader>>,
+///   - `Tag(config::Loaders)`
+pub struct AddLoaders {
+    loaders: Vec<Arc<dyn Loader>>,
 }
 
-impl AddConfigLoaders {
-    /// Create a new AddConfigLoaders instance
-    pub fn new(loaders: Vec<Arc<dyn ConfigLoader>>) -> Self {
+impl AddLoaders {
+    /// Create a new AddLoaders instance
+    pub fn new(loaders: Vec<Arc<dyn Loader>>) -> Self {
         Self { loaders }
     }
 }
 
 #[async_trait]
-impl Hook for AddConfigLoaders {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        let loaders = match i.consume(&CONFIG_LOADERS).await {
+impl Hook for AddLoaders {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        let loaders = match i.consume(&LOADERS).await {
             Ok(loaders) => {
                 let mut updated = loaders.clone();
 
@@ -40,7 +41,7 @@ impl Hook for AddConfigLoaders {
             Err(_) => self.loaders.clone(),
         };
 
-        i.inject(&CONFIG_LOADERS, loaders).await?;
+        i.inject(&LOADERS, loaders).await?;
 
         Ok(())
     }
@@ -49,19 +50,19 @@ impl Hook for AddConfigLoaders {
 /// A Config Initializer
 ///
 /// **Provides:**
-///   - `C: Config`
+///   - `Config`
 ///
 /// **Consumes:**
-///   - `Tag(ConfigLoaders)`
+///   - `Tag(config::Loaders)`
 #[derive(Default)]
-pub struct InitConfig<C: Config> {
+pub struct Init<C: Config> {
     custom_path: Option<PathBuf>,
     tag: Option<&'static Tag<C>>,
     _phantom: PhantomData<C>,
 }
 
-impl<C: Config> InitConfig<C> {
-    /// Create a new InitConfig instance
+impl<C: Config> Init<C> {
+    /// Create a new Init instance
     pub fn new(custom_path: Option<PathBuf>, tag: Option<&'static Tag<C>>) -> Self {
         Self {
             custom_path,
@@ -88,10 +89,10 @@ impl<C: Config> InitConfig<C> {
 }
 
 #[async_trait]
-impl<C: Config> Hook for InitConfig<C> {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
-        let config_loaders = i.get(&CONFIG_LOADERS).await.unwrap_or_default().to_vec();
-        let loader = Loader::<C>::new(config_loaders);
+impl<C: Config> Hook for Init<C> {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        let loaders = i.get(&LOADERS).await.unwrap_or_default().to_vec();
+        let loader = LoadAll::<C>::new(loaders);
 
         let config = loader
             .load(self.custom_path.clone())
@@ -102,6 +103,85 @@ impl<C: Config> Hook for InitConfig<C> {
         } else {
             i.inject_type(config).await?;
         }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod test {
+    use anyhow::Result;
+    use figment::providers::Env;
+
+    use crate::config::loader::test::Config;
+
+    use super::*;
+
+    #[derive(Default, Debug, PartialEq, Eq)]
+    pub struct TestLoader {}
+
+    impl Loader for TestLoader {
+        fn load_env(&self, env: Env) -> Env {
+            env
+        }
+    }
+
+    #[tokio::test]
+    async fn test_add_loaders_success() -> Result<()> {
+        let i = Inject::default();
+
+        let loader: Arc<dyn Loader> = Arc::new(TestLoader::default());
+
+        let hook = AddLoaders::new(vec![loader]);
+
+        i.handle(hook).await?;
+
+        let results = i.get(&LOADERS).await?;
+        assert_eq!(results.len(), 1);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_add_loaders_to_existing() -> Result<()> {
+        let i = Inject::default();
+
+        let loader: Arc<dyn Loader> = Arc::new(TestLoader::default());
+
+        let existing: Vec<Arc<dyn Loader>> = vec![Arc::new(TestLoader::default())];
+
+        i.inject(&LOADERS, existing).await?;
+
+        let hook = AddLoaders::new(vec![loader]);
+
+        i.handle(hook).await?;
+
+        let results = i.get(&LOADERS).await?;
+        assert_eq!(results.len(), 2);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_success() -> Result<()> {
+        let i = Inject::default();
+
+        let hook = Init::<Config>::new(None, None);
+
+        i.handle(hook).await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_custom_path() -> Result<()> {
+        let i = Inject::default();
+
+        let custom_path = PathBuf::from("config.toml");
+
+        let hook = Init::<Config>::new(Some(custom_path), None);
+
+        i.handle(hook).await?;
 
         Ok(())
     }

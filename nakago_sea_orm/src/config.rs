@@ -1,17 +1,17 @@
 use std::sync::Arc;
 
 use figment::providers::Env;
-use nakago::config::loader::ConfigLoader;
+use nakago::config;
 use serde::{Deserialize, Serialize};
 
 /// Return the default Config Loaders for SeaORM
-pub fn default_config_loaders() -> Vec<Arc<dyn ConfigLoader>> {
-    vec![Arc::<DatabaseConfigLoader>::default()]
+pub fn default_config_loaders() -> Vec<Arc<dyn config::Loader>> {
+    vec![Arc::<Loader>::default()]
 }
 
 /// Database Config
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct DatabaseConfig {
+pub struct Config {
     /// Full database url
     pub url: String,
 
@@ -34,9 +34,9 @@ pub struct DatabasePool {
 
 /// The Database Config Loader
 #[derive(Default)]
-pub struct DatabaseConfigLoader {}
+pub struct Loader {}
 
-impl ConfigLoader for DatabaseConfigLoader {
+impl config::Loader for Loader {
     fn load_env(&self, env: Env) -> Env {
         // Split the Database variables
         env.map(|key| {

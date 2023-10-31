@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use async_trait::async_trait;
 use axum::Router;
 use hyper::Body;
-use nakago::{Hook, Inject, InjectResult};
+use nakago::{inject, Hook, Inject};
 use tokio::sync::Mutex;
 
 use crate::app::State;
@@ -25,13 +25,13 @@ impl<S, B> Route<S, B> {
 }
 
 /// A hook to initialize a particular route
-pub struct InitRoute<S: State> {
+pub struct Init<S: State> {
     get_route: fn(Inject) -> Route<S>,
     _phantom: PhantomData<S>,
 }
 
-impl<S: State> InitRoute<S> {
-    /// Create a new InitRoute instance
+impl<S: State> Init<S> {
+    /// Create a new Init instance
     pub fn new(get_route: fn(Inject) -> Route<S>) -> Self {
         Self {
             get_route,
@@ -41,8 +41,8 @@ impl<S: State> InitRoute<S> {
 }
 
 #[async_trait]
-impl<S: State> Hook for InitRoute<S> {
-    async fn handle(&self, i: Inject) -> InjectResult<()> {
+impl<S: State> Hook for Init<S> {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
         let route = (self.get_route)(i.clone());
 
         if let Some(routes) = i.get_type_opt::<Mutex<Vec<Route<S>>>>().await? {

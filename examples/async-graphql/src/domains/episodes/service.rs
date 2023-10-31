@@ -5,28 +5,29 @@ use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{Inject, InjectResult, Provider, Tag};
+use nakago::{inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
-use nakago_sea_orm::{DatabaseConnection, DATABASE_CONNECTION};
+use nakago_sea_orm::{DatabaseConnection, CONNECTION};
 use sea_orm::{entity::*, query::*, EntityTrait};
+
+use crate::{
+    domains::shows::model as show_model,
+    utils::{ordering::Ordering, pagination::ManyResponse},
+};
 
 use super::{
     model::{self, Episode, EpisodeList, EpisodeOption},
     mutations::{CreateEpisodeInput, UpdateEpisodeInput},
     queries::{EpisodeCondition, EpisodesOrderBy},
 };
-use crate::{
-    domains::shows::model as show_model,
-    utils::{ordering::Ordering, pagination::ManyResponse},
-};
 
-/// Tag(EpisodesService)
-pub const EPISODES_SERVICE: Tag<Box<dyn EpisodesService>> = Tag::new("EpisodesService");
+/// Tag(episodes::Service)
+pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("episodes::Service");
 
-/// An EpisodesService applies business logic to a dynamic EpisodesRepository implementation.
+/// An Service applies business logic to a dynamic EpisodesRepository implementation.
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait EpisodesService: Sync + Send {
+pub trait Service: Sync + Send {
     /// Get an individual `Episode` by id
     async fn get(&self, id: &str, with_show: &bool) -> Result<Option<Episode>>;
 
@@ -58,22 +59,22 @@ pub trait EpisodesService: Sync + Send {
     async fn delete(&self, id: &str) -> Result<()>;
 }
 
-/// The default `EpisodesService` struct.
-pub struct DefaultEpisodesService {
+/// The default `Service` struct.
+pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
 }
 
-/// The default `EpisodesService` implementation
-impl DefaultEpisodesService {
-    /// Create a new `EpisodesService` instance
+/// The default `Service` implementation
+impl DefaultService {
+    /// Create a new `Service` instance
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 }
 
 #[async_trait]
-impl EpisodesService for DefaultEpisodesService {
+impl Service for DefaultService {
     async fn get(&self, id: &str, with_show: &bool) -> Result<Option<Episode>> {
         let query = model::Entity::find_by_id(id.to_owned());
 
@@ -280,22 +281,22 @@ impl EpisodesService for DefaultEpisodesService {
     }
 }
 
-/// Provide the EpisodesService
+/// Provide the Service
 ///
-/// **Provides:** `Arc<dyn EpisodesService>`
+/// **Provides:** `Arc<Box<dyn episodes::Service>>`
 ///
 /// **Depends on:**
-///   - `Tag(DatabaseConnection)`
+///   - `Tag(nakago_sea_orm::DatabaseConnection)`
 #[derive(Default)]
-pub struct ProvideEpisodesService {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<Box<dyn EpisodesService>> for ProvideEpisodesService {
-    async fn provide(self: Arc<Self>, i: Inject) -> InjectResult<Arc<Box<dyn EpisodesService>>> {
-        let db = i.get(&DATABASE_CONNECTION).await?;
+impl Provider<Box<dyn Service>> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Box<dyn Service>>> {
+        let db = i.get(&CONNECTION).await?;
 
-        Ok(Arc::new(Box::new(DefaultEpisodesService::new(db))))
+        Ok(Arc::new(Box::new(DefaultService::new(db))))
     }
 }
 
@@ -303,20 +304,17 @@ impl Provider<Box<dyn EpisodesService>> for ProvideEpisodesService {
 pub(crate) mod test {
     use super::*;
 
-    /// Provide the Mocked EpisodesService for testing
+    /// Provide the Mocked Service for testing
     ///
-    /// **Provides:** `Arc<dyn EpisodesService>`
+    /// **Provides:** `Arc<Box<dyn episodes::Service>>`
     #[derive(Default)]
-    pub struct ProvideMockEpisodesService {}
+    pub struct ProvideMock {}
 
     #[Provider]
     #[async_trait]
-    impl Provider<Box<dyn EpisodesService>> for ProvideMockEpisodesService {
-        async fn provide(
-            self: Arc<Self>,
-            _i: Inject,
-        ) -> InjectResult<Arc<Box<dyn EpisodesService>>> {
-            Ok(Arc::new(Box::<MockEpisodesService>::default()))
+    impl Provider<Box<dyn Service>> for ProvideMock {
+        async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<Box<dyn Service>>> {
+            Ok(Arc::new(Box::<MockService>::default()))
         }
     }
 }
