@@ -151,7 +151,7 @@ impl Inject {
 
     /// Temporarily remove a dependency from the container and try to unwrap it from the Arc, which
     /// will only succeed if there are no other strong pointers to the value. Then, apply a function
-    /// to it, and then inject sit back into the container.
+    /// to it, and then injects it back into the container.
     pub async fn modify_key<T, F>(&self, key: Key, modify: F) -> Result<()>
     where
         T: Any + Send + Sync,
