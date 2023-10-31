@@ -74,3 +74,35 @@ impl<C: Config> LoadAll<C> {
         config.extract()
     }
 }
+
+#[cfg(test)]
+pub(crate) mod test {
+    use anyhow::Result;
+
+    use super::*;
+
+    #[derive(Default, Debug, Serialize, Deserialize, Clone)]
+    struct Config {}
+
+    impl crate::Config for Config {}
+
+    #[tokio::test]
+    async fn test_load_all_success() -> Result<()> {
+        let loader = LoadAll::<Config>::new(vec![]);
+
+        loader.load(None)?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_all_custom_path() -> Result<()> {
+        let loader = LoadAll::<Config>::new(vec![]);
+
+        let custom_path = PathBuf::from("config.toml");
+
+        loader.load(Some(custom_path))?;
+
+        Ok(())
+    }
+}

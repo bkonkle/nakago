@@ -107,3 +107,86 @@ impl<C: Config> Hook for Init<C> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+pub(crate) mod test {
+    use anyhow::Result;
+    use figment::providers::Env;
+    use serde_derive::{Deserialize, Serialize};
+
+    use super::*;
+
+    #[derive(Default, Debug, Serialize, Deserialize, Clone)]
+    struct Config {}
+
+    impl crate::Config for Config {}
+
+    #[derive(Default, Debug, PartialEq, Eq)]
+    struct TestLoader {}
+
+    impl Loader for TestLoader {
+        fn load_env(&self, env: Env) -> Env {
+            env
+        }
+    }
+
+    #[tokio::test]
+    async fn test_add_loaders_success() -> Result<()> {
+        let i = Inject::default();
+
+        let loader: Arc<dyn Loader> = Arc::new(TestLoader::default());
+
+        let hook = AddLoaders::new(vec![loader]);
+
+        i.handle(hook).await?;
+
+        let results = i.get(&LOADERS).await?;
+        assert_eq!(results.len(), 1);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_add_loaders_to_existing() -> Result<()> {
+        let i = Inject::default();
+
+        let loader: Arc<dyn Loader> = Arc::new(TestLoader::default());
+
+        let existing: Vec<Arc<dyn Loader>> = vec![Arc::new(TestLoader::default())];
+
+        i.inject(&LOADERS, existing).await?;
+
+        let hook = AddLoaders::new(vec![loader]);
+
+        i.handle(hook).await?;
+
+        let results = i.get(&LOADERS).await?;
+        assert_eq!(results.len(), 2);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_success() -> Result<()> {
+        let i = Inject::default();
+
+        let hook = Init::<Config>::new(None, None);
+
+        i.handle(hook).await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_custom_path() -> Result<()> {
+        let i = Inject::default();
+
+        let custom_path = PathBuf::from("config.toml");
+
+        let hook = Init::<Config>::new(Some(custom_path), None);
+
+        i.handle(hook).await?;
+
+        Ok(())
+    }
+}
