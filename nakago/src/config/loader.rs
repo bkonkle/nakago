@@ -82,7 +82,7 @@ pub(crate) mod test {
     use super::*;
 
     #[derive(Default, Debug, Serialize, Deserialize, Clone)]
-    struct Config {}
+    pub struct Config {}
 
     impl crate::Config for Config {}
 

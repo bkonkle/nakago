@@ -112,17 +112,13 @@ impl<C: Config> Hook for Init<C> {
 pub(crate) mod test {
     use anyhow::Result;
     use figment::providers::Env;
-    use serde_derive::{Deserialize, Serialize};
+
+    use crate::config::loader::test::Config;
 
     use super::*;
 
-    #[derive(Default, Debug, Serialize, Deserialize, Clone)]
-    struct Config {}
-
-    impl crate::Config for Config {}
-
     #[derive(Default, Debug, PartialEq, Eq)]
-    struct TestLoader {}
+    pub struct TestLoader {}
 
     impl Loader for TestLoader {
         fn load_env(&self, env: Env) -> Env {

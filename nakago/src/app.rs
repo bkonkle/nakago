@@ -168,3 +168,62 @@ fn handle_panic(info: &PanicInfo<'_>) {
         .unwrap();
     }
 }
+
+#[cfg(test)]
+pub mod test {
+    use anyhow::Result;
+
+    use crate::config::{hooks::test::TestLoader, loader::test::Config, AddLoaders, Loader};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_app_load_success() -> Result<()> {
+        let mut app = Application::<Config>::default();
+
+        let loader: Arc<dyn Loader> = Arc::new(TestLoader::default());
+        app.on(&EventType::Load, AddLoaders::new(vec![loader]));
+
+        app.load(None).await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_app_load_custom_path() -> Result<()> {
+        let app = Application::<Config>::default();
+
+        let custom_path = PathBuf::from("config.toml");
+
+        app.load(Some(custom_path)).await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_app_init_success() -> Result<()> {
+        let app = Application::<Config>::default();
+
+        app.init().await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_app_start_success() -> Result<()> {
+        let app = Application::<Config>::default();
+
+        app.start().await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_app_stop_success() -> Result<()> {
+        let app = Application::<Config>::default();
+
+        app.stop().await?;
+
+        Ok(())
+    }
+}
