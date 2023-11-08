@@ -30,7 +30,7 @@ pub async fn resolve(
     State(state): State<nakago_axum::State>,
     sub: Subject,
     req: GraphQLRequest,
-) -> GraphQLResponse {
+) -> Result<GraphQLResponse, GraphQLResponse> {
     let users = state
         .get(&users::SERVICE)
         .await
@@ -51,7 +51,7 @@ pub async fn resolve(
     // Add the Subject and optional User to the context
     let request = req.into_inner().data(sub).data(user);
 
-    schema.execute(request).await.into()
+    Ok(schema.execute(request).await.into())
 }
 
 /// A Provider for the GraphLJ Resolve route
