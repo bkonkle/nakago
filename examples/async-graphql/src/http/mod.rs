@@ -1,10 +1,8 @@
-/// Health Controller
+/// Health handlers
 pub mod health;
 
-/// Axum Routes
-pub mod routes;
+/// GraphQL handlers
+pub mod graphql;
 
-/// Axum Application State
-pub mod state;
-
-pub use state::{State, STATE};
+/// Events handlers
+pub mod events;

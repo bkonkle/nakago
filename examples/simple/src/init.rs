@@ -7,7 +7,7 @@ use nakago_axum::{
 
 use crate::{
     config::{Config, CONFIG},
-    http::{health, user},
+    http::{self, health, user},
 };
 
 /// Create a default AxumApplication instance
@@ -25,8 +25,14 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     // Routes
 
-    app.on(&EventType::Init, routes::Init::new(&health::ROUTE));
-    app.on(&EventType::Init, routes::Init::new(&user::ROUTE));
+    app.on(&EventType::Load, http::Load::default());
+
+    app.on(&EventType::Init, routes::Init::new(&health::CHECK_ROUTE));
+
+    app.on(
+        &EventType::Init,
+        routes::Init::new(&user::GET_USERNAME_ROUTE),
+    );
 
     Ok(app)
 }

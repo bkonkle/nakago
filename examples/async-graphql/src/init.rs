@@ -48,7 +48,7 @@ pub async fn app() -> inject::Result<AxumApplication<Config, State>> {
     app.provide(&graphql::SCHEMA_BUILDER, schema::ProvideBuilder::default())
         .await?;
 
-    app.provide(&auth::STATE, auth::state::Provide::default())
+    app.provide(&auth::STATE, auth::subject::Provide::default())
         .await?;
 
     app.provide(&STATE, state::Provide::default()).await?;

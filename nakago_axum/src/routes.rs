@@ -8,17 +8,17 @@ use tokio::sync::Mutex;
 
 use crate::State;
 
-/// A Route that will be nested within a higher-level Router
-pub type Route<B = Body> = Mutex<Router<B>>;
+/// A Route that will be nested within a higher-level Router, wrapped in a Mutex to safely move
+pub type Route<B = Body> = Mutex<Router<State, B>>;
 
 /// A hook to initialize a particular route
 pub struct Init {
-    tag: &'static Tag<Route<State>>,
+    tag: &'static Tag<Route>,
 }
 
 impl Init {
     /// Create a new Init hook for a Route
-    pub fn new(tag: &'static Tag<Route<State>>) -> Self {
+    pub fn new(tag: &'static Tag<Route>) -> Self {
         Self { tag }
     }
 }
@@ -28,7 +28,7 @@ impl Hook for Init {
     async fn handle(&self, i: Inject) -> inject::Result<()> {
         let route = i.get(self.tag).await?;
 
-        if let Some(routes) = i.get_type_opt::<Mutex<Vec<Arc<Route<State>>>>>().await? {
+        if let Some(routes) = i.get_type_opt::<Mutex<Vec<Arc<Route>>>>().await? {
             routes.lock().await.push(route);
         } else {
             i.inject_type(Mutex::new(vec![route])).await?;

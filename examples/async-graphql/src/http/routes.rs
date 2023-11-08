@@ -5,7 +5,7 @@ use nakago_axum::Route;
 use crate::events;
 
 use super::{
-    handlers::{graphiql, graphql_handler, health_handler},
+    health::{graphiql, graphql_handler, health_handler},
     State,
 };
 

@@ -10,7 +10,7 @@ use nakago::{self, inject, Application, Tag};
 use tokio::sync::Mutex;
 use tower_http::trace;
 
-use crate::{Config, Route, State};
+use crate::{routes::Route, Config, State};
 
 /// An Axum HTTP Application
 pub struct AxumApplication<C>
@@ -107,8 +107,8 @@ where
     async fn get_router(&self) -> inject::Result<Router> {
         let mut router = Router::<State>::new();
 
-        if let Some(routes) = self.app.get_type_opt::<Mutex<Vec<Route<State>>>>().await? {
-            let routes: Vec<Route<State>> = routes.lock().await.drain(..).collect();
+        if let Some(routes) = self.app.get_type_opt::<Mutex<Vec<Route>>>().await? {
+            let routes: Vec<Route> = routes.lock().await.drain(..).collect();
             for route in routes {
                 router = router.nest("/", route.into_inner());
             }

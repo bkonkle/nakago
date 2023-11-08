@@ -8,8 +8,8 @@ use nakago_derive::Provider;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-/// Tag(health::Route)
-pub const ROUTE: Tag<Route> = Tag::new("health::Route");
+/// Tag(health::check::Route)
+pub const CHECK_ROUTE: Tag<Route> = Tag::new("health::check::Route");
 
 /// A Health Check Response
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,30 +21,23 @@ pub struct HealthResponse {
     success: bool,
 }
 
-#[derive(Clone, Default)]
-pub struct Controller {}
-
-impl Controller {
-    /// Handle health check requests
-    pub async fn handle(self) -> Json<HealthResponse> {
-        Json(HealthResponse {
-            code: 200,
-            success: true,
-        })
-    }
+/// Handle health check requests
+pub async fn health_check() -> Json<HealthResponse> {
+    Json(HealthResponse {
+        code: 200,
+        success: true,
+    })
 }
 
+/// A Provider for the health check route
 #[derive(Default)]
-pub struct Provide {}
+pub struct ProvideCheck {}
 
 #[Provider]
 #[async_trait]
-impl Provider<Route> for Provide {
+impl Provider<Route> for ProvideCheck {
     async fn provide(self: Arc<Self>, _: Inject) -> inject::Result<Arc<Route>> {
-        let controller = Controller::default();
-
-        let route: Router<HealthResponse> =
-            Router::new().route("/health", get(|| async move { controller.handle().await }));
+        let route = Router::new().route("/health", get(health_check));
 
         Ok(Arc::new(Mutex::new(route)))
     }

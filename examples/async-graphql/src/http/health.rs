@@ -1,16 +1,15 @@
 use std::sync::Arc;
 
-use async_graphql::http::GraphiQLSource;
-use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use axum::{
-    extract::State,
-    response::{Html, IntoResponse},
-    Json,
-};
-use nakago_axum::auth::Subject;
+use async_trait::async_trait;
+use axum::{routing::get, Json, Router};
+use nakago::{inject, Inject, Provider, Tag};
+use nakago_axum::Route;
+use nakago_derive::Provider;
 use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
 
-use crate::{domains::users, graphql};
+/// Tag(health::check::Route)
+pub const CHECK_ROUTE: Tag<Route> = Tag::new("health::check::Route");
 
 /// A Health Check Response
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,15 +21,24 @@ pub struct HealthResponse {
     success: bool,
 }
 
-#[derive(Clone)]
-pub struct Controller {}
+/// Handle health check requests
+pub async fn health_check() -> Json<HealthResponse> {
+    Json(HealthResponse {
+        code: 200,
+        success: true,
+    })
+}
 
-impl Controller {
-    /// Handle health check requests
-    pub async fn handle(self) -> Json<HealthResponse> {
-        Json(HealthResponse {
-            code: 200,
-            success: true,
-        })
+/// A Provider for the health check route
+#[derive(Default)]
+pub struct ProvideCheck {}
+
+#[Provider]
+#[async_trait]
+impl Provider<Route> for ProvideCheck {
+    async fn provide(self: Arc<Self>, _: Inject) -> inject::Result<Arc<Route>> {
+        let route = Router::new().route("/health", get(health_check));
+
+        Ok(Arc::new(Mutex::new(route)))
     }
 }

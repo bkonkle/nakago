@@ -8,7 +8,7 @@ use nakago_derive::Provider;
 
 use crate::{domains::users, events::SOCKET_HANDLER, graphql};
 
-use super::handlers::{EventsState, GraphQLState};
+use super::health::{EventsState, GraphQLState};
 
 /// Tag(app::State)
 pub const STATE: Tag<State> = Tag::new("app::State");
