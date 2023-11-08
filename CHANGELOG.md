@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `nakago`: Renamed `nakago::error` to `nakago::errors`
 - `nakago-axum`: Moved away from a custom Axum State, using a hardcoded State that simply contains an `Inject` container instead.
+- `nakago-axum`: Major routing improvements, with drastic simplification from the previous version.
 - `nakago-async-graphql`: Reworked things around the new State approach for Axum.
 - Updated examples.
 

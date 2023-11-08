@@ -18,9 +18,45 @@ The `Startup` Hook for an Axum Application uses the State with the provided Rout
 
 ## Routes
 
-Routes are Loaded ahead of time and then initialized on Init. They have access to an Axum State extractor that pulls the `Inject` container out to be used within handlers. This approach is similar to Async-GraphQL's data facility.
+Routes are initialized on Init. They have access to an Axum State extractor that pulls the `Inject` container in to be used within handlers. This approach is similar to Async-GraphQL's [data facility](https://async-graphql.github.io/async-graphql/en/context.html#store-data).
 
-TO BE CONTINUED...
+### Handlers
+
+Here's an example of a route handler that needs access to the Inject container to retrieve a Users Service and a WebSocket connection handler::
+
+```rust
+use nakago_axum::{auth::Subject, Error, Inject};
+
+pub async fn upgrade(
+    Inject(i): Inject,
+    sub: Subject,
+    ws: WebSocketUpgrade,
+) -> axum::response::Result<impl IntoResponse> {
+    let users = i.get(&users::SERVICE).await.map_err(Error)?;
+    let handler = i.get(&socket::HANDLER).await.map_err(Error)?;
+
+    // Retrieve the request User, if username is present
+    let user = if let Subject(Some(ref username)) = sub {
+        users.get_by_username(username, &true).await.unwrap_or(None)
+    } else {
+        None
+    };
+
+    Ok(ws.on_upgrade(|socket| async move { handler.handle(socket, user).await }))
+}
+```
+
+The `Inject` extractor from the `nakago_axum` package is used to retrieve the `Inject` container from the State. This container is then used to retrieve the `users::SERVICE` and `socket::HANDLER` services from the container, mapping the errors to the special `nakago_axum:Error` wrapper that works as an Axum response.
+
+### Routing
+
+Then, to init a Route you pass the HTTP method, path, and handler to the `routes::Init` Hook:
+
+```rust
+app.on(&EventType::Init, routes::Init::new(Method::GET, "/events", events::upgrade));
+```
+
+This merges the route into the top-level Axum route for the application, mapping requests on `/events` with a GET method to the `events::upgrade` handler.
 
 ## Starting the Application
 
@@ -30,13 +66,12 @@ To start your application, pass in your top-level Config type and create an inst
 let mut app = AxumApplication::<Config>::default();
 app.on(&EventType::Load, users::schema::Load::default());
 app.on(&EventType::Load, authz::Load::default());
-app.on(&EventType::Init, routes::Init::new(new_health_route));
 ```
 
 Then, use `run` to start the application and return the connection details.
 
 ```rust
-let server = app.run::<State>(args.config_path).await?;
+let server = app.run(args.config_path).await?;
 let addr = server.local_addr();
 
 info!("Started on port: {port}", port = addr.port());

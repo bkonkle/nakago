@@ -1,11 +1,11 @@
 use axum::{extract::WebSocketUpgrade, response::IntoResponse};
-use nakago_axum::{auth::Subject, state, Error};
+use nakago_axum::{auth::Subject, Error, Inject};
 
 use crate::{domains::users, events::socket};
 
 /// Handle WebSocket upgrade requests
 pub async fn upgrade(
-    state::Inject(i): state::Inject,
+    Inject(i): Inject,
     sub: Subject,
     ws: WebSocketUpgrade,
 ) -> axum::response::Result<impl IntoResponse> {
