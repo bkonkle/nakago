@@ -1,23 +1,10 @@
-use std::sync::Arc;
-
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use async_trait::async_trait;
-use axum::{
-    response::{Html, IntoResponse},
-    routing::get,
-    Router,
-};
-use nakago::{inject, Inject, Provider, Tag};
+use axum::response::{Html, IntoResponse};
 use nakago_async_graphql::errors;
-use nakago_axum::{auth::Subject, state, Route};
-use nakago_derive::Provider;
-use tokio::sync::Mutex;
+use nakago_axum::{auth::Subject, state};
 
 use crate::{domains::users, graphql};
-
-/// Tag(graphql::resolve::Route)
-pub const RESOLVE_ROUTE: Tag<Route> = Tag::new("graphql::resolve::Route");
 
 /// Handle GraphiQL Requests
 pub async fn graphiql() -> impl IntoResponse {
@@ -51,18 +38,4 @@ pub async fn resolve(
     let request = req.into_inner().data(sub).data(user);
 
     Ok(schema.execute(request).await.into())
-}
-
-/// A Provider for the GraphLJ Resolve route
-#[derive(Default)]
-pub struct ProvideResolve {}
-
-#[Provider]
-#[async_trait]
-impl Provider<Route> for ProvideResolve {
-    async fn provide(self: Arc<Self>, _: Inject) -> inject::Result<Arc<Route>> {
-        let route = Router::new().route("/graphql", get(graphiql).post(resolve));
-
-        Ok(Arc::new(Mutex::new(route)))
-    }
 }

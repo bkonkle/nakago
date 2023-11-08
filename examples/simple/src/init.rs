@@ -1,3 +1,4 @@
+use hyper::Method;
 use nakago::{config, inject, EventType};
 use nakago_axum::{
     auth::{self, jwks, Validator, JWKS},
@@ -7,7 +8,7 @@ use nakago_axum::{
 
 use crate::{
     config::{Config, CONFIG},
-    http::{self, health, user},
+    http::{health, user},
 };
 
 /// Create a default AxumApplication instance
@@ -28,13 +29,14 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     // Routes
 
-    app.on(&EventType::Load, http::Load::default());
-
-    app.on(&EventType::Init, routes::Init::new(&health::CHECK_ROUTE));
+    app.on(
+        &EventType::Init,
+        routes::Init::new(Method::GET, "/health", health::health_check),
+    );
 
     app.on(
         &EventType::Init,
-        routes::Init::new(&user::GET_USERNAME_ROUTE),
+        routes::Init::new(Method::GET, "/username", user::get_username),
     );
 
     Ok(app)

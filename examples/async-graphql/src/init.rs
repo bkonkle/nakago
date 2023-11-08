@@ -1,3 +1,4 @@
+use hyper::Method;
 use nakago::{config, inject, EventType};
 use nakago_async_graphql::schema;
 use nakago_axum::{
@@ -62,8 +63,6 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     app.on(&EventType::Load, authz::Load::default());
 
-    app.on(&EventType::Load, http::Load::default());
-
     // Initialization
 
     app.on(&EventType::Init, graphql::Init::default());
@@ -77,17 +76,22 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     app.on(
         &EventType::Init,
-        routes::Init::new(&http::health::CHECK_ROUTE),
+        routes::Init::new(Method::GET, "/health", http::health::health_check),
     );
 
     app.on(
         &EventType::Init,
-        routes::Init::new(&http::graphql::RESOLVE_ROUTE),
+        routes::Init::new(Method::GET, "/graphql", http::graphql::graphiql),
     );
 
     app.on(
         &EventType::Init,
-        routes::Init::new(&http::events::UPGRADE_ROUTE),
+        routes::Init::new(Method::POST, "/graphql", http::graphql::resolve),
+    );
+
+    app.on(
+        &EventType::Init,
+        routes::Init::new(Method::GET, "/events", http::events::upgrade),
     );
 
     Ok(app)
