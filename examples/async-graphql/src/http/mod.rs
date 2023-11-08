@@ -1,5 +1,5 @@
-/// HTTP Handlers
-pub mod handlers;
+/// Health Controller
+pub mod health;
 
 /// Axum Routes
 pub mod routes;

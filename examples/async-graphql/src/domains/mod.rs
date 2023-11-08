@@ -1,6 +1,9 @@
 //! # Domains
 #![forbid(unsafe_code)]
 
+/// Controller
+pub mod controller;
+
 /// Users
 pub mod users;
 

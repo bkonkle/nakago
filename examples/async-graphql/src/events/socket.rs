@@ -10,8 +10,7 @@ use nakago_derive::Provider;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-/// The SocketHandler Tag
-pub const SOCKET_HANDLER: Tag<SocketHandler> = Tag::new("events::SocketHandler");
+use crate::{domains::users::model::User, events::connections::Session};
 
 use super::{
     connections::{Connections, CONNECTIONS},
@@ -21,15 +20,17 @@ use super::{
         OutgoingMessage::{Error, Pong},
     },
 };
-use crate::{domains::users::model::User, events::connections::Session};
+
+/// The socket::Handler Tag
+pub const HANDLER: Tag<Handler> = Tag::new("socket::Handler");
 
 /// WebSocket Event Handler
 #[derive(Clone)]
-pub struct SocketHandler {
+pub struct Handler {
     connections: Arc<Connections>,
 }
 
-impl SocketHandler {
+impl Handler {
     /// Create a new Event Handler instance with dependencies
     pub fn new(connections: Arc<Connections>) -> Self {
         Self { connections }
@@ -120,14 +121,14 @@ impl SocketHandler {
 /// **Depends on:**
 ///   - `Tag(events::Connections)`
 #[derive(Default)]
-pub struct ProvideSocket {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<SocketHandler> for ProvideSocket {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<SocketHandler>> {
+impl Provider<Handler> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Handler>> {
         let connections = i.get(&CONNECTIONS).await?;
 
-        Ok(Arc::new(SocketHandler::new(connections)))
+        Ok(Arc::new(Handler::new(connections)))
     }
 }

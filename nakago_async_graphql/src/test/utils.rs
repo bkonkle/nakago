@@ -2,37 +2,36 @@ use std::ops::Deref;
 
 use axum::extract::FromRef;
 use nakago::{inject, Config};
-use nakago_axum::{self, app::State, auth, AxumApplication};
+use nakago_axum::{self, auth, AxumApplication};
 
 use super::http::GraphQL;
 
 /// Test utils, extended for application-specific helpers
-pub struct Utils<C: Config, S: State> {
-    utils: nakago_axum::test::utils::Utils<C, S>,
+pub struct Utils<C: Config> {
+    utils: nakago_axum::test::utils::Utils<C>,
 
     /// GraphQL test utils
     pub graphql: GraphQL,
 }
 
-impl<C: Config, S: State> Deref for Utils<C, S> {
-    type Target = nakago_axum::test::utils::Utils<C, S>;
+impl<C: Config> Deref for Utils<C> {
+    type Target = nakago_axum::test::utils::Utils<C>;
 
     fn deref(&self) -> &Self::Target {
         &self.utils
     }
 }
 
-impl<C: Config, S: State> Utils<C, S> {
+impl<C: Config> Utils<C> {
     /// Initialize the GraphQL test utils
     pub async fn init(
-        app: AxumApplication<C, S>,
+        app: AxumApplication<C>,
         config_path: &str,
         base_url: &str,
         graphql_url: &str,
     ) -> inject::Result<Self>
     where
         C: Config,
-        S: State,
         nakago_axum::Config: FromRef<C>,
         auth::Config: FromRef<C>,
     {

@@ -2,8 +2,10 @@ use axum::{routing::get, Router};
 use nakago::Inject;
 use nakago_axum::Route;
 
+use crate::events;
+
 use super::{
-    handlers::{events_handler, graphiql, graphql_handler, health_handler},
+    handlers::{graphiql, graphql_handler, health_handler},
     State,
 };
 
@@ -21,6 +23,8 @@ pub fn new_graphql_route(_: Inject) -> Route<State> {
 }
 
 /// Initialize the Events Route
-pub fn new_events_route(_: Inject) -> Route<State> {
+pub async fn new_events_route(i: Inject) -> Route<State> {
+    let controller = i.get(&events::CONTROLLER).await;
+
     Route::new("/", Router::new().route("/events", get(events_handler)))
 }

@@ -13,12 +13,16 @@ pub mod auth;
 /// Routes
 pub mod routes;
 
+/// Axum State
+pub mod state;
+
 /// Testing
 pub mod test;
 
 #[macro_use]
 extern crate log;
 
-pub use app::{AxumApplication, State};
+pub use app::AxumApplication;
 pub use config::Config;
 pub use routes::Route;
+pub use state::State;
