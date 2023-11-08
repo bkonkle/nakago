@@ -4,14 +4,13 @@ use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use async_trait::async_trait;
 use axum::{
-    extract::State,
     response::{Html, IntoResponse},
     routing::get,
     Router,
 };
 use nakago::{inject, Inject, Provider, Tag};
 use nakago_async_graphql::errors;
-use nakago_axum::{auth::Subject, Route};
+use nakago_axum::{auth::Subject, state, Route};
 use nakago_derive::Provider;
 use tokio::sync::Mutex;
 
@@ -27,16 +26,16 @@ pub async fn graphiql() -> impl IntoResponse {
 
 /// Handle GraphQL Requests
 pub async fn resolve(
-    State(state): State<nakago_axum::State>,
+    state::Inject(i): state::Inject,
     sub: Subject,
     req: GraphQLRequest,
 ) -> Result<GraphQLResponse, GraphQLResponse> {
-    let users = state
+    let users = i
         .get(&users::SERVICE)
         .await
         .map_err(errors::to_graphql_response)?;
 
-    let schema = state
+    let schema = i
         .get(&graphql::SCHEMA)
         .await
         .map_err(errors::to_graphql_response)?;

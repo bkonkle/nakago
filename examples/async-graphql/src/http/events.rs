@@ -1,14 +1,9 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use axum::{
-    extract::{State, WebSocketUpgrade},
-    response::IntoResponse,
-    routing::get,
-    Router,
-};
+use axum::{extract::WebSocketUpgrade, response::IntoResponse, routing::get, Router};
 use nakago::{inject, Inject, Provider, Tag};
-use nakago_axum::{auth::Subject, Error, Route};
+use nakago_axum::{auth::Subject, state, Error, Route};
 use nakago_derive::Provider;
 use tokio::sync::Mutex;
 
@@ -19,12 +14,12 @@ pub const UPGRADE_ROUTE: Tag<Route> = Tag::new("events::upgrade::Route");
 
 /// Handle WebSocket upgrade requests
 pub async fn upgrade(
-    State(state): State<nakago_axum::State>,
+    state::Inject(i): state::Inject,
     sub: Subject,
     ws: WebSocketUpgrade,
 ) -> axum::response::Result<impl IntoResponse> {
-    let users = state.get(&users::SERVICE).await.map_err(Error)?;
-    let handler = state.get(&socket::HANDLER).await.map_err(Error)?;
+    let users = i.get(&users::SERVICE).await.map_err(Error)?;
+    let handler = i.get(&socket::HANDLER).await.map_err(Error)?;
 
     // Retrieve the request User, if username is present
     let user = if let Subject(Some(ref username)) = sub {

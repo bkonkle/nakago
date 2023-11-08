@@ -6,7 +6,7 @@ use anyhow::Result;
 use axum::http::HeaderValue;
 use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
-use nakago_axum::auth;
+use nakago_axum::auth::{self, Validator};
 use serde::Deserialize;
 use tokio::{net::TcpStream, time::timeout};
 use tokio_tungstenite::{
@@ -40,7 +40,7 @@ impl Utils {
     pub async fn init() -> Result<Self> {
         let app = init::app().await?;
 
-        app.replace_type(auth::subject::ProvideUnverified::default())
+        app.replace_type_with::<Validator>(auth::subject::ProvideUnverified::default())
             .await?;
 
         let config_path = std::env::var("CONFIG_PATH_ASYNC_GRAPHQL")

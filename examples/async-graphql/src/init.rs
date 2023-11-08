@@ -1,7 +1,7 @@
 use nakago::{config, inject, EventType};
 use nakago_async_graphql::schema;
 use nakago_axum::{
-    auth::{jwks, JWKS},
+    auth::{self, jwks, Validator, JWKS},
     routes, AxumApplication,
 };
 use nakago_sea_orm::{connection, CONNECTION};
@@ -21,6 +21,9 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
     // Dependencies
 
     app.provide(&JWKS, jwks::Provide::default().with_config_tag(&CONFIG))
+        .await?;
+
+    app.provide_type::<Validator>(auth::subject::Provide::default())
         .await?;
 
     app.provide(

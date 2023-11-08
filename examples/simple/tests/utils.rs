@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use anyhow::Result;
-use nakago_axum::auth;
+use nakago_axum::auth::{self, Validator};
 
 use nakago_examples_simple::{init, Config};
 
@@ -19,7 +19,7 @@ impl TestUtils {
     pub async fn init() -> Result<Self> {
         let app = init::app().await?;
 
-        app.replace_type(auth::subject::ProvideUnverified::default())
+        app.replace_type_with::<Validator>(auth::subject::ProvideUnverified::default())
             .await?;
 
         let config_path = std::env::var("CONFIG_PATH_SIMPLE")

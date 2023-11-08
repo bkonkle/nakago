@@ -29,4 +29,4 @@ pub use app::AxumApplication;
 pub use config::Config;
 pub use errors::Error;
 pub use routes::Route;
-pub use state::State;
+pub use state::{Inject, State};
