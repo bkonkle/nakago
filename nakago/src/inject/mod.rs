@@ -2,7 +2,7 @@
 pub mod container;
 
 /// Errors
-pub mod error;
+pub mod errors;
 
 /// Keys
 pub mod key;
@@ -23,7 +23,7 @@ pub mod provider;
 pub mod injector;
 
 pub use container::Inject;
-pub use error::{Error, Result};
+pub use errors::{Error, Result};
 pub use hooks::Hook;
 pub use injector::{Dependency, Pending};
 pub use key::{Id, Key};

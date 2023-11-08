@@ -6,3 +6,6 @@ pub mod schema;
 
 /// Testing utils
 pub mod test;
+
+/// Errors
+pub mod errors;

@@ -19,10 +19,14 @@ pub mod state;
 /// Testing
 pub mod test;
 
+/// Errors
+pub mod errors;
+
 #[macro_use]
 extern crate log;
 
 pub use app::AxumApplication;
 pub use config::Config;
+pub use errors::Error;
 pub use routes::Route;
 pub use state::State;
