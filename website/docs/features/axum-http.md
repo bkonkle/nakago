@@ -4,17 +4,23 @@ sidebar_position: 3
 
 # Axum HTTP Applications
 
-The `nakago-axum` crate defines `AxumApplication`, which wraps `Application` and provides a way to Run an HTTP service.
+The `nakago-axum` crate defines `AxumApplication`, which wraps `Application` and provides a way to Run an HTTP service and use the `Inject` container via Axum's `State` mechanism.
 
 ## Application Lifecycle
 
 ### Init
 
-The `Init` Hook for an Axum Application automatically adds the `HttpConfig` and `AuthConfig` Config Loaders before the user-provided hook is invoked and the Config is generated.
+The `Init` Hook for an Axum Application automatically adds the `http::Config` and `auth::Config` Loaders before the user-provided hook is invoked and the Config is generated.
 
 ### Startup
 
 The `Startup` Hook for an Axum Application uses the State with the provided Router, allowing the flow of the application to proceed through the Axum request handlers.
+
+## Routes
+
+Routes are Loaded ahead of time and then initialized on Init. They have access to an Axum State extractor that pulls the `Inject` container out to be used within handlers. This approach is similar to Async-GraphQL's data facility.
+
+TO BE CONTINUED...
 
 ## Starting the Application
 
