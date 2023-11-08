@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0]
+
+### Changed
+
+- `nakago`: Renamed `nakago::error` to `nakago::errors`
+- `nakago-axum`: Moved away from a custom Axum State, using a hardcoded State that simply contains an `Inject` container instead.
+- `nakago-async-graphql`: Reworked things around the new State approach for Axum.
+- Updated examples.
+
+## Added
+
+- `nakago-axum`: Added `nakago-axum::State` and `nakago-axum::Inject` for smoother interop with Axum handlers.
+- `nakago-async-graphql`: Added `nakago-async-graphql::errors::to_graphql_response` to convert `nakago::Error` into a GraphQL response.
+
 ## [0.13.0]
 
 ### Changed
@@ -195,6 +209,7 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
+[0.14.0]: https://github.com/bkonkle/nakago/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/bkonkle/nakago/compare/0.12.2...0.13.0
 [0.12.2]: https://github.com/bkonkle/nakago/compare/0.12.1...0.12.2
 [0.12.1]: https://github.com/bkonkle/nakago/compare/0.12.0...0.12.1
