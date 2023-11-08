@@ -29,10 +29,9 @@ simple/
 ├─ config/ -- Config files for different environments
 ├─ src/
 │  ├─ http/ -- Axum HTTP routes
-│  │  ├─ handlers.rs
-│  │  ├─ mod.rs
-│  │  ├─ routes.rs
-│  │  └─ state.rs
+│  │  ├─ health.rs -- The HTTP health check handler
+│  │  ├─ init.rs -- Initialization hook for all handlers
+│  │  └─ mod.rs
 │  ├─ config.rs -- Your app's custom Config struct
 │  ├─ init.rs -- App initialization
 │  ├─ lib.rs
@@ -43,9 +42,9 @@ simple/
 └─ // ...
 ```
 
-This includes a simple `AppConfig` struct with an embedded `HttpConfig` provided by the `nakago-axum` library. You can add your own configuration fields to this struct and they'll be populated by the [figment](https://docs.rs/figment/latest/figment/) crate.
+This includes a simple app-specific `Config` struct with an embedded `http::Config` provided by the `nakago-axum` library. You can add your own configuration fields to this struct and they'll be populated by the [figment](https://docs.rs/figment/latest/figment/) crate.
 
-It includes a barebones `init::app()` function that will load your configuration and initialize your dependencies. You can add your own dependencies to this function and they'll be available when you build your Axum route state.
+It includes a barebones `init::app()` function that will load your configuration and initialize your dependencies. You can add your own dependencies to this function and they'll be available when you build your Axum routes.
 
 The `main.rs` uses the [pico-args](https://docs.rs/pico-args/0.5.0/pico_args/) to parse a simple command-line argument to specify an alternate config path, which is useful for many deployment scenarios that dynamically map a config file to a certain mount point within a container filesystem.
 
@@ -65,25 +64,23 @@ The only currently supported method of authentication is through JWT with JWKS k
 
 *Configurable claims and other authentication methods will be added in the future.*
 
-### AuthConfig
+### Auth Config
 
-In your `config.rs` file, add a new property to the `AppConfig` struct:
+In your `config.rs` file, add a new property to the app's `Config` struct:
 
 ```rust
-use nakago_axum::auth::config::AuthConfig,
-
 /// Server Config
 #[derive(Default, Debug, Serialize, Deserialize, Clone, FromRef)]
-pub struct AppConfig {
+pub struct Config {
     /// HTTP config
-    pub http: HttpConfig,
+    pub http: nakago_axum::Config,
 
     /// HTTP Auth Config
-    pub auth: AuthConfig,
+    pub auth: nakago_axum::auth::Config,
 }
 ```
 
-This `AuthConfig` is automatically loaded as part of the default config loaders in the `nakago-axum` crate, so this line in the `init.rs` ensures that it is populated from environment variables or the currently chosen config file:
+This auth `Config` is automatically loaded as part of the default config loaders in the `nakago-axum` crate, so this line in the `init.rs` ensures that it is populated from environment variables or the currently chosen config file:
 
 ```rust
 // Config
@@ -108,72 +105,30 @@ secret = "client_secret"
 
 Add the real details to your own `config/local.toml` file, which should be excluded from git via the `.gitignore` file. If you don't have real values yet, leave them as the dummy values above. You can still run integration tests without having a real OAuth2 provider running, if you want.
 
-### Axum State
+### Initialization
 
-Before you can use the `Subject` request extension with your Axum routes, you'll need to add the `AuthState` to your `AppState` in your `http/state.rs` file:
-
-```rust
-use nakago_axum::auth;
-
-/// The top-level Application State
-#[derive(Clone, FromRef)]
-pub struct State {
-    auth: auth::State,
-}
-```
-
-Then you can update the `ProvideAppState` provider to retrieve the `AuthState` you provided earlier and use it when creating the `AppState`:
+In your top-level `init.rs` file, you should use `jwks::Provide` and `auth::subject::Provide` providers to inject the pieces that Nakago-Axum's `Subject` extractor will use to retrieve the authentication data for a request.
 
 ```rust
-use nakago_axum::auth;
+use nakago_axum::auth::{self, jwks, Validator, JWKS};
 
-#[Provider]
-#[async_trait]
-impl Provider<State> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<State>> {
-        let auth = i.get(&auth::STATE).await?;
-
-        Ok(Arc::new(State {
-            auth: (*auth).clone(),
-        }))
-    }
-}
-```
-
-The `(*auth).clone()` is because the `AuthState`` initially comes wrapped in an Arc, and this easily clones it out of the Arc.
-
-You'll probably also want to add a note to the docstring for your `ProvideAppState` provider so that you can see at a glance that this is a dependency your AppState requires.
-
-```rust
-/// **Depends on:**
-///   - `Tag(auth::State)`
-```
-
-In your `init.rs` file, you should use `ProvideJwks` and `ProvideAuthState` to provide the AuthState that the custom `ProvideAppState` provider unique to your app will use to populate that property.
-
-```rust
-use nakago_axum::auth::{self, jwks, JWKS};
+// ...
 
 app.provide(&JWKS, jwks::Provide::default().with_config_tag(&CONFIG))
     .await?;
 
-app.provide(&auth::STATE, auth::state::Provide::default())
+app.provide_type::<Validator>(auth::subject::Provide::default())
     .await?;
-
-app.provide(&STATE, state::Provide::default()).await?; // <-- this line should already be there
 ```
 
 The `.with_config_tag(&CONFIG)` provides the custom Tag for your `AppConfig`, which will be unique to your app.
 
 ### Axum Route
 
-You can now add a quick handler to `http/handlers.rs` that allows a user to view their own username when logged in.
+You can now add a quick handler to `http/` that allows a user to view their own username when logged in. Create a new file called `http/user.rs`
 
 ```rust
 use nakago_axum::auth::Subject;
-
-// Get Username
-// ------------
 
 /// A Username Response
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -186,7 +141,7 @@ pub struct UsernameResponse {
 }
 
 /// Handle Get Username requests
-pub async fn get_username_handler(sub: Subject) -> Json<UsernameResponse> {
+pub async fn get_username(sub: Subject) -> Json<UsernameResponse> {
     let username = if let Subject(Some(username)) = sub {
         username.clone()
     } else {
@@ -200,32 +155,17 @@ pub async fn get_username_handler(sub: Subject) -> Json<UsernameResponse> {
 }
 ```
 
-The `Subject` extension uses the AuthState to decode the JWT and return the `sub` claim from the payload. If the user is not logged in, the `Subject` will contain a `None`.
+The `Subject` extension uses Nakago's bulit-in Axum State to find the Inject container, which it uses to grab the JWT config and the Validator instance. It uses them to decode the JWT and return the `sub` claim from the payload. If the user is not logged in, the `Subject` will contain a `None`.
 
-Now add a route that uses the handler to `http/routes.rs`:
-
-```rust
-use super::handlers::get_username_handler;
-
-/// Initialize the User route
-pub fn new_user_route(_: Inject) -> Route<State> {
-    Route::new("/", Router::new().route("/username", get(get_username_handler)))
-}
-```
-
-The `Inject` container is there if you need it, but most things will be provided as part of the `AppState` so you can ignore it.
-
-Finally, in your `init.rs` add a new `InitRoute` hook to your app:
+Now add a route that uses the handler to the Init hook at `http/init.rs`:
 
 ```rust
-use crate::https::routes::new_user_route;
-
-// Routes
-
-app.on(&EventType::Init, routes::Init::new(new_health_route));
-app.on(&EventType::Init, routes::Init::new(new_user_route)); // <-- the new route
-
-Ok(app)
+i.handle(routes::Init::new(
+    Method::GET,
+    "/username",
+    user::get_username,
+))
+.await?;
 ```
 
 ### Running the App
@@ -283,9 +223,9 @@ To start out with, create a `tests` folder alongside your `src`. This will be us
 For the purposes of your own application, you'll want to create a `tests/utils.rs` file that wraps the `nakago_axum::test::Utils` so that you can override any dependencies that you need or add convenience methods to build test data easily for your tests. Start out with a newtype like this:
 
 ```rust
-use simple::{config::AppConfig, http::state::AppState};
+use simple::Config;
 
-pub struct Utils(nakago_axum::test::utils::Utils<AppConfig, AppState>);
+pub struct Utils(nakago_axum::test::Utils<Config>);
 ```
 
 Replace `simple` with your actual project name.
@@ -296,7 +236,7 @@ To make it easy to access the fields on the inner `Utils`, you can implement the
 use std::ops::Deref;
 
 impl Deref for Utils {
-    type Target = nakago_axum::test::Utils<AppConfig, AppState>;
+    type Target = nakago_axum::test::Utils<Config>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -316,13 +256,13 @@ impl Utils {
     pub async fn init() -> Result<Self> {
         let app = init::app().await?;
 
-        app.replace_with(&auth::STATE, auth::state::ProvideUnverified::default())
+        app.replace_type_with::<Validator>(auth::subject::ProvideUnverified::default())
             .await?;
 
         let config_path =
             std::env::var("CONFIG_PATH").unwrap_or_else(|_| "config/test.toml".to_string());
 
-        let utils = nakago_axum::test::Utils::init(app, &config_path, "/").await?;
+        let utils = nakago_axum::Utils::init(app, &config_path, "/").await?;
 
         Ok(Self(utils))
     }
@@ -352,7 +292,7 @@ The `todo!()` macro allows you to leave this test unfinished for now, but it wil
 
 ### HTTP Calls
 
-Next, we can add an HTTP call with a JWT token. First, create the dummy token, which will only work with the `ProvideUnverifiedAuthState` provider above for use in testing.
+Next, we can add an HTTP call with a JWT token. First, create the dummy token, which will only work with the `auth::subject::ProvideUnverified` Validator provider above for use in testing.
 
 ```rust
 use ulid::Ulid;
