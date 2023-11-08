@@ -11,18 +11,17 @@ use hyper_tls::HttpsConnector;
 use nakago::{self, inject};
 use tokio::time::sleep;
 
-use crate::{app::State, auth, AxumApplication, Config};
+use crate::{auth, AxumApplication, Config};
 
 use super::http::{Http, ProvideClient, CLIENT};
 
 /// Common test utils
-pub struct Utils<C, S>
+pub struct Utils<C>
 where
     C: nakago::Config,
-    S: State,
 {
     /// The Application instance
-    pub app: AxumApplication<C, S>,
+    pub app: AxumApplication<C>,
 
     /// The Address the server is listening on
     pub addr: SocketAddr,
@@ -34,16 +33,15 @@ where
     pub http_client: Arc<Client<HttpsConnector<HttpConnector>>>,
 }
 
-impl<C, S> Utils<C, S>
+impl<C> Utils<C>
 where
     C: nakago::Config,
-    S: State,
     Config: FromRef<C>,
     auth::Config: FromRef<C>,
 {
     /// Initialize a new set of utils
     pub async fn init(
-        app: AxumApplication<C, S>,
+        app: AxumApplication<C>,
         config_path: &str,
         base_url: &str,
     ) -> inject::Result<Self> {

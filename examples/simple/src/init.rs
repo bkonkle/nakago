@@ -1,33 +1,26 @@
 use nakago::{config, inject, EventType};
 use nakago_axum::{
-    auth::{self, jwks, JWKS},
+    auth::{self, jwks, Validator, JWKS},
     config::default_loaders,
-    routes, AxumApplication,
+    AxumApplication,
 };
 
 use crate::{
     config::{Config, CONFIG},
-    http::{
-        routes::{new_health_route, new_user_route},
-        state::{self, State, STATE},
-    },
+    http,
 };
 
 /// Create a default AxumApplication instance
-pub async fn app() -> inject::Result<AxumApplication<Config, State>> {
-    let mut app = AxumApplication::default()
-        .with_config_tag(&CONFIG)
-        .with_state_tag(&STATE);
+pub async fn app() -> inject::Result<AxumApplication<Config>> {
+    let mut app = AxumApplication::default().with_config_tag(&CONFIG);
 
     // Dependencies
 
     app.provide(&JWKS, jwks::Provide::default().with_config_tag(&CONFIG))
         .await?;
 
-    app.provide(&auth::STATE, auth::state::Provide::default())
+    app.provide_type::<Validator>(auth::subject::Provide::default())
         .await?;
-
-    app.provide(&STATE, state::Provide::default()).await?;
 
     // Config
 
@@ -35,8 +28,7 @@ pub async fn app() -> inject::Result<AxumApplication<Config, State>> {
 
     // Routes
 
-    app.on(&EventType::Init, routes::Init::new(new_health_route));
-    app.on(&EventType::Init, routes::Init::new(new_user_route));
+    app.on(&EventType::Init, http::Init::default());
 
     Ok(app)
 }

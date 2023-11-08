@@ -9,10 +9,10 @@ pub mod errors;
 /// JWKS well-known key set retrieval
 pub mod jwks;
 
-/// JWT authentication state
-pub mod state;
+/// JWT authentication
+pub mod subject;
 
 pub use config::Config;
 pub use errors::Error;
-pub use jwks::JWKS;
-pub use state::{State, Subject, STATE};
+pub use jwks::{Validator, JWKS};
+pub use subject::Subject;

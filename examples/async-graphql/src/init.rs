@@ -1,34 +1,29 @@
 use nakago::{config, inject, EventType};
 use nakago_async_graphql::schema;
 use nakago_axum::{
-    auth::{self, jwks, JWKS},
-    routes, AxumApplication,
+    auth::{self, jwks, Validator, JWKS},
+    AxumApplication,
 };
 use nakago_sea_orm::{connection, CONNECTION};
 
 use crate::{
     config::{Config, CONFIG},
     domains::{episodes, profiles, role_grants, shows, users},
-    events::{
-        ProvideConnections, ProvideSocket, {CONNECTIONS, SOCKET_HANDLER},
-    },
-    graphql,
-    http::{
-        routes::{new_events_route, new_graphql_route, new_health_route},
-        state::{self, State, STATE},
-    },
+    events::{socket, ProvideConnections, CONNECTIONS},
+    graphql, http,
     utils::authz::{self, ProvideOso, OSO},
 };
 
 /// Create a default AxumApplication instance
-pub async fn app() -> inject::Result<AxumApplication<Config, State>> {
-    let mut app = AxumApplication::default()
-        .with_config_tag(&CONFIG)
-        .with_state_tag(&STATE);
+pub async fn app() -> inject::Result<AxumApplication<Config>> {
+    let mut app = AxumApplication::default().with_config_tag(&CONFIG);
 
     // Dependencies
 
     app.provide(&JWKS, jwks::Provide::default().with_config_tag(&CONFIG))
+        .await?;
+
+    app.provide_type::<Validator>(auth::subject::Provide::default())
         .await?;
 
     app.provide(
@@ -42,16 +37,11 @@ pub async fn app() -> inject::Result<AxumApplication<Config, State>> {
     app.provide(&CONNECTIONS, ProvideConnections::default())
         .await?;
 
-    app.provide(&SOCKET_HANDLER, ProvideSocket::default())
+    app.provide(&socket::HANDLER, socket::Provide::default())
         .await?;
 
     app.provide(&graphql::SCHEMA_BUILDER, schema::ProvideBuilder::default())
         .await?;
-
-    app.provide(&auth::STATE, auth::state::Provide::default())
-        .await?;
-
-    app.provide(&STATE, state::Provide::default()).await?;
 
     // Loading
 
@@ -83,9 +73,7 @@ pub async fn app() -> inject::Result<AxumApplication<Config, State>> {
             .with_schema_tag(&graphql::SCHEMA),
     );
 
-    app.on(&EventType::Init, routes::Init::new(new_health_route));
-    app.on(&EventType::Init, routes::Init::new(new_graphql_route));
-    app.on(&EventType::Init, routes::Init::new(new_events_route));
+    app.on(&EventType::Init, http::Init::default());
 
     Ok(app)
 }

@@ -27,4 +27,3 @@ mod graphql;
 extern crate anyhow;
 
 pub use config::{Config, CONFIG};
-pub use http::{State, STATE};

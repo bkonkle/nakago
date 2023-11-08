@@ -106,23 +106,22 @@ impl Validator {
                 // First extract without verifying the header to locate the key-id (kid)
                 let token = JWT::<Empty, Empty>::new_encoded(jwt);
 
-                let header: Header<Empty> =
-                    token.unverified_header().map_err(Error::JWTTokenError)?;
+                let header: Header<Empty> = token.unverified_header().map_err(Error::JWTToken)?;
 
-                let key_id = header.registered.key_id.ok_or(Error::JWKSError)?;
+                let key_id = header.registered.key_id.ok_or(Error::JWKSVerification)?;
 
                 debug!("Fetching signing key for '{:?}'", key_id);
 
                 // Now that we have the key, construct our RSA public key secret
-                let secret =
-                    get_secret_from_key_set(jwks, &key_id).map_err(|_err| Error::JWKSError)?;
+                let secret = get_secret_from_key_set(jwks, &key_id)
+                    .map_err(|_err| Error::JWKSVerification)?;
 
                 // Now fully verify and extract the token
                 let token = token
                     .into_decoded(&secret, SignatureAlgorithm::RS256)
-                    .map_err(Error::JWTTokenError)?;
+                    .map_err(Error::JWTToken)?;
 
-                let payload = token.payload().map_err(Error::JWTTokenError)?;
+                let payload = token.payload().map_err(Error::JWTToken)?;
 
                 debug!(
                     "Successfully verified token with subject: {:?}",
@@ -134,7 +133,7 @@ impl Validator {
             Validator::Unverified => {
                 let token = JWT::<Empty, Empty>::new_encoded(jwt);
 
-                let payload = &token.unverified_payload().map_err(Error::JWTTokenError)?;
+                let payload = &token.unverified_payload().map_err(Error::JWTToken)?;
 
                 Ok(payload.clone())
             }

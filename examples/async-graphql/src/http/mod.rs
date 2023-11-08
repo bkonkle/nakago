@@ -1,10 +1,13 @@
-/// HTTP Handlers
-pub mod handlers;
+/// Health handlers
+pub mod health;
 
-/// Axum Routes
-pub mod routes;
+/// GraphQL handlers
+pub mod graphql;
 
-/// Axum Application State
-pub mod state;
+/// Events handlers
+pub mod events;
 
-pub use state::{State, STATE};
+/// Init all handlers
+pub mod init;
+
+pub use init::Init;

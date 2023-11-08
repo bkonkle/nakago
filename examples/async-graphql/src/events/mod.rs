@@ -9,4 +9,3 @@ pub mod socket;
 
 pub use connections::{Connection, Connections, ProvideConnections, CONNECTIONS};
 pub use messages::{IncomingMessage, OutgoingMessage};
-pub use socket::{ProvideSocket, SocketHandler, SOCKET_HANDLER};

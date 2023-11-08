@@ -16,30 +16,14 @@ use http::{header::AUTHORIZATION, request::Parts, HeaderMap, HeaderValue};
 use nakago::{inject, Dependency, Inject, Provider, Tag};
 use nakago_derive::Provider;
 
+use crate::State;
+
 use super::{
     jwks::{get_secret_from_key_set, Validator, JWKS},
-    Error::{self, InvalidAuthHeaderError},
+    Error::{self, InvalidAuthHeader, MissingValidator},
 };
 
-/// Tag(auth::State)
-pub const STATE: Tag<State> = Tag::new("auth::State");
-
 const BEARER: &str = "Bearer ";
-
-/// The state interface needed for Authentication
-#[derive(Clone)]
-#[allow(dead_code)]
-pub struct State {
-    /// The JWKS Validator
-    pub jwks: Validator,
-}
-
-impl State {
-    /// Create a new State instance
-    pub(crate) fn new(jwks: Validator) -> Self {
-        Self { jwks }
-    }
-}
 
 /// The token's Subject claim, which corresponds with the username
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -48,22 +32,21 @@ pub struct Subject(pub Option<String>);
 /// Implement the Axum FromRequestParts trait, allowing the `Subject` to be used as an Axum
 /// extractor.
 #[async_trait]
-impl<S> FromRequestParts<S> for Subject
-where
-    S: Send + Sync,
-    State: FromRef<S>,
-{
+impl FromRequestParts<State> for Subject {
     type Rejection = Error;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        state: &S,
+        state: &State,
     ) -> std::result::Result<Self, Self::Rejection> {
-        let state = State::from_ref(state);
+        let validator = state
+            .get_type::<Validator>()
+            .await
+            .map_err(|_err| MissingValidator)?;
 
         match jwt_from_header(&parts.headers) {
             Ok(Some(jwt)) => {
-                let payload = state.jwks.get_payload(jwt)?;
+                let payload = validator.get_payload(jwt)?;
                 let subject = payload.registered.subject.clone();
 
                 debug!("Successfully verified token with subject: {:?}", subject);
@@ -95,7 +78,7 @@ pub fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>,
 
     if !auth_header.starts_with(BEARER) {
         // Authorization header doesn't start with "Bearer ", so return early with an Error
-        return Err(InvalidAuthHeaderError);
+        return Err(InvalidAuthHeader);
     }
 
     Ok(Some(auth_header.trim_start_matches(BEARER)))
@@ -103,7 +86,7 @@ pub fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>,
 
 /// Provide the State needed in order to use the `Subject` extractor in an Axum handler
 ///
-/// **Provides:** `auth::State`
+/// **Provides:** `Validator`
 ///
 /// **Depends on:**
 ///   - `Tag(auth::JWKS)`
@@ -112,12 +95,13 @@ pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<State> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<State>> {
+impl Provider<Validator> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Validator>> {
         let jwks = i.get(&JWKS).await?;
-        let auth_state = State::new(Validator::KeySet(jwks));
 
-        Ok(Arc::new(auth_state))
+        let validator = Validator::KeySet(jwks);
+
+        Ok(Arc::new(validator))
     }
 }
 
@@ -125,16 +109,16 @@ impl Provider<State> for Provide {
 ///
 /// **WARNING: This is insecure and should only be used in testing**
 ///
-/// **Provides:** `auth::State`
+/// **Provides:** `Validator`
 #[derive(Default)]
 pub struct ProvideUnverified {}
 
 #[Provider]
 #[async_trait]
-impl Provider<State> for ProvideUnverified {
-    async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<State>> {
-        let auth_state = State::new(Validator::Unverified);
+impl Provider<Validator> for ProvideUnverified {
+    async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<Validator>> {
+        let validator = Validator::Unverified;
 
-        Ok(Arc::new(auth_state))
+        Ok(Arc::new(validator))
     }
 }

@@ -6,7 +6,7 @@ use anyhow::Result;
 use axum::http::HeaderValue;
 use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
-use nakago_axum::auth;
+use nakago_axum::auth::{self, Validator};
 use serde::Deserialize;
 use tokio::{net::TcpStream, time::timeout};
 use tokio_tungstenite::{
@@ -22,14 +22,14 @@ use nakago_examples_async_graphql::{
         shows::{self, model::Show, mutations::CreateShowInput},
         users::{self, model::User},
     },
-    init, Config, State,
+    init, Config,
 };
 
 /// Test utils, extended for application-specific helpers
-pub struct Utils(nakago_async_graphql::test::Utils<Config, State>);
+pub struct Utils(nakago_async_graphql::test::Utils<Config>);
 
 impl Deref for Utils {
-    type Target = nakago_async_graphql::test::Utils<Config, State>;
+    type Target = nakago_async_graphql::test::Utils<Config>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -40,7 +40,7 @@ impl Utils {
     pub async fn init() -> Result<Self> {
         let app = init::app().await?;
 
-        app.replace_with(&auth::STATE, auth::state::ProvideUnverified::default())
+        app.replace_type_with::<Validator>(auth::subject::ProvideUnverified::default())
             .await?;
 
         let config_path = std::env::var("CONFIG_PATH_ASYNC_GRAPHQL")
