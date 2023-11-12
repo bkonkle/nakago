@@ -12,6 +12,9 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> inject::Result<()> {
+        let graphql_controller = i.get(&graphql::CONTROLLER).await?;
+        let events_controller = i.get(&events::CONTROLLER).await?;
+
         i.handle(routes::Init::new(
             Method::GET,
             "/health",
@@ -22,19 +25,27 @@ impl Hook for Init {
         i.handle(routes::Init::new(
             Method::GET,
             "/graphql",
-            graphql::graphiql,
+            graphql::Controller::graphiql,
         ))
         .await?;
 
         i.handle(routes::Init::new(
             Method::POST,
             "/graphql",
-            graphql::resolve,
+            move |sub, req| async move {
+                graphql::Controller::resolve(graphql_controller, sub, req).await
+            },
         ))
         .await?;
 
-        i.handle(routes::Init::new(Method::GET, "/events", events::upgrade))
-            .await?;
+        i.handle(routes::Init::new(
+            Method::GET,
+            "/events",
+            move |sub, ws| async move {
+                events::Controller::upgrade(events_controller, sub, ws).await
+            },
+        ))
+        .await?;
 
         Ok(())
     }

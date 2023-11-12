@@ -1,41 +1,65 @@
+use std::sync::Arc;
+
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+use async_trait::async_trait;
 use axum::response::{Html, IntoResponse};
-use nakago_async_graphql::errors;
-use nakago_axum::{auth::Subject, state};
+use nakago::{inject, Inject, Provider, Tag};
+use nakago_axum::auth::Subject;
+use nakago_derive::Provider;
 
 use crate::{domains::users, graphql};
 
-/// Handle GraphiQL Requests
-pub async fn graphiql() -> impl IntoResponse {
-    Html(GraphiQLSource::build().endpoint("/graphql").finish())
+/// GraphQL Controller
+pub const CONTROLLER: Tag<Controller> = Tag::new("graphql::Controller");
+
+/// Events Controller
+#[derive(Clone)]
+pub struct Controller {
+    users: Arc<Box<dyn users::Service>>,
+    schema: Arc<graphql::Schema>,
 }
 
-/// Handle GraphQL Requests
-pub async fn resolve(
-    state::Inject(i): state::Inject,
-    sub: Subject,
-    req: GraphQLRequest,
-) -> Result<GraphQLResponse, GraphQLResponse> {
-    let users = i
-        .get(&users::SERVICE)
-        .await
-        .map_err(errors::to_graphql_response)?;
+impl Controller {
+    /// Handle GraphiQL Requests
+    pub async fn graphiql() -> impl IntoResponse {
+        Html(GraphiQLSource::build().endpoint("/graphql").finish())
+    }
 
-    let schema = i
-        .get(&graphql::SCHEMA)
-        .await
-        .map_err(errors::to_graphql_response)?;
+    /// Handle GraphQL Requests
+    pub async fn resolve(
+        self: Arc<Self>,
+        sub: Subject,
+        req: GraphQLRequest,
+    ) -> Result<GraphQLResponse, GraphQLResponse> {
+        // Retrieve the request User, if username is present
+        let user = if let Subject(Some(ref username)) = sub {
+            self.users
+                .get_by_username(username, &true)
+                .await
+                .unwrap_or(None)
+        } else {
+            None
+        };
 
-    // Retrieve the request User, if username is present
-    let user = if let Subject(Some(ref username)) = sub {
-        users.get_by_username(username, &true).await.unwrap_or(None)
-    } else {
-        None
-    };
+        // Add the Subject and optional User to the context
+        let request = req.into_inner().data(sub).data(user);
 
-    // Add the Subject and optional User to the context
-    let request = req.into_inner().data(sub).data(user);
+        Ok(self.schema.execute(request).await.into())
+    }
+}
 
-    Ok(schema.execute(request).await.into())
+/// Events Provider
+#[derive(Default)]
+pub struct Provide {}
+
+#[Provider]
+#[async_trait]
+impl Provider<Controller> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Controller>> {
+        let users = i.get(&users::SERVICE).await?;
+        let schema = i.get(&graphql::SCHEMA).await?;
+
+        Ok(Arc::new(Controller { users, schema }))
+    }
 }
