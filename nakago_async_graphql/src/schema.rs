@@ -20,9 +20,9 @@ pub struct ProvideBuilder<Query: Any, Mutation: Any, Subscription: Any> {
 impl<Query, Mutation, Subscription> Provider<SchemaBuilder<Query, Mutation, Subscription>>
     for ProvideBuilder<Query, Mutation, Subscription>
 where
-    Query: ObjectType + Default + 'static,
-    Mutation: ObjectType + Default + 'static,
-    Subscription: SubscriptionType + Default + 'static,
+    Query: ObjectType + 'static,
+    Mutation: ObjectType + 'static,
+    Subscription: SubscriptionType + 'static,
 {
     async fn provide(
         self: Arc<Self>,

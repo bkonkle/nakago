@@ -81,11 +81,14 @@ pub(crate) mod test {
             let service = i.get(&SERVICE).await?;
             let profiles = i.get(&profiles::SERVICE).await?;
 
-            let schema: Schema =
-                Schema::build(Query::default(), Mutation::default(), EmptySubscription)
-                    .data(service)
-                    .data(profiles)
-                    .finish();
+            let schema: Schema = Schema::build(
+                Query::default(),
+                Mutation::new(service, profiles),
+                EmptySubscription,
+            )
+            .data(service)
+            .data(profiles)
+            .finish();
 
             Ok(Arc::new(schema))
         }

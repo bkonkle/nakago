@@ -9,11 +9,11 @@ use crate::{
 };
 
 /// The GraphQL top-level Query type
-#[derive(MergedObject, Default)]
+#[derive(MergedObject)]
 pub struct Query(users::Query, profiles::Query, shows::Query, episodes::Query);
 
 /// The GraphQL top-level Mutation type
-#[derive(MergedObject, Default)]
+#[derive(MergedObject)]
 pub struct Mutation(
     users::Mutation,
     profiles::Mutation,

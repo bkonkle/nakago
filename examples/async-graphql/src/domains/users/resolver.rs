@@ -19,8 +19,10 @@ use crate::{
 pub struct UsersQuery {}
 
 /// The Mutation segment for Users
-#[derive(Default)]
-pub struct UsersMutation {}
+pub struct UsersMutation {
+    service: Arc<Box<dyn Service>>,
+    profiles: Arc<Box<dyn profiles::Service>>,
+}
 
 /// Queries for the User model
 #[Object]
@@ -30,6 +32,12 @@ impl UsersQuery {
         let user = ctx.data_unchecked::<Option<User>>();
 
         Ok(user.clone())
+    }
+}
+
+impl UsersMutation {
+    pub fn new(service: Arc<Box<dyn Service>>, profiles: Arc<Box<dyn profiles::Service>>) -> Self {
+        Self { service, profiles }
     }
 }
 
@@ -43,8 +51,6 @@ impl UsersMutation {
         input: CreateUserInput,
     ) -> Result<MutateUserResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let users = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn profiles::Service>>>();
         let subject = ctx.data_unchecked::<Subject>();
 
         // If the User exists in the GraphQL context, simply return it
@@ -60,13 +66,17 @@ impl UsersMutation {
             _ => Err(graphql_error("Unauthorized", StatusCode::UNAUTHORIZED)),
         }?;
 
-        let user = users.create(username).await.map_err(as_graphql_error(
-            "Eror while creating User",
-            StatusCode::INTERNAL_SERVER_ERROR,
-        ))?;
+        let user = self
+            .service
+            .create(username)
+            .await
+            .map_err(as_graphql_error(
+                "Eror while creating User",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))?;
 
         if let Some(profile) = input.profile {
-            profiles
+            self.profiles
                 .get_or_create(
                     &user.id,
                     &CreateProfileInput {
@@ -92,20 +102,19 @@ impl UsersMutation {
         input: UpdateUserInput,
     ) -> Result<MutateUserResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let users = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Check to see if the associated Profile is selected
         let with_roles = ctx.look_ahead().field("user").field("roles").exists();
 
         if let Some(user) = user {
-            let updated =
-                users
-                    .update(&user.id, &input, &with_roles)
-                    .await
-                    .map_err(as_graphql_error(
-                        "Error while updating User",
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                    ))?;
+            let updated = self
+                .service
+                .update(&user.id, &input, &with_roles)
+                .await
+                .map_err(as_graphql_error(
+                    "Error while updating User",
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                ))?;
 
             return Ok(MutateUserResult {
                 user: Some(updated),
