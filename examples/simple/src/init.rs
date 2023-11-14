@@ -1,8 +1,7 @@
-use nakago::{config, inject, EventType};
+use nakago::{inject, EventType};
 use nakago_axum::{
     auth::{self, jwks, Validator, JWKS},
-    config::default_loaders,
-    AxumApplication,
+    config, AxumApplication,
 };
 
 use crate::{
@@ -22,11 +21,11 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
     app.provide_type::<Validator>(auth::subject::Provide::default())
         .await?;
 
-    // Config
+    // Loading
 
-    app.on(&EventType::Load, config::AddLoaders::new(default_loaders()));
+    app.on(&EventType::Load, config::AddLoaders::default());
 
-    // Routes
+    // Initialization
 
     app.on(&EventType::Init, http::Init::default());
 

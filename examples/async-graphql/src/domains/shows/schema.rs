@@ -1,11 +1,13 @@
 use async_trait::async_trait;
 use nakago::{inject, Hook, Inject};
 
-use crate::{domains::role_grants, graphql};
+use crate::domains::graphql;
 
 use super::{
     loaders::{self, LOADER},
+    mutation, query,
     service::{self, SERVICE},
+    MUTATION, QUERY,
 };
 
 /// Provide dependencies needed for the Shows domain
@@ -16,30 +18,25 @@ pub struct Load {}
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> inject::Result<()> {
         i.provide(&SERVICE, service::Provide::default()).await?;
-
         i.provide(&LOADER, loaders::Provide::default()).await?;
+        i.provide(&QUERY, query::Provide::default()).await?;
+        i.provide(&MUTATION, mutation::Provide::default()).await?;
 
         Ok(())
     }
 }
 
-/// The Hook for initializing the dependencies for the GraphQL Shows resolver
-///
-/// **Depends on:**
-///  - Tag(RoleGrantsService)
-///  - Tag(ShowsService)
-///  - Tag(GraphQLSchemaBuilder)
+/// The Hook for initializing GraphQL User dependencies
 #[derive(Default)]
 pub struct Init {}
 
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> inject::Result<()> {
-        let role_grants = i.get(&role_grants::SERVICE).await?;
-        let service = i.get(&SERVICE).await?;
+        let loader = i.get(&LOADER).await?;
 
         i.modify(&graphql::SCHEMA_BUILDER, |builder| {
-            Ok(builder.data(role_grants.clone()).data(service.clone()))
+            Ok(builder.data(loader.clone()))
         })
         .await?;
 
@@ -54,7 +51,10 @@ pub(crate) mod test {
     use async_graphql::{self, EmptySubscription};
     use nakago::{Provider, Tag};
 
-    use crate::domains::shows::{Mutation, Query};
+    use crate::domains::{
+        role_grants,
+        shows::{Mutation, Query},
+    };
 
     use super::*;
 
@@ -78,11 +78,14 @@ pub(crate) mod test {
     impl Provider<Schema> for ProvideSchema {
         async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Schema>> {
             let service = i.get(&SERVICE).await?;
+            let role_grants = i.get(&role_grants::SERVICE).await?;
 
-            let schema: Schema =
-                Schema::build(Query::default(), Mutation::default(), EmptySubscription)
-                    .data(service)
-                    .finish();
+            let schema: Schema = Schema::build(
+                Query::new(service.clone()),
+                Mutation::new(service, role_grants),
+                EmptySubscription,
+            )
+            .finish();
 
             Ok(Arc::new(schema))
         }

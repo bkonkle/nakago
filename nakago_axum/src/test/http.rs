@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use derive_new::new;
 use http::{Method, Request};
 use hyper::{client::HttpConnector, Body, Client};
 use hyper_tls::HttpsConnector;
@@ -10,16 +11,12 @@ use nakago_derive::Provider;
 use serde_json::Value;
 
 /// Utilities for testing HTTP GraphQL endpoints with Hyper
+#[derive(new)]
 pub struct Http {
     base_url: String,
 }
 
 impl Http {
-    /// Construct a new GraphQL helper with a path to the endpoint
-    pub fn new(base_url: String) -> Self {
-        Http { base_url }
-    }
-
     /// Create a GraphQL query request for Hyper with an optional auth token
     pub fn call(
         &self,

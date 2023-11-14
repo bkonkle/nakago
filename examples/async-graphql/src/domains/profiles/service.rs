@@ -3,22 +3,21 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_graphql::MaybeUndefined::{Null, Undefined, Value};
 use async_trait::async_trait;
+use derive_new::new;
 #[cfg(test)]
 use mockall::automock;
 use nakago::{inject, Inject, Provider, Tag};
+use nakago_axum::utils::{ManyResponse, Ordering};
 use nakago_derive::Provider;
 use nakago_sea_orm::{DatabaseConnection, CONNECTION};
 use sea_orm::{entity::*, query::*, EntityTrait};
 
-use crate::{
-    domains::users::model as user_model,
-    utils::{ordering::Ordering, pagination::ManyResponse},
-};
+use crate::domains::users::model as user_model;
 
 use super::{
     model::{self, Profile, ProfileList, ProfileOption},
-    mutations::{CreateProfileInput, UpdateProfileInput},
-    queries::{ProfileCondition, ProfilesOrderBy},
+    mutation::{CreateProfileInput, UpdateProfileInput},
+    query::{ProfileCondition, ProfilesOrderBy},
 };
 
 /// Tag(profiles::Service)
@@ -71,17 +70,10 @@ pub trait Service: Sync + Send {
 }
 
 /// The default `Service` struct
+#[derive(new)]
 pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
-}
-
-/// The default `Service` implementation
-impl DefaultService {
-    /// Create a new `Service` instance
-    pub fn new(db: Arc<DatabaseConnection>) -> Self {
-        Self { db }
-    }
 }
 
 #[async_trait]

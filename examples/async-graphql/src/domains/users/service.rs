@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use derive_new::new;
 #[cfg(test)]
 use mockall::automock;
 use nakago::{inject, Inject, Provider, Tag};
@@ -11,7 +12,7 @@ use sea_orm::{entity::*, query::*, EntityTrait};
 
 use super::{
     model::{self, User, UserOption},
-    mutations::UpdateUserInput,
+    mutation::UpdateUserInput,
 };
 use crate::domains::role_grants::model as role_grant_model;
 
@@ -45,17 +46,10 @@ pub trait Service: Sync + Send {
 }
 
 /// The default `Service` implementation
+#[derive(new)]
 pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
-}
-
-/// The default `Service` implementation
-impl DefaultService {
-    /// Create a new `DefaultService` instance
-    pub fn new(db: Arc<DatabaseConnection>) -> Self {
-        Self { db }
-    }
 }
 
 #[async_trait]

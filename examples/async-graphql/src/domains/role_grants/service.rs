@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use derive_new::new;
 #[cfg(test)]
 use mockall::automock;
 use nakago::{inject, Inject, Provider, Tag};
@@ -32,17 +33,10 @@ pub trait Service: Sync + Send {
 }
 
 /// The default `Service` struct.
+#[derive(new)]
 pub struct DefaultService {
     /// The SeaOrm database connection
     db: Arc<DatabaseConnection>,
-}
-
-/// The default `Service` implementation
-impl DefaultService {
-    /// Create a new `Service` instance
-    pub fn new(db: Arc<DatabaseConnection>) -> Self {
-        Self { db }
-    }
 }
 
 #[async_trait]

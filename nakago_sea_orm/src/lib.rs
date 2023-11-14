@@ -7,7 +7,7 @@ pub mod connection;
 /// Database Config
 pub mod config;
 
-pub use config::{default_config_loaders, Config, DatabasePool, Loader};
+pub use config::{Config, DatabasePool};
 pub use connection::CONNECTION;
 
 // Re-exports

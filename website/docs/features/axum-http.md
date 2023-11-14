@@ -6,6 +6,10 @@ sidebar_position: 3
 
 The `nakago-axum` crate defines `AxumApplication`, which wraps `Application` and provides a way to Run an HTTP service and use the `Inject` container via Axum's `State` mechanism.
 
+## Dependencies vs. Context
+
+Axum provides the State extractor that allows you to inject dependencies that stay the same across many requests. For Nakago applications, however, your dependencies are provided through the Inject container. Nakago Axum apps use State to automatically carry the Inject container, but in a way that you don't have to think about while building typicaly applications.
+
 ## Application Lifecycle
 
 ### Init
@@ -18,11 +22,99 @@ The `Startup` Hook for an Axum Application uses the State with the provided Rout
 
 ## Routes
 
-Routes are initialized on Init. They have access to an Axum State extractor that pulls the `Inject` container in to be used within handlers. This approach is similar to Async-GraphQL's [data facility](https://async-graphql.github.io/async-graphql/en/context.html#store-data).
+Routes are initialized on Init. There are multiple options for how to implement handlers and access their Dependencies. The approach with the smoothest Nakago integration also has the benefit of allowing you to define Controller structs with methods that can be used as handlers, allowing you to share common dependencies between related Axum request handlers.
 
-### Handlers
+### Controllers
 
-Here's an example of a route handler that needs access to the Inject container to retrieve a Users Service and a WebSocket connection handler::
+Start with a hypothetical Controller for a WebSocket connection, that will handle requests to upgrade an HTTP request to a WebSocket connection:
+
+```rust
+pub const CONTROLLER: Tag<Controller> = Tag::new("events::Controller");
+
+#[derive(Clone)]
+pub struct Controller {
+    users: Arc<Box<dyn users::Service>>,
+    handler: Arc<socket::Handler>,
+}
+```
+
+It has a dependency on the Users Service and the Socket Handler, which are both used within the "upgrade()" method:
+
+```rust
+impl Controller {
+    /// Create a new Events handler
+    pub async fn upgrade(
+        self: Arc<Self>,
+        sub: Subject,
+        ws: WebSocketUpgrade,
+    ) -> axum::response::Result<impl IntoResponse> {
+        // Retrieve the request User, if username is present
+        let user = if let Subject(Some(ref username)) = sub {
+            self.users
+                .get_by_username(username, &true)
+                .await
+                .unwrap_or(None)
+        } else {
+            None
+        };
+
+        Ok(ws.on_upgrade(|socket| async move { self.handler.handle(socket, user).await }))
+    }
+}
+```
+
+As you can see, standard Axum extractors like `Subject` are usable within the Controller methods, and the Controller can use `self` to access Dependencies and complete the work it needs to do. Other methods can be added that share the same dependencies, organized around a common business domain or other focus.
+
+Couple this with a Provider that can be used to inject the dependency:
+
+```rust
+#[derive(Default)]
+pub struct Provide {}
+
+#[Provider]
+#[async_trait]
+impl Provider<Controller> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Controller>> {
+        let users = i.get(&users::SERVICE).await?;
+        let handler = i.get(&socket::HANDLER).await?;
+
+        Ok(Arc::new(Controller { users, handler }))
+    }
+}
+```
+
+The route can then be initialized with an Init hook:
+
+```rust
+#[derive(Default)]
+pub struct Init {}
+
+#[async_trait]
+impl Hook for Init {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        let events_controller = i.get(&events::CONTROLLER).await?;
+
+        i.handle(routes::Init::new(
+            Method::GET,
+            "/events",
+            move |sub, ws| async move {
+                events::Controller::upgrade(events_controller, sub, ws).await
+            },
+        ))
+        .await?;
+
+        Ok(())
+    }
+}
+```
+
+The `move |sub, ws| async move {}` function is a necessary shim to wrap the method to use it as a handler.
+
+### Functional Handlers
+
+Functional handlers eschew the typical Nakago approach of using a struct with Dependencies on the `self` instance, and instead use async functions with access to an Axum State extractor that pulls the `Inject` container out of the State.
+
+Here's an example of a route handler implemented as an async function that uses the Inject container to retrieve a Users Service and a WebSocket connection handler::
 
 ```rust
 use nakago_axum::{auth::Subject, Error, Inject};
@@ -48,15 +140,26 @@ pub async fn upgrade(
 
 The `Inject` extractor from the `nakago_axum` package is used to retrieve the `Inject` container from the State. This container is then used to retrieve the `users::SERVICE` and `socket::HANDLER` services from the container, mapping the errors to the special `nakago_axum:Error` wrapper that works as an Axum response.
 
-### Routing
-
-Then, to init a Route you pass the HTTP method, path, and handler to the `routes::Init` Hook:
+Then you can initialize the route in an Init hook:
 
 ```rust
-app.on(&EventType::Init, routes::Init::new(Method::GET, "/events", events::upgrade));
-```
+#[derive(Default)]
+pub struct Init {}
 
-This merges the route into the top-level Axum route for the application, mapping requests on `/events` with a GET method to the `events::upgrade` handler.
+#[async_trait]
+impl Hook for Init {
+    async fn handle(&self, _i: Inject) -> inject::Result<()> {
+        i.handle(routes::Init::new(
+            Method::GET,
+            "/events",
+            events::upgrade,
+        ))
+        .await?;
+
+        Ok(())
+    }
+}
+```
 
 ## Starting the Application
 
@@ -64,8 +167,9 @@ To start your application, pass in your top-level Config type and create an inst
 
 ```rust
 let mut app = AxumApplication::<Config>::default();
-app.on(&EventType::Load, users::schema::Load::default());
 app.on(&EventType::Load, authz::Load::default());
+app.on(&EventType::Load, graphql::Load::default());
+app.on(&EventType::Init, graphql::Init::default());
 ```
 
 Then, use `run` to start the application and return the connection details.

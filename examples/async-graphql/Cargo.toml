@@ -19,6 +19,7 @@ async-graphql-axum = "6.0"
 async-trait = "0.1"
 axum = { version = "0.6", features = ["ws", "macros"] }
 chrono = { version = "0.4.19", features = ["serde"] }
+derive-new = "0.5"
 fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
@@ -27,8 +28,8 @@ log = "0.4"
 nakago = "0.14"
 nakago-axum = "0.14"
 nakago-derive = "0.8"
-nakago-sea-orm = "0.13"
-nakago-async-graphql = "0.14"
+nakago-sea-orm = "0.14"
+nakago-async-graphql = "0.15"
 oso = "0.27"
 pico-args = "0.5.0"
 pretty_env_logger = "0.5"

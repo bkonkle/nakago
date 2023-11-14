@@ -1,16 +1,28 @@
-use async_graphql::{Enum, InputObject, SimpleObject};
+use std::sync::Arc;
 
-use crate::{
-    domains::shows::model::{self, Show},
-    utils::{
-        ordering::Ordering::{self, Asc, Desc},
-        pagination::ManyResponse,
-    },
+use async_graphql::{Context, Enum, InputObject, Object, Result, SimpleObject};
+use async_trait::async_trait;
+use derive_new::new;
+use hyper::StatusCode;
+use nakago::{inject, Inject, Provider, Tag};
+use nakago_async_graphql::utils::as_graphql_error;
+use nakago_axum::utils::{
+    ManyResponse,
+    Ordering::{self, Asc, Desc},
+};
+use nakago_derive::Provider;
+
+use super::{
+    model::{self, Show},
+    Service, SERVICE,
 };
 
 use ShowsOrderBy::{
     CreatedAtAsc, CreatedAtDesc, IdAsc, IdDesc, TitleAsc, TitleDesc, UpdatedAtAsc, UpdatedAtDesc,
 };
+
+/// Tag(shows::Query)
+pub const QUERY: Tag<ShowsQuery> = Tag::new("shows::Query");
 
 /// The `ShowsPage` result type
 #[derive(Clone, Eq, PartialEq, SimpleObject)]
@@ -86,5 +98,58 @@ impl From<ShowsOrderBy> for Ordering<model::Column> {
             CreatedAtDesc => Desc(model::Column::CreatedAt),
             UpdatedAtDesc => Desc(model::Column::UpdatedAt),
         }
+    }
+}
+
+/// The Query segment owned by the Shows library
+#[derive(new)]
+pub struct ShowsQuery {
+    service: Arc<Box<dyn Service>>,
+}
+
+/// Queries for the `Show` model
+#[Object]
+impl ShowsQuery {
+    async fn get_show(
+        &self,
+        _ctx: &Context<'_>,
+        #[graphql(desc = "The Show id")] id: String,
+    ) -> Result<Option<Show>> {
+        Ok(self.service.get(&id).await?)
+    }
+
+    /// Get multiple Shows
+    async fn get_many_shows(
+        &self,
+        _ctx: &Context<'_>,
+        r#where: Option<ShowCondition>,
+        order_by: Option<Vec<ShowsOrderBy>>,
+        page: Option<u64>,
+        page_size: Option<u64>,
+    ) -> Result<ShowsPage> {
+        let response = self
+            .service
+            .get_many(r#where, order_by, page, page_size)
+            .await
+            .map_err(as_graphql_error(
+                "Error while listing Shows",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))?;
+
+        Ok(response.into())
+    }
+}
+
+/// Provide the ShowsQuery
+#[derive(Default)]
+pub struct Provide {}
+
+#[Provider]
+#[async_trait]
+impl Provider<ShowsQuery> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<ShowsQuery>> {
+        let service = i.get(&SERVICE).await?;
+
+        Ok(Arc::new(ShowsQuery::new(service)))
     }
 }

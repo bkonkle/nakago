@@ -2,18 +2,16 @@ use anyhow::Result;
 use async_graphql::MaybeUndefined;
 use fake::{Fake, Faker};
 use nakago::{inject, Inject};
+use nakago_axum::utils::ManyResponse;
 use nakago_sea_orm::{connection, CONNECTION};
 use pretty_assertions::assert_eq;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction, Value};
 
-use crate::{
-    domains::shows::{
-        model::Show,
-        mutations::{CreateShowInput, UpdateShowInput},
-        queries::{ShowCondition, ShowsOrderBy},
-        service::{self, SERVICE},
-    },
-    utils::pagination::ManyResponse,
+use crate::domains::shows::{
+    model::Show,
+    mutation::{CreateShowInput, UpdateShowInput},
+    query::{ShowCondition, ShowsOrderBy},
+    service::{self, SERVICE},
 };
 
 async fn setup(db: MockDatabase) -> inject::Result<Inject> {

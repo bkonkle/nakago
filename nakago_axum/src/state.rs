@@ -5,19 +5,13 @@ use std::{
 
 use async_trait::async_trait;
 use axum::extract::FromRequestParts;
+use derive_new::new;
 use http::request::Parts;
 
-#[derive(Clone)]
+#[derive(Clone, new)]
 /// Axum State used to carry the injection container
 pub struct State {
     i: nakago::Inject,
-}
-
-impl State {
-    /// Create a new State instance
-    pub fn new(i: nakago::Inject) -> Self {
-        Self { i }
-    }
 }
 
 impl Deref for State {

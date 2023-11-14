@@ -16,11 +16,8 @@ pub mod events;
 /// Application domains
 pub mod domains;
 
-/// Application utils
-mod utils;
-
-/// GraphQL utils
-mod graphql;
+/// Authorization
+pub mod authz;
 
 /// Error macros
 #[macro_use]

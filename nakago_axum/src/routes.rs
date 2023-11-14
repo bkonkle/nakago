@@ -27,15 +27,6 @@ pub struct Init<H, T> {
     _phantom: PhantomData<T>,
 }
 
-// top_level_handler_fn!(delete, DELETE);
-// top_level_handler_fn!(get, GET);
-// top_level_handler_fn!(head, HEAD);
-// top_level_handler_fn!(options, OPTIONS);
-// top_level_handler_fn!(patch, PATCH);
-// top_level_handler_fn!(post, POST);
-// top_level_handler_fn!(put, PUT);
-// top_level_handler_fn!(trace, TRACE);
-
 impl<H, T> Init<H, T> {
     /// Create a new Init instance
     pub fn new(method: Method, path: &str, handler: H) -> Self {

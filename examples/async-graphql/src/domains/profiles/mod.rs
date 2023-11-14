@@ -8,13 +8,10 @@ pub mod loaders;
 pub mod model;
 
 /// GraphQL Mutations
-pub mod mutations;
+pub mod mutation;
 
 /// GraphQL Queries
-pub mod queries;
-
-/// GraphQL Resolver
-pub mod resolver;
+pub mod query;
 
 /// GraphQL Schema
 pub mod schema;
@@ -30,5 +27,6 @@ pub const AUTHORIZATION: &str = include_str!("authorization.polar");
 mod tests;
 
 pub use loaders::{Loader, LOADER};
-pub use resolver::{ProfilesMutation as Mutation, ProfilesQuery as Query};
+pub use mutation::{ProfilesMutation as Mutation, MUTATION};
+pub use query::{ProfilesQuery as Query, QUERY};
 pub use service::{Service, SERVICE};

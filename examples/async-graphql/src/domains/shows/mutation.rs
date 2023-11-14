@@ -1,65 +1,77 @@
+use async_graphql::{InputObject, MaybeUndefined, SimpleObject};
+use async_trait::async_trait;
+use fake::{Dummy, Faker};
+use nakago::{inject, Inject, Provider, Tag};
+use nakago_async_graphql::utils::dummy_maybe_undef;
+use nakago_derive::Provider;
+use rand::Rng;
+
+use super::{model::Show, Service, SERVICE};
+
+/// Tag(shows::Mutation)
+pub const MUTATION: Tag<ShowsMutation> = Tag::new("shows::Mutation");
+
+/// The `CreateShowInput` input type
+#[derive(Clone, Default, Dummy, Eq, PartialEq, InputObject)]
+pub struct CreateShowInput {
+    /// The Show's title
+    pub title: String,
+
+    /// The Show's description summary
+    pub summary: Option<String>,
+
+    /// The Show's picture
+    pub picture: Option<String>,
+}
+
+/// The `UpdateShowInput` input type
+#[derive(Clone, Default, Eq, PartialEq, InputObject)]
+pub struct UpdateShowInput {
+    /// The Show's title
+    pub title: MaybeUndefined<String>,
+
+    /// The Show's description summary
+    pub summary: MaybeUndefined<String>,
+
+    /// The Show's picture
+    pub picture: MaybeUndefined<String>,
+}
+
+impl Dummy<Faker> for UpdateShowInput {
+    fn dummy_with_rng<R: Rng + ?Sized>(config: &Faker, rng: &mut R) -> Self {
+        UpdateShowInput {
+            title: dummy_maybe_undef(config, rng),
+            summary: dummy_maybe_undef(config, rng),
+            picture: dummy_maybe_undef(config, rng),
+        }
+    }
+}
+
+/// The `MutateShowResult` type
+#[derive(Clone, Default, Dummy, Eq, PartialEq, SimpleObject)]
+pub struct MutateShowResult {
+    /// The Show's subscriber id
+    pub show: Option<Show>,
+}
+
 use std::sync::Arc;
 
 use async_graphql::{Context, Object, Result};
+use derive_new::new;
 use hyper::StatusCode;
+use nakago_async_graphql::utils::{as_graphql_error, graphql_error};
 use oso::Oso;
 
-use crate::{
-    domains::{
-        role_grants::{self, model::CreateRoleGrantInput},
-        shows::{
-            model::Show,
-            mutations::{CreateShowInput, MutateShowResult, UpdateShowInput},
-            queries::{ShowCondition, ShowsOrderBy, ShowsPage},
-            Service,
-        },
-        users::model::User,
-    },
-    utils::graphql::{as_graphql_error, graphql_error},
+use crate::domains::{
+    role_grants::{self, model::CreateRoleGrantInput},
+    users::model::User,
 };
 
-/// The Query segment owned by the Shows library
-#[derive(Default)]
-pub struct ShowsQuery {}
-
 /// The Mutation segment for Shows
-#[derive(Default)]
-pub struct ShowsMutation {}
-
-/// Queries for the `Show` model
-#[Object]
-impl ShowsQuery {
-    async fn get_show(
-        &self,
-        ctx: &Context<'_>,
-        #[graphql(desc = "The Show id")] id: String,
-    ) -> Result<Option<Show>> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
-
-        Ok(shows.get(&id).await?)
-    }
-
-    /// Get multiple Shows
-    async fn get_many_shows(
-        &self,
-        ctx: &Context<'_>,
-        r#where: Option<ShowCondition>,
-        order_by: Option<Vec<ShowsOrderBy>>,
-        page: Option<u64>,
-        page_size: Option<u64>,
-    ) -> Result<ShowsPage> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
-
-        let response = shows
-            .get_many(r#where, order_by, page, page_size)
-            .await
-            .map_err(as_graphql_error(
-                "Error while listing Shows",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            ))?;
-
-        Ok(response.into())
-    }
+#[derive(new)]
+pub struct ShowsMutation {
+    service: Arc<Box<dyn Service>>,
+    role_grants: Arc<Box<dyn role_grants::Service>>,
 }
 
 /// Mutations for the Show model
@@ -71,19 +83,17 @@ impl ShowsMutation {
         ctx: &Context<'_>,
         input: CreateShowInput,
     ) -> Result<MutateShowResult> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
-        let role_grants = ctx.data_unchecked::<Arc<Box<dyn role_grants::Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
 
         // Check authorization
         if let Some(user) = user {
-            let show = shows.create(&input).await.map_err(as_graphql_error(
+            let show = self.service.create(&input).await.map_err(as_graphql_error(
                 "Error while creating Show",
                 StatusCode::INTERNAL_SERVER_ERROR,
             ))?;
 
             // Grant the Admin role to the creator
-            role_grants
+            self.role_grants
                 .create(&CreateRoleGrantInput {
                     role_key: "admin".to_string(),
                     user_id: user.id.clone(),
@@ -109,12 +119,12 @@ impl ShowsMutation {
         id: String,
         input: UpdateShowInput,
     ) -> Result<MutateShowResult> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
         // Retrieve the existing Show for authorization
-        let existing = shows
+        let existing = self
+            .service
             .get(&id)
             .await
             .map_err(as_graphql_error(
@@ -132,22 +142,26 @@ impl ShowsMutation {
             return Err(graphql_error("Unauthorized", StatusCode::UNAUTHORIZED));
         }
 
-        let show = shows.update(&id, &input).await.map_err(as_graphql_error(
-            "Error while updating Show",
-            StatusCode::INTERNAL_SERVER_ERROR,
-        ))?;
+        let show = self
+            .service
+            .update(&id, &input)
+            .await
+            .map_err(as_graphql_error(
+                "Error while updating Show",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))?;
 
         Ok(MutateShowResult { show: Some(show) })
     }
 
     /// Remove an existing Show
     async fn delete_show(&self, ctx: &Context<'_>, id: String) -> Result<bool> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
         // Retrieve the existing Show for authorization
-        let existing = shows
+        let existing = self
+            .service
             .get(&id)
             .await
             .map_err(as_graphql_error(
@@ -165,11 +179,26 @@ impl ShowsMutation {
             return Err(graphql_error("Unauthorized", StatusCode::UNAUTHORIZED));
         }
 
-        shows.delete(&id).await.map_err(as_graphql_error(
+        self.service.delete(&id).await.map_err(as_graphql_error(
             "Error while deleting Show",
             StatusCode::INTERNAL_SERVER_ERROR,
         ))?;
 
         Ok(true)
+    }
+}
+
+/// Provide the ShowsMutation
+#[derive(Default)]
+pub struct Provide {}
+
+#[Provider]
+#[async_trait]
+impl Provider<ShowsMutation> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<ShowsMutation>> {
+        let service = i.get(&SERVICE).await?;
+        let role_grants = i.get(&role_grants::SERVICE).await?;
+
+        Ok(Arc::new(ShowsMutation::new(service, role_grants)))
     }
 }

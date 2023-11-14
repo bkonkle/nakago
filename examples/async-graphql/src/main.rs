@@ -6,13 +6,12 @@ use std::path::PathBuf;
 use log::info;
 use pico_args::{Arguments, Error};
 
+mod authz;
 mod config;
 mod domains;
 mod events;
-mod graphql;
 mod http;
 mod init;
-mod utils;
 
 /// Error macros
 #[macro_use]

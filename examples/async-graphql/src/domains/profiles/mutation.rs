@@ -1,92 +1,93 @@
 use std::sync::Arc;
 
-use async_graphql::{dataloader::DataLoader, ComplexObject, Context, Object, Result};
+use async_graphql::{
+    dataloader::DataLoader, ComplexObject, Context, InputObject, MaybeUndefined, Object, Result,
+    SimpleObject,
+};
+use async_trait::async_trait;
+use derive_new::new;
+use fake::{faker::internet::en::FreeEmail, Dummy, Fake, Faker};
 use hyper::StatusCode;
+use nakago::{inject, Inject, Provider, Tag};
+use nakago_async_graphql::utils::{as_graphql_error, dummy_maybe_undef, graphql_error};
+use nakago_derive::Provider;
+use rand::Rng;
 
-use crate::{
-    domains::users::{self, model::User},
-    utils::graphql::{as_graphql_error, graphql_error},
-};
+use crate::domains::users::{self, model::User};
 
-use super::{
-    model::Profile,
-    mutations::{CreateProfileInput, MutateProfileResult, UpdateProfileInput},
-    queries::{ProfileCondition, ProfilesOrderBy, ProfilesPage},
-    Service,
-};
+use super::{model::Profile, Service, SERVICE};
 
-/// The Query segment for Profiles
-#[derive(Default)]
-pub struct ProfilesQuery {}
+/// Tag(profiles::Mutation)
+pub const MUTATION: Tag<ProfilesMutation> = Tag::new("profiles::Mutation");
+
+/// The `CreateProfileInput` input type
+#[derive(Clone, Default, Dummy, Eq, PartialEq, InputObject)]
+pub struct CreateProfileInput {
+    /// The Profile's email address
+    pub email: String,
+
+    /// The Profile's display name
+    pub display_name: Option<String>,
+
+    /// The Profile's picture
+    pub picture: Option<String>,
+
+    /// The Profile's city
+    pub city: Option<String>,
+
+    /// The Profile's state or province
+    pub state_province: Option<String>,
+
+    /// The Profile's User id
+    pub user_id: String,
+}
+
+/// The `UpdateProfileInput` input type
+#[derive(Clone, Default, Eq, PartialEq, InputObject)]
+pub struct UpdateProfileInput {
+    /// The Profile's email address
+    pub email: Option<String>,
+
+    /// The Profile's display name
+    pub display_name: MaybeUndefined<String>,
+
+    /// The Profile's picture
+    pub picture: MaybeUndefined<String>,
+
+    /// The Profile's city
+    pub city: MaybeUndefined<String>,
+
+    /// The Profile's state or province
+    pub state_province: MaybeUndefined<String>,
+
+    /// The Profile's User id
+    pub user_id: Option<String>,
+}
+
+impl Dummy<Faker> for UpdateProfileInput {
+    fn dummy_with_rng<R: Rng + ?Sized>(config: &Faker, rng: &mut R) -> Self {
+        UpdateProfileInput {
+            email: FreeEmail().fake(),
+            display_name: dummy_maybe_undef(config, rng),
+            picture: dummy_maybe_undef(config, rng),
+            city: dummy_maybe_undef(config, rng),
+            state_province: dummy_maybe_undef(config, rng),
+            user_id: Faker.fake(),
+        }
+    }
+}
+
+/// The `MutateProfileResult` type
+#[derive(Clone, Default, Dummy, Eq, PartialEq, SimpleObject)]
+pub struct MutateProfileResult {
+    /// The Profile's subscriber id
+    pub profile: Option<Profile>,
+}
 
 /// The Mutation segment for Profiles
-#[derive(Default)]
-pub struct ProfilesMutation {}
-
-/// Queries for the `Profile` model
-#[Object]
-impl ProfilesQuery {
-    /// Get a single Profile
-    async fn get_profile(&self, ctx: &Context<'_>, id: String) -> Result<Option<Profile>> {
-        let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
-
-        // Check to see if the associated User is selected
-        let with_user = ctx.look_ahead().field("user").exists();
-
-        let profile = profiles.get(&id, &with_user).await?;
-
-        // Use the request User to decide if the Profile should be censored
-        let censored = match user {
-            Some(user) => {
-                let user_id = user.id.clone();
-
-                // If the User and Profile are present, censor the Profile based on the User id
-                profile.map(|p| {
-                    Profile {
-                        user: Some(user.clone()),
-                        ..p
-                    }
-                    .censor(&Some(user_id))
-                })
-            }
-            // If the User is absent, always censor the Profile
-            None => profile.map(|p| p.censor(&None)),
-        };
-
-        Ok(censored)
-    }
-
-    /// Get multiple Profiles
-    async fn get_many_profiles(
-        &self,
-        ctx: &Context<'_>,
-        r#where: Option<ProfileCondition>,
-        order_by: Option<Vec<ProfilesOrderBy>>,
-        page: Option<u64>,
-        page_size: Option<u64>,
-    ) -> Result<ProfilesPage> {
-        let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
-
-        // Retrieve the current request User id for authorization
-        let user_id = user.clone().map(|u| u.id);
-
-        // Check to see if the associated User is selected
-        let with_user = ctx.look_ahead().field("data").field("user").exists();
-
-        let response = profiles
-            .get_many(r#where, order_by, page, page_size, &with_user)
-            .await
-            .map_err(as_graphql_error(
-                "Error while listing Profiles",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            ))?;
-
-        let censored = response.map(|p| p.censor(&user_id));
-
-        Ok(censored.into())
-    }
+#[derive(new)]
+pub struct ProfilesMutation {
+    service: Arc<Box<dyn Service>>,
 }
 
 /// Mutations for the Profile model
@@ -99,7 +100,6 @@ impl ProfilesMutation {
         input: CreateProfileInput,
     ) -> Result<MutateProfileResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Retrieve the current request User id for authorization
         let user_id = user.clone().map(|u| u.id);
@@ -117,7 +117,8 @@ impl ProfilesMutation {
         // Check to see if the associated User is selected
         let with_user = ctx.look_ahead().field("profile").field("user").exists();
 
-        let profile = profiles
+        let profile = self
+            .service
             .create(&input, &with_user)
             .await
             .map_err(as_graphql_error(
@@ -138,10 +139,10 @@ impl ProfilesMutation {
         input: UpdateProfileInput,
     ) -> Result<MutateProfileResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Retrieve the existing Profile for authorization
-        let existing = profiles
+        let existing = self
+            .service
             .get(&id, &true)
             .await
             .map_err(as_graphql_error(
@@ -169,7 +170,8 @@ impl ProfilesMutation {
         let with_user = ctx.look_ahead().field("profile").field("user").exists();
 
         // Use the already retrieved Profile to update the record
-        let profile = profiles
+        let profile = self
+            .service
             .update(&existing.id, &input, &with_user)
             .await
             .map_err(as_graphql_error(
@@ -185,10 +187,10 @@ impl ProfilesMutation {
     /// Remove an existing Profile
     async fn delete_profile(&self, ctx: &Context<'_>, id: String) -> Result<bool> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Retrieve the existing Profile for authorization
-        let existing = profiles
+        let existing = self
+            .service
             .get(&id, &true)
             .await
             .map_err(as_graphql_error(
@@ -212,7 +214,7 @@ impl ProfilesMutation {
             return Err(graphql_error("Unauthorized", StatusCode::UNAUTHORIZED));
         }
 
-        profiles.delete(&id).await.map_err(as_graphql_error(
+        self.service.delete(&id).await.map_err(as_graphql_error(
             "Error while deleting Profile",
             StatusCode::INTERNAL_SERVER_ERROR,
         ))?;
@@ -237,5 +239,19 @@ impl Profile {
         }
 
         Ok(None)
+    }
+}
+
+/// Provide the ProfilesMutation
+#[derive(Default)]
+pub struct Provide {}
+
+#[Provider]
+#[async_trait]
+impl Provider<ProfilesMutation> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<ProfilesMutation>> {
+        let service = i.get(&SERVICE).await?;
+
+        Ok(Arc::new(ProfilesMutation::new(service)))
     }
 }

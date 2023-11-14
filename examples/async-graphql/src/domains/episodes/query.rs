@@ -1,16 +1,29 @@
-use async_graphql::{Enum, InputObject, SimpleObject};
+use std::sync::Arc;
 
-use crate::utils::{
-    ordering::Ordering::{self, Asc, Desc},
-    pagination::ManyResponse,
+use async_graphql::{Context, Enum, InputObject, Object, Result, SimpleObject};
+use async_trait::async_trait;
+use derive_new::new;
+use hyper::StatusCode;
+use nakago::{inject, Inject, Provider, Tag};
+use nakago_async_graphql::utils::as_graphql_error;
+use nakago_axum::utils::{
+    ManyResponse,
+    Ordering::{self, Asc, Desc},
 };
+use nakago_derive::Provider;
 
-use super::model::{self, Episode};
+use super::{
+    model::{self, Episode},
+    Service, SERVICE,
+};
 
 use EpisodesOrderBy::{
     CreatedAtAsc, CreatedAtDesc, IdAsc, IdDesc, ShowIdAsc, ShowIdDesc, TitleAsc, TitleDesc,
     UpdatedAtAsc, UpdatedAtDesc,
 };
+
+/// Tag(episodes::Query)
+pub const QUERY: Tag<EpisodesQuery> = Tag::new("episodes::Query");
 
 /// The `EpisodesPage` result type
 #[derive(Clone, Eq, PartialEq, SimpleObject)]
@@ -95,5 +108,71 @@ impl From<EpisodesOrderBy> for Ordering<model::Column> {
             CreatedAtDesc => Desc(model::Column::CreatedAt),
             UpdatedAtDesc => Desc(model::Column::UpdatedAt),
         }
+    }
+}
+
+/// The Query segment owned by the Episodes library
+#[derive(new)]
+pub struct EpisodesQuery {
+    service: Arc<Box<dyn Service>>,
+}
+
+/// Queries for the `Episode` model
+#[Object]
+impl EpisodesQuery {
+    /// Get a sincle Episode
+    pub async fn get_episode(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(desc = "The Episode id")] id: String,
+    ) -> Result<Option<Episode>> {
+        // Check to see if the associated Show is selected
+        let with_show = ctx.look_ahead().field("show").exists();
+
+        self.service
+            .get(&id, &with_show)
+            .await
+            .map_err(as_graphql_error(
+                "Error while retrieving Episode",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+    }
+
+    /// Get multiple Episodes
+    pub async fn get_many_episodes(
+        &self,
+        ctx: &Context<'_>,
+        r#where: Option<EpisodeCondition>,
+        order_by: Option<Vec<EpisodesOrderBy>>,
+        page: Option<u64>,
+        page_size: Option<u64>,
+    ) -> Result<EpisodesPage> {
+        // Check to see if the associated Show is selected
+        let with_show = ctx.look_ahead().field("data").field("show").exists();
+
+        let response = self
+            .service
+            .get_many(r#where, order_by, page, page_size, &with_show)
+            .await
+            .map_err(as_graphql_error(
+                "Error while listing Episodes",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))?;
+
+        Ok(response.into())
+    }
+}
+
+/// Provide the EpisodesQuery
+#[derive(Default)]
+pub struct Provide {}
+
+#[Provider]
+#[async_trait]
+impl Provider<EpisodesQuery> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<EpisodesQuery>> {
+        let service = i.get(&SERVICE).await?;
+
+        Ok(Arc::new(EpisodesQuery::new(service)))
     }
 }

@@ -1,6 +1,7 @@
 use std::{marker::PhantomData, path::PathBuf, sync::Arc};
 
 use async_trait::async_trait;
+use derive_new::new;
 
 use crate::{inject, Hook, Inject, InjectError, Tag};
 
@@ -13,15 +14,9 @@ pub const LOADERS: Tag<Vec<Arc<dyn Loader>>> = Tag::new("config::Loaders");
 ///
 /// **Provides or Modifies:**
 ///   - `Tag(config::Loaders)`
+#[derive(new)]
 pub struct AddLoaders {
     loaders: Vec<Arc<dyn Loader>>,
-}
-
-impl AddLoaders {
-    /// Create a new AddLoaders instance
-    pub fn new(loaders: Vec<Arc<dyn Loader>>) -> Self {
-        Self { loaders }
-    }
 }
 
 #[async_trait]

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::extract::ws::WebSocket;
+use derive_new::new;
 use futures::{SinkExt, StreamExt, TryFutureExt};
 use log::error;
 use nakago::{inject, Inject, Provider, Tag};
@@ -25,17 +26,12 @@ use super::{
 pub const HANDLER: Tag<Handler> = Tag::new("socket::Handler");
 
 /// WebSocket Event Handler
-#[derive(Clone)]
+#[derive(Clone, new)]
 pub struct Handler {
     connections: Arc<Connections>,
 }
 
 impl Handler {
-    /// Create a new Event Handler instance with dependencies
-    pub fn new(connections: Arc<Connections>) -> Self {
-        Self { connections }
-    }
-
     /// Handle `WebSocket` connections by setting up a message handler that deserializes them and
     /// determines how to handle
     pub async fn handle(&self, socket: WebSocket, user: Option<User>) {
