@@ -44,11 +44,9 @@ jobs:
         if: ${{ inputs.upload-dist-archive }}
 
       - name: cargo xtask dist
-        uses: actions-rs/cargo@v1
+        run: cargo xtask dist --use-cross-if-needed --target ${{ matrix.job.target }}
         with:
-          command: xtask
           toolchain: ${{ matrix.rust }}
-          args: dist --use-cross-if-needed --target ${{ matrix.job.target }}
         if: ${{ inputs.upload-dist-archive }}
 
       - name: Upload binaries as artifacts
