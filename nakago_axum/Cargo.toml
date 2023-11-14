@@ -1,6 +1,6 @@
 [package]
 name = "nakago-axum"
-version = "0.14.0"
+version = "0.14.1"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "An Axum HTTP routes integration for Nakago"

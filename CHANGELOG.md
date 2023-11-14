@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.1]
+
+### Added
+
+- `nakago-axum`: Add a default Axum `AddLoaders` struct that wraps the base `nakago::config::AddLoaders` struct.
+- `nakago-sea`: Add a default SeaOrm `AddLoaders` struct that wraps the base `nakago::config::AddLoaders` struct.
+
+### Changed
+
+- `nakago`: Introduced the `derive-new` crate and used it in a few places.
+- `nakago-axum`: Introduced the `derive-new` crate and used it in a few places.
+
 ## [0.14.0]
 
 ### Changed
@@ -210,6 +222,7 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
+[0.14.1]: https://github.com/bkonkle/nakago/compare/0.14.0...0.14.1
 [0.14.0]: https://github.com/bkonkle/nakago/compare/0.13.0...0.14.0
 [0.13.0]: https://github.com/bkonkle/nakago/compare/0.12.2...0.13.0
 [0.12.2]: https://github.com/bkonkle/nakago/compare/0.12.1...0.12.2
