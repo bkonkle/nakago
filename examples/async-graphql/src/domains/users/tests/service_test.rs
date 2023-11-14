@@ -7,7 +7,7 @@ use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction};
 
 use crate::domains::users::{
     model::User,
-    mutations::UpdateUserInput,
+    mutation::UpdateUserInput,
     service::{self, SERVICE},
 };
 

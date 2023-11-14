@@ -10,8 +10,8 @@ use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction};
 use crate::domains::{
     profiles::{
         model::{Model, ProfileList},
-        mutations::{CreateProfileInput, UpdateProfileInput},
-        queries::{ProfileCondition, ProfilesOrderBy},
+        mutation::{CreateProfileInput, UpdateProfileInput},
+        query::{ProfileCondition, ProfilesOrderBy},
         service::{self, SERVICE},
     },
     users::model::User,

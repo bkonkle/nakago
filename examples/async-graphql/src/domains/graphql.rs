@@ -1,10 +1,7 @@
-use std::sync::Arc;
-
 use async_graphql::{self, EmptySubscription, MergedObject};
 use async_trait::async_trait;
-use nakago::{inject, Hook, Inject, Provider, Tag};
+use nakago::{inject, Hook, Inject, Tag};
 use nakago_async_graphql::schema;
-use nakago_derive::Provider;
 
 use crate::{authz::OSO, config::CONFIG};
 
@@ -35,43 +32,6 @@ pub const SCHEMA: Tag<Schema> = Tag::new("graphql::Schema");
 /// Tag(graphql::SchemaBuilder)
 pub const SCHEMA_BUILDER: Tag<SchemaBuilder> = Tag::new("graphql::SchemaBuilder");
 
-/// Provide the SchemaBuilder
-#[derive(Default)]
-pub struct Provide {}
-
-#[Provider]
-#[async_trait]
-impl Provider<SchemaBuilder> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<SchemaBuilder>> {
-        let users_service = i.get(&users::SERVICE).await?;
-        let profiles_service = i.get(&profiles::SERVICE).await?;
-        let role_grants_service = i.get(&role_grants::SERVICE).await?;
-        let shows_service = i.get(&shows::SERVICE).await?;
-        let episodes_service = i.get(&episodes::SERVICE).await?;
-
-        let users_query = users::Query::default();
-        let profiles_query = profiles::Query::new(profiles_service.clone());
-        let shows_query = shows::Query::new(shows_service.clone());
-        let episodes_query = episodes::Query::new(episodes_service.clone());
-
-        let users_mutation = users::Mutation::new(users_service, profiles_service.clone());
-        let profiles_mutation = profiles::Mutation::new(profiles_service);
-        let shows_mutation = shows::Mutation::new(shows_service.clone(), role_grants_service);
-        let episodes_mutation = episodes::Mutation::new(episodes_service, shows_service);
-
-        Ok(Arc::new(Schema::build(
-            Query(users_query, profiles_query, shows_query, episodes_query),
-            Mutation(
-                users_mutation,
-                profiles_mutation,
-                shows_mutation,
-                episodes_mutation,
-            ),
-            EmptySubscription,
-        )))
-    }
-}
-
 /// Loads the GraphQL schema builder dependencies
 #[derive(Default)]
 pub struct Load {}
@@ -79,8 +39,6 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> inject::Result<()> {
-        i.provide(&SCHEMA_BUILDER, Provide::default()).await?;
-
         i.handle(users::schema::Load::default()).await?;
         i.handle(profiles::schema::Load::default()).await?;
         i.handle(role_grants::schema::Load::default()).await?;
@@ -101,10 +59,30 @@ impl Hook for Init {
         let config = i.get(&CONFIG).await?;
         let oso = i.get(&OSO).await?;
 
-        i.modify(&SCHEMA_BUILDER, |builder| {
-            Ok(builder.data(config.clone()).data((*oso).clone()))
-        })
-        .await?;
+        let users_query = i.consume(&users::QUERY).await?;
+        let profiles_query = i.consume(&profiles::QUERY).await?;
+        let shows_query = i.consume(&shows::QUERY).await?;
+        let episodes_query = i.consume(&episodes::QUERY).await?;
+
+        let users_mutation = i.consume(&users::MUTATION).await?;
+        let profiles_mutation = i.consume(&profiles::MUTATION).await?;
+        let shows_mutation = i.consume(&shows::MUTATION).await?;
+        let episodes_mutation = i.consume(&episodes::MUTATION).await?;
+
+        let builder = Schema::build(
+            Query(users_query, profiles_query, shows_query, episodes_query),
+            Mutation(
+                users_mutation,
+                profiles_mutation,
+                shows_mutation,
+                episodes_mutation,
+            ),
+            EmptySubscription,
+        )
+        .data(config.clone())
+        .data((*oso).clone());
+
+        i.inject(&SCHEMA_BUILDER, builder).await?;
 
         i.handle(users::schema::Init::default()).await?;
         i.handle(profiles::schema::Init::default()).await?;

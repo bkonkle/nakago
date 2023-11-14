@@ -9,8 +9,8 @@ use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction, Value}
 
 use crate::domains::shows::{
     model::Show,
-    mutations::{CreateShowInput, UpdateShowInput},
-    queries::{ShowCondition, ShowsOrderBy},
+    mutation::{CreateShowInput, UpdateShowInput},
+    query::{ShowCondition, ShowsOrderBy},
     service::{self, SERVICE},
 };
 

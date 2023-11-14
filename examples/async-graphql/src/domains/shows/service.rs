@@ -14,8 +14,8 @@ use sea_orm::{entity::*, query::*, EntityTrait};
 
 use crate::domains::shows::{
     model::{self, Show},
-    mutations::{CreateShowInput, UpdateShowInput},
-    queries::{ShowCondition, ShowsOrderBy},
+    mutation::{CreateShowInput, UpdateShowInput},
+    query::{ShowCondition, ShowsOrderBy},
 };
 
 /// Tag(shows::Service)

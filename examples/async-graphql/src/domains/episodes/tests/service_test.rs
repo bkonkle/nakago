@@ -10,8 +10,8 @@ use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction, Value}
 use crate::domains::{
     episodes::{
         model::Episode,
-        mutations::{CreateEpisodeInput, UpdateEpisodeInput},
-        queries::{EpisodeCondition, EpisodesOrderBy},
+        mutation::{CreateEpisodeInput, UpdateEpisodeInput},
+        query::{EpisodeCondition, EpisodesOrderBy},
         service::{self, SERVICE},
     },
     shows::model::Show,

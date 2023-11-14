@@ -5,7 +5,7 @@ use fake::{faker::internet::en::FreeEmail, Fake, Faker};
 use hyper::body::to_bytes;
 use nakago_examples_async_graphql::domains::{
     role_grants::{self, model::CreateRoleGrantInput},
-    shows::{self, mutations::CreateShowInput},
+    shows::{self, mutation::CreateShowInput},
     users,
 };
 use pretty_assertions::assert_eq;

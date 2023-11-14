@@ -12,7 +12,7 @@ use sea_orm::{entity::*, query::*, EntityTrait};
 
 use super::{
     model::{self, User, UserOption},
-    mutations::UpdateUserInput,
+    mutation::UpdateUserInput,
 };
 use crate::domains::role_grants::model as role_grant_model;
 

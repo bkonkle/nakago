@@ -1,70 +1,74 @@
 use std::sync::Arc;
 
-use async_graphql::{dataloader::DataLoader, ComplexObject, Context, Object, Result};
+use async_graphql::{
+    dataloader::DataLoader, ComplexObject, Context, InputObject, MaybeUndefined, Object, Result,
+    SimpleObject,
+};
+use async_trait::async_trait;
 use derive_new::new;
+use fake::{Dummy, Fake, Faker};
 use hyper::StatusCode;
-use nakago_async_graphql::utils::{as_graphql_error, graphql_error};
+use nakago::{inject, Inject, Provider, Tag};
+use nakago_async_graphql::utils::{as_graphql_error, dummy_maybe_undef, graphql_error};
+use nakago_derive::Provider;
 use oso::Oso;
+use rand::Rng;
 
 use crate::domains::{shows, shows::model::Show, users::model::User};
 
-use super::{
-    model::Episode,
-    mutations::{CreateEpisodeInput, MutateEpisodeResult, UpdateEpisodeInput},
-    queries::{EpisodeCondition, EpisodesOrderBy, EpisodesPage},
-    Service,
-};
+use super::{model::Episode, Service, SERVICE};
 
-/// The Query segment owned by the Episodes library
-#[derive(new)]
-pub struct EpisodesQuery {
-    service: Arc<Box<dyn Service>>,
+/// Tag(episodes::Mutation)
+pub const MUTATION: Tag<EpisodesMutation> = Tag::new("episodes::Mutation");
+
+/// The `CreateEpisodeInput` input type
+#[derive(Clone, Default, Dummy, Eq, PartialEq, InputObject)]
+pub struct CreateEpisodeInput {
+    /// The Episode's title
+    pub title: String,
+
+    /// The Episode's description summary
+    pub summary: Option<String>,
+
+    /// The Episode's picture
+    pub picture: Option<String>,
+
+    /// The Episode's Show id
+    pub show_id: String,
 }
 
-/// Queries for the `Episode` model
-#[Object]
-impl EpisodesQuery {
-    /// Get a sincle Episode
-    pub async fn get_episode(
-        &self,
-        ctx: &Context<'_>,
-        #[graphql(desc = "The Episode id")] id: String,
-    ) -> Result<Option<Episode>> {
-        // Check to see if the associated Show is selected
-        let with_show = ctx.look_ahead().field("show").exists();
+/// The `UpdateEpisodeInput` input type
+#[derive(Clone, Default, Eq, PartialEq, InputObject)]
+pub struct UpdateEpisodeInput {
+    /// The Episode's title
+    pub title: Option<String>,
 
-        self.service
-            .get(&id, &with_show)
-            .await
-            .map_err(as_graphql_error(
-                "Error while retrieving Episode",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            ))
+    /// The Episode's description summary
+    pub summary: MaybeUndefined<String>,
+
+    /// The Episode's picture
+    pub picture: MaybeUndefined<String>,
+
+    /// The Episode's Show id
+    pub show_id: Option<String>,
+}
+
+impl Dummy<Faker> for UpdateEpisodeInput {
+    fn dummy_with_rng<R: Rng + ?Sized>(config: &Faker, rng: &mut R) -> Self {
+        UpdateEpisodeInput {
+            title: Faker.fake(),
+            summary: dummy_maybe_undef(config, rng),
+            picture: dummy_maybe_undef(config, rng),
+            show_id: Faker.fake(),
+        }
     }
+}
 
-    /// Get multiple Episodes
-    pub async fn get_many_episodes(
-        &self,
-        ctx: &Context<'_>,
-        r#where: Option<EpisodeCondition>,
-        order_by: Option<Vec<EpisodesOrderBy>>,
-        page: Option<u64>,
-        page_size: Option<u64>,
-    ) -> Result<EpisodesPage> {
-        // Check to see if the associated Show is selected
-        let with_show = ctx.look_ahead().field("data").field("show").exists();
-
-        let response = self
-            .service
-            .get_many(r#where, order_by, page, page_size, &with_show)
-            .await
-            .map_err(as_graphql_error(
-                "Error while listing Episodes",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            ))?;
-
-        Ok(response.into())
-    }
+/// The `MutateEpisodeResult` type
+#[derive(Clone, Default, Dummy, Eq, PartialEq, SimpleObject)]
+pub struct MutateEpisodeResult {
+    /// The Episode's subscriber id
+    pub episode: Option<Episode>,
 }
 
 /// The Mutation segment for Episodes
@@ -229,5 +233,20 @@ impl Episode {
         let show = loader.load_one(self.show_id.clone()).await?;
 
         Ok(show)
+    }
+}
+
+/// Provide the EpisodesMutation
+#[derive(Default)]
+pub struct Provide {}
+
+#[Provider]
+#[async_trait]
+impl Provider<EpisodesMutation> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<EpisodesMutation>> {
+        let service = i.get(&SERVICE).await?;
+        let shows = i.get(&shows::SERVICE).await?;
+
+        Ok(Arc::new(EpisodesMutation::new(service, shows)))
     }
 }

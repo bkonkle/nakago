@@ -1,32 +1,62 @@
 use std::sync::Arc;
 
-use async_graphql::{Context, Object, Result};
+use async_graphql::{Context, InputObject, Object, Result, SimpleObject};
+use async_trait::async_trait;
 use derive_new::new;
 use hyper::StatusCode;
+use nakago::{inject, Inject, Provider, Tag};
 use nakago_async_graphql::utils::{as_graphql_error, graphql_error};
 use nakago_axum::auth::Subject;
+use nakago_derive::Provider;
 
-use crate::domains::profiles::{self, mutations::CreateProfileInput};
+use crate::domains::profiles::{self, mutation::CreateProfileInput};
 
-use super::{
-    model::User,
-    mutations::{CreateUserInput, MutateUserResult, UpdateUserInput},
-    Service,
-};
+use super::{model::User, Service, SERVICE};
 
-/// The Query segment for Users
-#[derive(Default)]
-pub struct UsersQuery {}
+/// Tag(users::Mutation)
+pub const MUTATION: Tag<UsersMutation> = Tag::new("users::Mutation");
 
-/// Queries for the User model
-#[Object]
-impl UsersQuery {
-    /// Get the current User from the GraphQL context
-    async fn get_current_user(&self, ctx: &Context<'_>) -> Result<Option<User>> {
-        let user = ctx.data_unchecked::<Option<User>>();
+/// The `CreateUserProfileInput` input type
+#[derive(Clone, Default, Eq, PartialEq, InputObject)]
+pub struct CreateUserProfileInput {
+    /// The Profile's email address
+    pub email: String,
 
-        Ok(user.clone())
-    }
+    /// The Profile's display name
+    pub display_name: Option<String>,
+
+    /// The Profile's picture
+    pub picture: Option<String>,
+
+    /// The Profile's city
+    pub city: Option<String>,
+
+    /// The Profile's state or province
+    pub state_province: Option<String>,
+}
+
+/// The `CreateUserInput` input type
+#[derive(Clone, Default, Eq, PartialEq, InputObject)]
+pub struct CreateUserInput {
+    /// The User's profile
+    pub profile: Option<CreateUserProfileInput>,
+}
+
+/// The `UpdateUserInput` input type
+#[derive(Clone, Default, Eq, PartialEq, InputObject)]
+pub struct UpdateUserInput {
+    /// The User's subscriber id
+    pub username: Option<String>,
+
+    /// Whether the User is active or disabled
+    pub is_active: Option<bool>,
+}
+
+/// The `MutateUserResult` input type
+#[derive(Clone, Default, Eq, PartialEq, SimpleObject)]
+pub struct MutateUserResult {
+    /// The User's subscriber id
+    pub user: Option<User>,
 }
 
 /// The Mutation segment for Users
@@ -117,5 +147,20 @@ impl UsersMutation {
         }
 
         Err(graphql_error("Unauthorized", StatusCode::UNAUTHORIZED))
+    }
+}
+
+/// Provide the UsersMutation
+#[derive(Default)]
+pub struct Provide {}
+
+#[Provider]
+#[async_trait]
+impl Provider<UsersMutation> for Provide {
+    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<UsersMutation>> {
+        let service = i.get(&SERVICE).await?;
+        let profiles = i.get(&profiles::SERVICE).await?;
+
+        Ok(Arc::new(UsersMutation::new(service, profiles)))
     }
 }

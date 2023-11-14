@@ -16,8 +16,8 @@ use crate::domains::users::model as user_model;
 
 use super::{
     model::{self, Profile, ProfileList, ProfileOption},
-    mutations::{CreateProfileInput, UpdateProfileInput},
-    queries::{ProfileCondition, ProfilesOrderBy},
+    mutation::{CreateProfileInput, UpdateProfileInput},
+    query::{ProfileCondition, ProfilesOrderBy},
 };
 
 /// Tag(profiles::Service)

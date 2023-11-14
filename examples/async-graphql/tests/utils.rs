@@ -17,9 +17,9 @@ use tokio_tungstenite::{
 
 use nakago_examples_async_graphql::{
     domains::{
-        episodes::{self, model::Episode, mutations::CreateEpisodeInput},
-        profiles::{self, model::Profile, mutations::CreateProfileInput},
-        shows::{self, model::Show, mutations::CreateShowInput},
+        episodes::{self, model::Episode, mutation::CreateEpisodeInput},
+        profiles::{self, model::Profile, mutation::CreateProfileInput},
+        shows::{self, model::Show, mutation::CreateShowInput},
         users::{self, model::User},
     },
     init, Config,

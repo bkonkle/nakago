@@ -16,8 +16,8 @@ use crate::domains::shows::model as show_model;
 
 use super::{
     model::{self, Episode, EpisodeList, EpisodeOption},
-    mutations::{CreateEpisodeInput, UpdateEpisodeInput},
-    queries::{EpisodeCondition, EpisodesOrderBy},
+    mutation::{CreateEpisodeInput, UpdateEpisodeInput},
+    query::{EpisodeCondition, EpisodesOrderBy},
 };
 
 /// Tag(episodes::Service)

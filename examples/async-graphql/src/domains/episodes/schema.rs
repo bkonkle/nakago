@@ -5,7 +5,9 @@ use crate::domains::graphql;
 
 use super::{
     loaders::{self, LOADER},
+    mutation, query,
     service::{self, SERVICE},
+    MUTATION, QUERY,
 };
 
 /// Provide dependencies needed for the Episodes domain
@@ -17,6 +19,8 @@ impl Hook for Load {
     async fn handle(&self, i: Inject) -> inject::Result<()> {
         i.provide(&SERVICE, service::Provide::default()).await?;
         i.provide(&LOADER, loaders::Provide::default()).await?;
+        i.provide(&QUERY, query::Provide::default()).await?;
+        i.provide(&MUTATION, mutation::Provide::default()).await?;
 
         Ok(())
     }
