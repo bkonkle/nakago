@@ -1,15 +1,14 @@
-use nakago::{config, inject, EventType};
+use nakago::{inject, EventType};
 use nakago_async_graphql::schema;
 use nakago_axum::{
     auth::{self, jwks, Validator, JWKS},
     AxumApplication,
 };
-use nakago_sea_orm::{connection, CONNECTION};
 
 use crate::{
     config::{Config, CONFIG},
     domains::graphql,
-    events::{socket, ProvideConnections, CONNECTIONS},
+    events::{self, socket},
     http,
     utils::authz::{self, ProvideOso, OSO},
 };
@@ -27,15 +26,18 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
         .await?;
 
     app.provide(
-        &CONNECTION,
-        connection::Provide::default().with_config_tag(&CONFIG),
+        &nakago_sea_orm::CONNECTION,
+        nakago_sea_orm::connection::Provide::default().with_config_tag(&CONFIG),
     )
     .await?;
 
     app.provide(&OSO, ProvideOso::default()).await?;
 
-    app.provide(&CONNECTIONS, ProvideConnections::default())
-        .await?;
+    app.provide(
+        &events::CONNECTIONS,
+        events::connections::Provide::default(),
+    )
+    .await?;
 
     app.provide(&socket::HANDLER, socket::Provide::default())
         .await?;
@@ -45,9 +47,11 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     // Loading
 
+    app.on(&EventType::Load, nakago_axum::config::AddLoaders::default());
+
     app.on(
         &EventType::Load,
-        config::AddLoaders::new(nakago_sea_orm::default_config_loaders()),
+        nakago_sea_orm::config::AddLoaders::default(),
     );
 
     app.on(&EventType::Load, authz::Load::default());

@@ -1,11 +1,15 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use figment::providers::Env;
-use nakago::config;
+use nakago::{
+    config::{self},
+    inject, Hook, Inject,
+};
 use serde::{Deserialize, Serialize};
 
 /// Return the default Config Loaders for SeaORM
-pub fn default_config_loaders() -> Vec<Arc<dyn config::Loader>> {
+pub fn default_loaders() -> Vec<Arc<dyn config::Loader>> {
     vec![Arc::<Loader>::default()]
 }
 
@@ -45,5 +49,21 @@ impl config::Loader for Loader {
                 .into()
         })
         .map(|key| key.as_str().replace("DATABASE_", "DATABASE.").into())
+    }
+}
+
+/// Add the default SeaOrm Config Loaders to the stack.
+pub struct AddLoaders(config::AddLoaders);
+
+impl Default for AddLoaders {
+    fn default() -> Self {
+        Self(config::AddLoaders::new(default_loaders()))
+    }
+}
+
+#[async_trait]
+impl Hook for AddLoaders {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        self.0.handle(i).await
     }
 }

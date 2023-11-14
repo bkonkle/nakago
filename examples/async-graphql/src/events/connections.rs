@@ -113,14 +113,12 @@ impl Session {
 }
 
 /// Provide the default Connections implementation
-///
-/// **Provides:** `Arc<events::Connections>`
 #[derive(Default)]
-pub struct ProvideConnections {}
+pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<Connections> for ProvideConnections {
+impl Provider<Connections> for Provide {
     async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<Connections>> {
         Ok(Arc::new(Connections::default()))
     }

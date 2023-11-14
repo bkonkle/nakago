@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use figment::providers::Env;
-use nakago::config;
+use nakago::{config, inject, Hook, Inject};
 use serde::{Deserialize, Serialize};
 
 use crate::auth;
@@ -41,5 +42,21 @@ impl config::Loader for Loader {
     fn load_env(&self, env: Env) -> Env {
         // Split the HTTP variables
         env.map(|key| key.as_str().replace("HTTP_", "HTTP.").into())
+    }
+}
+
+/// Add the default HTTP Config Loaders to the stack.
+pub struct AddLoaders(config::AddLoaders);
+
+impl Default for AddLoaders {
+    fn default() -> Self {
+        Self(config::AddLoaders::new(default_loaders()))
+    }
+}
+
+#[async_trait]
+impl Hook for AddLoaders {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        self.0.handle(i).await
     }
 }
