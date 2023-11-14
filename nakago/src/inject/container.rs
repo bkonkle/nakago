@@ -255,19 +255,15 @@ pub(crate) mod test {
     // Mock Dependencies
     // -----------------
 
+    use derive_new::new;
+
     pub trait HasId: Send + Sync {
         fn get_id(&self) -> String;
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, new)]
     pub struct TestService {
         pub(crate) id: String,
-    }
-
-    impl TestService {
-        pub fn new(id: String) -> Self {
-            Self { id }
-        }
     }
 
     impl HasId for TestService {
@@ -276,14 +272,9 @@ pub(crate) mod test {
         }
     }
 
+    #[derive(new)]
     pub struct OtherService {
         pub(crate) other_id: String,
-    }
-
-    impl OtherService {
-        pub fn new(other_id: String) -> Self {
-            Self { other_id }
-        }
     }
 
     impl HasId for OtherService {

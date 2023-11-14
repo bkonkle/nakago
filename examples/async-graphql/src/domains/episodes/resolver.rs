@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::{dataloader::DataLoader, ComplexObject, Context, Object, Result};
+use derive_new::new;
 use hyper::StatusCode;
 use oso::Oso;
 
@@ -17,12 +18,10 @@ use super::{
 };
 
 /// The Query segment owned by the Episodes library
-#[derive(Default)]
-pub struct EpisodesQuery {}
-
-/// The Mutation segment for Episodes
-#[derive(Default)]
-pub struct EpisodesMutation {}
+#[derive(new)]
+pub struct EpisodesQuery {
+    service: Arc<Box<dyn Service>>,
+}
 
 /// Queries for the `Episode` model
 #[Object]
@@ -33,12 +32,10 @@ impl EpisodesQuery {
         ctx: &Context<'_>,
         #[graphql(desc = "The Episode id")] id: String,
     ) -> Result<Option<Episode>> {
-        let episodes = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
-
         // Check to see if the associated Show is selected
         let with_show = ctx.look_ahead().field("show").exists();
 
-        episodes
+        self.service
             .get(&id, &with_show)
             .await
             .map_err(as_graphql_error(
@@ -56,12 +53,11 @@ impl EpisodesQuery {
         page: Option<u64>,
         page_size: Option<u64>,
     ) -> Result<EpisodesPage> {
-        let episodes = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
-
         // Check to see if the associated Show is selected
         let with_show = ctx.look_ahead().field("data").field("show").exists();
 
-        let response = episodes
+        let response = self
+            .service
             .get_many(r#where, order_by, page, page_size, &with_show)
             .await
             .map_err(as_graphql_error(
@@ -73,6 +69,13 @@ impl EpisodesQuery {
     }
 }
 
+/// The Mutation segment for Episodes
+#[derive(new)]
+pub struct EpisodesMutation {
+    service: Arc<Box<dyn Service>>,
+    shows: Arc<Box<dyn shows::Service>>,
+}
+
 /// Mutations for the Episode model
 #[Object]
 impl EpisodesMutation {
@@ -82,13 +85,12 @@ impl EpisodesMutation {
         ctx: &Context<'_>,
         input: CreateEpisodeInput,
     ) -> Result<MutateEpisodeResult> {
-        let shows = ctx.data_unchecked::<Arc<Box<dyn shows::Service>>>();
-        let episodes = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
         // Retrieve the related Show for authorization
-        let show = shows
+        let show = self
+            .shows
             .get(&input.show_id)
             .await
             .map_err(as_graphql_error(
@@ -106,7 +108,8 @@ impl EpisodesMutation {
             return Err(graphql_error("Unauthorized", StatusCode::UNAUTHORIZED));
         }
 
-        let episode = episodes
+        let episode = self
+            .service
             .create(&input, &false)
             .await
             .map_err(as_graphql_error(
@@ -129,12 +132,12 @@ impl EpisodesMutation {
         id: String,
         input: UpdateEpisodeInput,
     ) -> Result<MutateEpisodeResult> {
-        let episodes = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
         // Retrieve the existing Episode for authorization
-        let existing = episodes
+        let existing = self
+            .service
             .get(&id, &true)
             .await
             .map_err(as_graphql_error(
@@ -162,7 +165,8 @@ impl EpisodesMutation {
         let with_show = ctx.look_ahead().field("episode").field("show").exists();
 
         // Use the already retrieved Episode to update the record
-        let episode = episodes
+        let episode = self
+            .service
             .update(&existing.id, &input, &with_show)
             .await
             .map_err(as_graphql_error(
@@ -177,12 +181,12 @@ impl EpisodesMutation {
 
     /// Remove an existing Episode
     pub async fn delete_episode(&self, ctx: &Context<'_>, id: String) -> Result<bool> {
-        let episodes = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
         let user = ctx.data_unchecked::<Option<User>>();
         let oso = ctx.data_unchecked::<Oso>();
 
         // Retrieve the related Show for authorization
-        let episode = episodes
+        let episode = self
+            .service
             .get(&id, &true)
             .await
             .map_err(as_graphql_error(
@@ -206,7 +210,7 @@ impl EpisodesMutation {
             return Err(graphql_error("Unauthorized", StatusCode::UNAUTHORIZED));
         }
 
-        episodes.delete(&id).await.map_err(as_graphql_error(
+        self.service.delete(&id).await.map_err(as_graphql_error(
             "Error while deleting Episode",
             StatusCode::INTERNAL_SERVER_ERROR,
         ))?;

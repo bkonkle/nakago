@@ -14,6 +14,7 @@ anyhow = "1.0"
 async-trait = "0.1"
 backtrace = "0.3"
 crossterm = "0.27"
+derive-new = "0.5"
 figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 fnv = "1.0.7"
 futures = "0.3.28"

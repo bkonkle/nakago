@@ -8,7 +8,7 @@ use nakago::{inject, Inject, Provider, Tag};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
 
-use crate::{domains::users, graphql};
+use crate::domains::{graphql, users};
 
 /// GraphQL Controller
 pub const CONTROLLER: Tag<Controller> = Tag::new("graphql::Controller");

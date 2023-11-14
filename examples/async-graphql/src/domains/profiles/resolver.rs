@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::{dataloader::DataLoader, ComplexObject, Context, Object, Result};
+use derive_new::new;
 use hyper::StatusCode;
 
 use crate::{
@@ -16,12 +17,10 @@ use super::{
 };
 
 /// The Query segment for Profiles
-#[derive(Default)]
-pub struct ProfilesQuery {}
-
-/// The Mutation segment for Profiles
-#[derive(Default)]
-pub struct ProfilesMutation {}
+#[derive(new)]
+pub struct ProfilesQuery {
+    service: Arc<Box<dyn Service>>,
+}
 
 /// Queries for the `Profile` model
 #[Object]
@@ -29,12 +28,11 @@ impl ProfilesQuery {
     /// Get a single Profile
     async fn get_profile(&self, ctx: &Context<'_>, id: String) -> Result<Option<Profile>> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Check to see if the associated User is selected
         let with_user = ctx.look_ahead().field("user").exists();
 
-        let profile = profiles.get(&id, &with_user).await?;
+        let profile = self.service.get(&id, &with_user).await?;
 
         // Use the request User to decide if the Profile should be censored
         let censored = match user {
@@ -67,7 +65,6 @@ impl ProfilesQuery {
         page_size: Option<u64>,
     ) -> Result<ProfilesPage> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Retrieve the current request User id for authorization
         let user_id = user.clone().map(|u| u.id);
@@ -75,7 +72,8 @@ impl ProfilesQuery {
         // Check to see if the associated User is selected
         let with_user = ctx.look_ahead().field("data").field("user").exists();
 
-        let response = profiles
+        let response = self
+            .service
             .get_many(r#where, order_by, page, page_size, &with_user)
             .await
             .map_err(as_graphql_error(
@@ -89,6 +87,12 @@ impl ProfilesQuery {
     }
 }
 
+/// The Mutation segment for Profiles
+#[derive(new)]
+pub struct ProfilesMutation {
+    service: Arc<Box<dyn Service>>,
+}
+
 /// Mutations for the Profile model
 #[Object]
 impl ProfilesMutation {
@@ -99,7 +103,6 @@ impl ProfilesMutation {
         input: CreateProfileInput,
     ) -> Result<MutateProfileResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Retrieve the current request User id for authorization
         let user_id = user.clone().map(|u| u.id);
@@ -117,7 +120,8 @@ impl ProfilesMutation {
         // Check to see if the associated User is selected
         let with_user = ctx.look_ahead().field("profile").field("user").exists();
 
-        let profile = profiles
+        let profile = self
+            .service
             .create(&input, &with_user)
             .await
             .map_err(as_graphql_error(
@@ -138,10 +142,10 @@ impl ProfilesMutation {
         input: UpdateProfileInput,
     ) -> Result<MutateProfileResult> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Retrieve the existing Profile for authorization
-        let existing = profiles
+        let existing = self
+            .service
             .get(&id, &true)
             .await
             .map_err(as_graphql_error(
@@ -169,7 +173,8 @@ impl ProfilesMutation {
         let with_user = ctx.look_ahead().field("profile").field("user").exists();
 
         // Use the already retrieved Profile to update the record
-        let profile = profiles
+        let profile = self
+            .service
             .update(&existing.id, &input, &with_user)
             .await
             .map_err(as_graphql_error(
@@ -185,10 +190,10 @@ impl ProfilesMutation {
     /// Remove an existing Profile
     async fn delete_profile(&self, ctx: &Context<'_>, id: String) -> Result<bool> {
         let user = ctx.data_unchecked::<Option<User>>();
-        let profiles = ctx.data_unchecked::<Arc<Box<dyn Service>>>();
 
         // Retrieve the existing Profile for authorization
-        let existing = profiles
+        let existing = self
+            .service
             .get(&id, &true)
             .await
             .map_err(as_graphql_error(
@@ -212,7 +217,7 @@ impl ProfilesMutation {
             return Err(graphql_error("Unauthorized", StatusCode::UNAUTHORIZED));
         }
 
-        profiles.delete(&id).await.map_err(as_graphql_error(
+        self.service.delete(&id).await.map_err(as_graphql_error(
             "Error while deleting Profile",
             StatusCode::INTERNAL_SERVER_ERROR,
         ))?;

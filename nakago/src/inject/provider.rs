@@ -64,6 +64,7 @@ where
 pub(crate) mod test {
     use std::sync::Arc;
 
+    use derive_new::new;
     use nakago_derive::Provider;
 
     use crate::inject::container::test::{HasId, OtherService, TestService};
@@ -73,15 +74,9 @@ pub(crate) mod test {
     // Mock Providers
     // -----------------
 
+    #[derive(new)]
     pub struct TestServiceProvider {
         id: String,
-    }
-
-    impl TestServiceProvider {
-        /// Create a new TestServiceProvider instance
-        pub fn new(id: String) -> Self {
-            Self { id }
-        }
     }
 
     #[Provider(internal)]
@@ -95,15 +90,9 @@ pub(crate) mod test {
         }
     }
 
+    #[derive(new)]
     pub struct OtherServiceProvider {
         id: String,
-    }
-
-    impl OtherServiceProvider {
-        /// Create a new OtherServiceProvider instance
-        pub fn new(id: String) -> Self {
-            Self { id }
-        }
     }
 
     #[Provider(internal)]

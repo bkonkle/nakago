@@ -8,9 +8,9 @@ use nakago_sea_orm::{connection, CONNECTION};
 
 use crate::{
     config::{Config, CONFIG},
-    domains::{episodes, profiles, role_grants, shows, users},
+    domains::graphql,
     events::{socket, ProvideConnections, CONNECTIONS},
-    graphql, http,
+    http,
     utils::authz::{self, ProvideOso, OSO},
 };
 
@@ -40,7 +40,7 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
     app.provide(&socket::HANDLER, socket::Provide::default())
         .await?;
 
-    app.provide(&graphql::SCHEMA_BUILDER, schema::ProvideBuilder::default())
+    app.provide(&graphql::SCHEMA_BUILDER, graphql::Provide::default())
         .await?;
 
     // Loading
@@ -50,17 +50,9 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
         config::AddLoaders::new(nakago_sea_orm::default_config_loaders()),
     );
 
-    app.on(&EventType::Load, users::schema::Load::default());
-
-    app.on(&EventType::Load, role_grants::schema::Load::default());
-
-    app.on(&EventType::Load, profiles::schema::Load::default());
-
-    app.on(&EventType::Load, shows::schema::Load::default());
-
-    app.on(&EventType::Load, episodes::schema::Load::default());
-
     app.on(&EventType::Load, authz::Load::default());
+    app.on(&EventType::Load, graphql::Load::default());
+    app.on(&EventType::Load, http::Load::default());
 
     // Initialization
 

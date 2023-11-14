@@ -5,6 +5,7 @@ use async_graphql::{
     FieldError,
 };
 use async_trait::async_trait;
+use derive_new::new;
 use nakago::{inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
 
@@ -17,17 +18,10 @@ use super::{
 pub const LOADER: Tag<DataLoader<Loader>> = Tag::new("users::Loader");
 
 /// A dataloader for `User` instances
+#[derive(new)]
 pub struct Loader {
     /// The SeaOrm database connection
     locations: Arc<Box<dyn Service>>,
-}
-
-/// The default implementation for the `Loader`
-impl Loader {
-    /// Create a new instance
-    pub fn new(locations: Arc<Box<dyn Service>>) -> Self {
-        Self { locations }
-    }
 }
 
 #[async_trait]

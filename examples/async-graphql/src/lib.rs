@@ -19,9 +19,6 @@ pub mod domains;
 /// Application utils
 mod utils;
 
-/// GraphQL utils
-mod graphql;
-
 /// Error macros
 #[macro_use]
 extern crate anyhow;

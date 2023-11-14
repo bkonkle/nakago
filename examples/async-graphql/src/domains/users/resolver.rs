@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::{Context, Object, Result};
+use derive_new::new;
 use hyper::StatusCode;
 use nakago_axum::auth::Subject;
 
@@ -18,12 +19,6 @@ use crate::{
 #[derive(Default)]
 pub struct UsersQuery {}
 
-/// The Mutation segment for Users
-pub struct UsersMutation {
-    service: Arc<Box<dyn Service>>,
-    profiles: Arc<Box<dyn profiles::Service>>,
-}
-
 /// Queries for the User model
 #[Object]
 impl UsersQuery {
@@ -35,10 +30,11 @@ impl UsersQuery {
     }
 }
 
-impl UsersMutation {
-    pub fn new(service: Arc<Box<dyn Service>>, profiles: Arc<Box<dyn profiles::Service>>) -> Self {
-        Self { service, profiles }
-    }
+/// The Mutation segment for Users
+#[derive(new)]
+pub struct UsersMutation {
+    service: Arc<Box<dyn Service>>,
+    profiles: Arc<Box<dyn profiles::Service>>,
 }
 
 /// Mutations for the User model

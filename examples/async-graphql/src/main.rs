@@ -9,7 +9,6 @@ use pico_args::{Arguments, Error};
 mod config;
 mod domains;
 mod events;
-mod graphql;
 mod http;
 mod init;
 mod utils;

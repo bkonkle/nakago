@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use nakago::{inject, Hook, Inject};
 
-use crate::{domains::profiles, graphql};
+use crate::domains::graphql;
 
 use super::{
     loaders::{self, LOADER},
@@ -16,30 +16,23 @@ pub struct Load {}
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> inject::Result<()> {
         i.provide(&SERVICE, service::Provide::default()).await?;
-
         i.provide(&LOADER, loaders::Provide::default()).await?;
 
         Ok(())
     }
 }
 
-/// The Hook for initializing the dependencies for the GraphQL Users resolver
-///
-/// **Depends on:**
-///  - Tag(UsersService)
-///  - Tag(ProfilesService)
-///  - Tag(GraphQLSchemaBuilder)
+/// The Hook for initializing GraphQL dependencies
 #[derive(Default)]
 pub struct Init {}
 
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> inject::Result<()> {
-        let service = i.get(&SERVICE).await?;
-        let profiles = i.get(&profiles::SERVICE).await?;
+        let loader = i.get(&LOADER).await?;
 
         i.modify(&graphql::SCHEMA_BUILDER, |builder| {
-            Ok(builder.data(service.clone()).data(profiles.clone()))
+            Ok(builder.data(loader.clone()))
         })
         .await?;
 
@@ -54,7 +47,10 @@ pub(crate) mod test {
     use async_graphql::{self, EmptySubscription};
     use nakago::{Provider, Tag};
 
-    use crate::domains::users::{Mutation, Query};
+    use crate::domains::{
+        profiles,
+        users::{Mutation, Query},
+    };
 
     use super::*;
 
@@ -86,8 +82,6 @@ pub(crate) mod test {
                 Mutation::new(service, profiles),
                 EmptySubscription,
             )
-            .data(service)
-            .data(profiles)
             .finish();
 
             Ok(Arc::new(schema))

@@ -5,6 +5,23 @@ use nakago_axum::routes;
 
 use super::{events, graphql, health};
 
+/// Load dependencies for all handlers
+#[derive(Default)]
+pub struct Load {}
+
+#[async_trait]
+impl Hook for Load {
+    async fn handle(&self, i: Inject) -> inject::Result<()> {
+        i.provide(&graphql::CONTROLLER, graphql::Provide::default())
+            .await?;
+
+        i.provide(&events::CONTROLLER, events::Provide::default())
+            .await?;
+
+        Ok(())
+    }
+}
+
 /// Init all handlers
 #[derive(Default)]
 pub struct Init {}

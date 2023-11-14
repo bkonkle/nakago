@@ -3,19 +3,16 @@ use axum::{
     body::Body,
     http::{Method, Request},
 };
+use derive_new::new;
 use serde_json::{json, Value};
 
 /// Utilities for testing HTTP GraphQL endpoints with Hyper
+#[derive(new)]
 pub struct GraphQL {
     url: String,
 }
 
 impl GraphQL {
-    /// Construct a new GraphQL helper with a path to the endpoint
-    pub fn new(url: String) -> Self {
-        GraphQL { url }
-    }
-
     /// Create a GraphQL query request for Hyper with an optional auth token
     pub fn query(
         &self,
