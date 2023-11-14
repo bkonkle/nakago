@@ -1,5 +1,4 @@
 use nakago::{inject, EventType};
-use nakago_async_graphql::schema;
 use nakago_axum::{
     auth::{self, jwks, Validator, JWKS},
     AxumApplication,
@@ -42,9 +41,6 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
     app.provide(&socket::HANDLER, socket::Provide::default())
         .await?;
 
-    app.provide(&graphql::SCHEMA_BUILDER, graphql::Provide::default())
-        .await?;
-
     // Loading
 
     app.on(&EventType::Load, nakago_axum::config::AddLoaders::default());
@@ -61,14 +57,6 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
     // Initialization
 
     app.on(&EventType::Init, graphql::Init::default());
-
-    app.on(
-        &EventType::Init,
-        schema::Init::default()
-            .with_builder_tag(&graphql::SCHEMA_BUILDER)
-            .with_schema_tag(&graphql::SCHEMA),
-    );
-
     app.on(&EventType::Init, http::Init::default());
 
     Ok(app)

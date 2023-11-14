@@ -3,6 +3,7 @@ use std::sync::Arc;
 use async_graphql::{self, EmptySubscription, MergedObject};
 use async_trait::async_trait;
 use nakago::{inject, Hook, Inject, Provider, Tag};
+use nakago_async_graphql::schema;
 use nakago_derive::Provider;
 
 use crate::{config::CONFIG, utils::authz::OSO};
@@ -78,6 +79,8 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> inject::Result<()> {
+        i.provide(&SCHEMA_BUILDER, Provide::default()).await?;
+
         i.handle(users::schema::Load::default()).await?;
         i.handle(profiles::schema::Load::default()).await?;
         i.handle(role_grants::schema::Load::default()).await?;
@@ -108,6 +111,13 @@ impl Hook for Init {
         i.handle(role_grants::schema::Init::default()).await?;
         i.handle(shows::schema::Init::default()).await?;
         i.handle(episodes::schema::Init::default()).await?;
+
+        i.handle(
+            schema::Init::default()
+                .with_builder_tag(&SCHEMA_BUILDER)
+                .with_schema_tag(&SCHEMA),
+        )
+        .await?;
 
         Ok(())
     }
