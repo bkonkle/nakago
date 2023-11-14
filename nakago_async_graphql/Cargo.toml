@@ -1,6 +1,6 @@
 [package]
 name = "nakago-async-graphql"
-version = "0.14.0"
+version = "0.15.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "An Async-GraphQL integration for Nakago"
