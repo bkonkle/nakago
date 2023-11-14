@@ -1,9 +1,9 @@
 use async_graphql::{InputObject, MaybeUndefined, SimpleObject};
 use fake::{Dummy, Faker};
+use nakago_async_graphql::utils::dummy_maybe_undef;
 use rand::Rng;
 
 use super::model::Show;
-use crate::utils::graphql::dummy_maybe_undef;
 
 /// The `CreateShowInput` input type
 #[derive(Clone, Default, Dummy, Eq, PartialEq, InputObject)]

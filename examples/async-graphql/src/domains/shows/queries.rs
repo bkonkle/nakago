@@ -1,12 +1,10 @@
 use async_graphql::{Enum, InputObject, SimpleObject};
-
-use crate::{
-    domains::shows::model::{self, Show},
-    utils::{
-        ordering::Ordering::{self, Asc, Desc},
-        pagination::ManyResponse,
-    },
+use nakago_axum::utils::{
+    ManyResponse,
+    Ordering::{self, Asc, Desc},
 };
+
+use crate::domains::shows::model::{self, Show};
 
 use ShowsOrderBy::{
     CreatedAtAsc, CreatedAtDesc, IdAsc, IdDesc, TitleAsc, TitleDesc, UpdatedAtAsc, UpdatedAtDesc,

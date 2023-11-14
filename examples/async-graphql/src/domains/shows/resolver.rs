@@ -3,20 +3,19 @@ use std::sync::Arc;
 use async_graphql::{Context, Object, Result};
 use derive_new::new;
 use hyper::StatusCode;
+use nakago_async_graphql::utils::{as_graphql_error, graphql_error};
 use oso::Oso;
 
-use crate::{
-    domains::{
-        role_grants::{self, model::CreateRoleGrantInput},
-        shows::{
-            model::Show,
-            mutations::{CreateShowInput, MutateShowResult, UpdateShowInput},
-            queries::{ShowCondition, ShowsOrderBy, ShowsPage},
-            Service,
-        },
-        users::model::User,
-    },
-    utils::graphql::{as_graphql_error, graphql_error},
+use crate::domains::{
+    role_grants::{self, model::CreateRoleGrantInput},
+    users::model::User,
+};
+
+use super::{
+    model::Show,
+    mutations::{CreateShowInput, MutateShowResult, UpdateShowInput},
+    queries::{ShowCondition, ShowsOrderBy, ShowsPage},
+    Service,
 };
 
 /// The Query segment owned by the Shows library

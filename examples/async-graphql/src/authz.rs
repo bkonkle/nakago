@@ -41,7 +41,8 @@ pub struct Load {}
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> inject::Result<()> {
         // Set up authorization
-        let mut oso = (*i.get(&OSO).await?).clone();
+        let oso = i.get(&OSO).await?;
+        let mut oso = (*oso).clone();
 
         oso.register_class(User::get_polar_class_builder().name("User").build())
             .map_err(to_provider_error)?;

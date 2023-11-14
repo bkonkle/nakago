@@ -6,7 +6,7 @@ use nakago::{inject, Hook, Inject, Provider, Tag};
 use nakago_async_graphql::schema;
 use nakago_derive::Provider;
 
-use crate::{config::CONFIG, utils::authz::OSO};
+use crate::{authz::OSO, config::CONFIG};
 
 use super::{episodes, profiles, role_grants, shows, users};
 

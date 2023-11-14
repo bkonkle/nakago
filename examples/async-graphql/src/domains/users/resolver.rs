@@ -3,16 +3,15 @@ use std::sync::Arc;
 use async_graphql::{Context, Object, Result};
 use derive_new::new;
 use hyper::StatusCode;
+use nakago_async_graphql::utils::{as_graphql_error, graphql_error};
 use nakago_axum::auth::Subject;
+
+use crate::domains::profiles::{self, mutations::CreateProfileInput};
 
 use super::{
     model::User,
     mutations::{CreateUserInput, MutateUserResult, UpdateUserInput},
     Service,
-};
-use crate::{
-    domains::profiles::{self, mutations::CreateProfileInput},
-    utils::graphql::{as_graphql_error, graphql_error},
 };
 
 /// The Query segment for Users

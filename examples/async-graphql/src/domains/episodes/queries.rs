@@ -1,8 +1,7 @@
 use async_graphql::{Enum, InputObject, SimpleObject};
-
-use crate::utils::{
-    ordering::Ordering::{self, Asc, Desc},
-    pagination::ManyResponse,
+use nakago_axum::utils::{
+    ManyResponse,
+    Ordering::{self, Asc, Desc},
 };
 
 use super::model::{self, Episode};

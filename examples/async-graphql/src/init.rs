@@ -5,11 +5,11 @@ use nakago_axum::{
 };
 
 use crate::{
+    authz::{self, ProvideOso, OSO},
     config::{Config, CONFIG},
     domains::graphql,
     events::{self, socket},
     http,
-    utils::authz::{self, ProvideOso, OSO},
 };
 
 /// Create a default AxumApplication instance

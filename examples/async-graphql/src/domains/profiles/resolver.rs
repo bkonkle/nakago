@@ -3,11 +3,9 @@ use std::sync::Arc;
 use async_graphql::{dataloader::DataLoader, ComplexObject, Context, Object, Result};
 use derive_new::new;
 use hyper::StatusCode;
+use nakago_async_graphql::utils::{as_graphql_error, graphql_error};
 
-use crate::{
-    domains::users::{self, model::User},
-    utils::graphql::{as_graphql_error, graphql_error},
-};
+use crate::domains::users::{self, model::User};
 
 use super::{
     model::Profile,

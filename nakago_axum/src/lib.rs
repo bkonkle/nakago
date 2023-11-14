@@ -22,6 +22,9 @@ pub mod test;
 /// Errors
 pub mod errors;
 
+/// Utils
+pub mod utils;
+
 #[macro_use]
 extern crate log;
 

@@ -7,17 +7,15 @@ use derive_new::new;
 #[cfg(test)]
 use mockall::automock;
 use nakago::{inject, Inject, Provider, Tag};
+use nakago_axum::utils::{ManyResponse, Ordering};
 use nakago_derive::Provider;
 use nakago_sea_orm::{DatabaseConnection, CONNECTION};
 use sea_orm::{entity::*, query::*, EntityTrait};
 
-use crate::{
-    domains::shows::{
-        model::{self, Show},
-        mutations::{CreateShowInput, UpdateShowInput},
-        queries::{ShowCondition, ShowsOrderBy},
-    },
-    utils::{ordering::Ordering, pagination::ManyResponse},
+use crate::domains::shows::{
+    model::{self, Show},
+    mutations::{CreateShowInput, UpdateShowInput},
+    queries::{ShowCondition, ShowsOrderBy},
 };
 
 /// Tag(shows::Service)

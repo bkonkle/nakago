@@ -1,8 +1,7 @@
 use async_graphql::{InputObject, MaybeUndefined, SimpleObject};
 use fake::{Dummy, Fake, Faker};
+use nakago_async_graphql::utils::dummy_maybe_undef;
 use rand::Rng;
-
-use crate::utils::graphql::dummy_maybe_undef;
 
 use super::model::Episode;
 

@@ -16,8 +16,8 @@ pub mod events;
 /// Application domains
 pub mod domains;
 
-/// Application utils
-mod utils;
+/// Authorization
+pub mod authz;
 
 /// Error macros
 #[macro_use]
