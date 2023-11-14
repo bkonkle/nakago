@@ -83,12 +83,9 @@ pub struct Config {
 This auth `Config` is automatically loaded as part of the default config loaders in the `nakago-axum` crate, so this line in the `init.rs` ensures that it is populated from environment variables or the currently chosen config file:
 
 ```rust
-// Config
+use nakago_axum::config;
 
-app.on(
-    &EventType::Load,
-    AddConfigLoaders::new(default_http_config_loaders()),
-);
+app.on(&EventType::Load, config::AddLoaders::default());
 ```
 
 Next, add the following values to your `config/local.toml.example` file as a hint, so that new developers know they need to reach out to you for real values when they create their own `config/local.toml` file:
