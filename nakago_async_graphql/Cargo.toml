@@ -21,7 +21,7 @@ figment = { version = "0.10", features = ["env"] }
 hyper = "0.14"
 log = "0.4"
 nakago = "0.14"
-nakago-axum = "0.14"
+nakago-axum = "0.16"
 nakago-derive = "0.8"
 pretty_env_logger = "0.5"
 rand = "0.8"
