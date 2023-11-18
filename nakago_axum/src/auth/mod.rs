@@ -12,7 +12,11 @@ pub mod jwks;
 /// JWT authentication
 pub mod subject;
 
+/// Validation
+pub mod validator;
+
 pub use config::Config;
 pub use errors::Error;
-pub use jwks::{Validator, JWKS};
+pub use jwks::JWKS;
 pub use subject::Subject;
+pub use validator::Validator;

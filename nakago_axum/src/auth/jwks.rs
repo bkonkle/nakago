@@ -3,10 +3,9 @@ use std::{marker::PhantomData, sync::Arc};
 use async_trait::async_trait;
 use axum::extract::FromRef;
 use biscuit::{
-    jwa::SignatureAlgorithm,
     jwk::{AlgorithmParameters, JWKSet, JWK},
-    jws::{Header, Secret},
-    ClaimsSet, Empty, JWT,
+    jws::Secret,
+    Empty,
 };
 use hyper::{self, body::to_bytes, client::HttpConnector, Body, Method, Request};
 use hyper_tls::HttpsConnector;
@@ -14,7 +13,7 @@ use nakago::{self, inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use thiserror::Error;
 
-use super::{Config, Error};
+use super::Config;
 
 /// The JWKS Tag
 pub const JWKS: Tag<JWKSet<Empty>> = Tag::new("auth::JWKS");
@@ -86,59 +85,6 @@ pub fn get_secret(jwk: JWK<Empty>) -> Result<Secret, ClientError> {
     };
 
     Ok(secret)
-}
-
-/// A validator for JWTs that uses a JWKS key set to validate the token
-#[derive(Clone)]
-pub enum Validator {
-    /// A validator that uses a JWKS key set to validate the token
-    KeySet(Arc<JWKSet<Empty>>),
-
-    /// A validator that does not validate the token, used for testing
-    Unverified,
-}
-
-impl Validator {
-    /// Get a validated payload from a JWT string
-    pub fn get_payload(&self, jwt: &str) -> Result<ClaimsSet<Empty>, Error> {
-        match self {
-            Validator::KeySet(jwks) => {
-                // First extract without verifying the header to locate the key-id (kid)
-                let token = JWT::<Empty, Empty>::new_encoded(jwt);
-
-                let header: Header<Empty> = token.unverified_header().map_err(Error::JWTToken)?;
-
-                let key_id = header.registered.key_id.ok_or(Error::JWKSVerification)?;
-
-                debug!("Fetching signing key for '{:?}'", key_id);
-
-                // Now that we have the key, construct our RSA public key secret
-                let secret = get_secret_from_key_set(jwks, &key_id)
-                    .map_err(|_err| Error::JWKSVerification)?;
-
-                // Now fully verify and extract the token
-                let token = token
-                    .into_decoded(&secret, SignatureAlgorithm::RS256)
-                    .map_err(Error::JWTToken)?;
-
-                let payload = token.payload().map_err(Error::JWTToken)?;
-
-                debug!(
-                    "Successfully verified token with subject: {:?}",
-                    payload.registered.subject
-                );
-
-                Ok(payload.clone())
-            }
-            Validator::Unverified => {
-                let token = JWT::<Empty, Empty>::new_encoded(jwt);
-
-                let payload = &token.unverified_payload().map_err(Error::JWTToken)?;
-
-                Ok(payload.clone())
-            }
-        }
-    }
 }
 
 /// Possible errors during jwks retrieval
