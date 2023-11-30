@@ -116,7 +116,7 @@ app.provide_type::<Validator>(validator::Provide::default())
 
 This will be overridden in your tests to use the unverified variant, but we'll get to that later.
 
-Next should use `jwks::Provide` and `auth::subject::Provide` providers to inject the pieces that Nakago-Axum's `Subject` extractor will use to retrieve the authentication data for a request. For the JWKS config we'll use a tag, so use the `provide` method rather than `provide_type`. This uses the tag as the key for the Inject container.
+Next you should use the `jwks::Provide` to inject the JWKS config with a tag, so we use the `provide` method rather than `provide_type`. This uses the tag as the key for the Inject container.
 
 ```rust
 use nakago_axum::auth::{self, jwks, Validator, JWKS};
@@ -124,9 +124,6 @@ use nakago_axum::auth::{self, jwks, Validator, JWKS};
 // ...
 
 app.provide(&JWKS, jwks::Provide::default().with_config_tag(&CONFIG))
-    .await?;
-
-app.provide_type::<Validator>(auth::subject::Provide::default())
     .await?;
 
 // ...
