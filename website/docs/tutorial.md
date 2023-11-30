@@ -80,21 +80,7 @@ pub struct Config {
 }
 ```
 
-This auth `Config` is automatically loaded as part of the default config loaders in the `nakago-axum` crate, so this line already in the `init.rs` ensures that it is populated from environment variables or the currently chosen config file:
-
-```rust
-// This line should already be in your `init.rs` file
-app.on(&EventType::Load, config::AddLoaders::default());
-```
-
-Then, add the default JWKS Validator from `nakago_axum`'s `auth` module:
-
-```rust
-app.provide_type::<Validator>(validator::Provide::default())
-    .await?;
-```
-
-This will be overridden in your tests to use the unverified variant, but we'll get to that later.
+This auth `Config` is automatically loaded as part of the default config loaders in the `nakago-axum` crate, which you'll see below.
 
 Next, add the following values to your `config/local.toml.example` file as a hint, so that new developers know they need to reach out to you for real values when they create their own `config/local.toml` file:
 
@@ -112,7 +98,25 @@ Add the real details to your own `config.toml` file, which should be excluded fr
 
 ### Initialization
 
-In your top-level `init.rs` file, you should use `jwks::Provide` and `auth::subject::Provide` providers to inject the pieces that Nakago-Axum's `Subject` extractor will use to retrieve the authentication data for a request.
+You're now ready to head over to your initialization routine. This is where you will provide all of the dependencies and lifecycle hooks your app needs in order to start up.
+
+This line already in the top-level `init.rs` ensures that your config is populated from environment variables or the currently chosen config file, along with the auth property you added above:
+
+```rust
+// This line should already be in your `init.rs` file
+app.on(&EventType::Load, config::AddLoaders::default());
+```
+
+First, add the default JWKS Validator from `nakago_axum`'s `auth` module using the `provide_type` method, which uses the type as the key for the Inject container:
+
+```rust
+app.provide_type::<Validator>(validator::Provide::default())
+    .await?;
+```
+
+This will be overridden in your tests to use the unverified variant, but we'll get to that later.
+
+Next should use `jwks::Provide` and `auth::subject::Provide` providers to inject the pieces that Nakago-Axum's `Subject` extractor will use to retrieve the authentication data for a request. For the JWKS config we'll use a tag, so use the `provide` method rather than `provide_type`. This uses the tag as the key for the Inject container.
 
 ```rust
 use nakago_axum::auth::{self, jwks, Validator, JWKS};
