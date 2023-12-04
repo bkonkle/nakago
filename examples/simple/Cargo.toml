@@ -51,7 +51,7 @@ futures-util = { version = "0.3", default-features = false, features = [
     "sink",
     "std",
 ] }
-hyper-tls = "0.5"
+hyper-tls = "0.6"
 maplit = { version = "1" }
 mockall = "0.11"
 pretty_assertions = "1.2"

@@ -23,7 +23,7 @@ futures-util = { version = "0.3", default-features = false, features = [
 ] }
 http = "0.2"
 hyper = "0.14"
-hyper-tls = "0.5"
+hyper-tls = "0.6"
 jsonwebtoken = "9.0"
 log = "0.4"
 nakago = "0.14"
