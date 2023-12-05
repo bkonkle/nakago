@@ -13,7 +13,7 @@ license = "MIT"
 anyhow = "1.0"
 async-trait = "0.1"
 axum = { version = "0.6", features = ["ws", "macros"] }
-biscuit = "0.6.0-beta1"
+biscuit = "0.7.0"
 derive-new = "0.5"
 fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env"] }
