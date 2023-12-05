@@ -18,7 +18,7 @@ axum = { version = "0.6", features = ["macros"] }
 derive-new = "0.5"
 fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env"] }
-hyper = "0.14"
+hyper = "1.0"
 log = "0.4"
 nakago = "0.14"
 nakago-axum = "0.16"

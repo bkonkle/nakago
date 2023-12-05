@@ -20,7 +20,7 @@ chrono = { version = "0.4.19", features = ["serde"] }
 fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
-hyper = "0.14"
+hyper = "1.0"
 log = "0.4"
 nakago = "0.14"
 nakago-axum = "0.16"
