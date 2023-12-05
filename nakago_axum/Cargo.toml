@@ -21,7 +21,7 @@ futures-util = { version = "0.3", default-features = false, features = [
     "sink",
     "std",
 ] }
-http = "0.2"
+http = "1.0"
 hyper = "0.14"
 hyper-tls = "0.5"
 jsonwebtoken = "9.0"
