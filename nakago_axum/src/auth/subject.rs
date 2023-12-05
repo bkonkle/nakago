@@ -1,26 +1,12 @@
-#![allow(unused_imports)]
-use std::sync::Arc;
-
 use async_trait::async_trait;
-use axum::{
-    extract::{FromRef, FromRequestParts},
-    Extension,
-};
-use biscuit::{
-    jwa::SignatureAlgorithm,
-    jwk::JWKSet,
-    jws::{Compact, Header},
-    ClaimsSet, Empty, JWT,
-};
+use axum::extract::FromRequestParts;
 use http::{header::AUTHORIZATION, request::Parts, HeaderMap, HeaderValue};
-use nakago::{inject, Dependency, Inject, Provider, Tag};
-use nakago_derive::Provider;
 
 use crate::State;
 
 use super::{
-    jwks::{get_secret_from_key_set, Validator, JWKS},
     Error::{self, InvalidAuthHeader, MissingValidator},
+    Validator,
 };
 
 const BEARER: &str = "Bearer ";
@@ -82,43 +68,4 @@ pub fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>,
     }
 
     Ok(Some(auth_header.trim_start_matches(BEARER)))
-}
-
-/// Provide the State needed in order to use the `Subject` extractor in an Axum handler
-///
-/// **Provides:** `Validator`
-///
-/// **Depends on:**
-///   - `Tag(auth::JWKS)`
-#[derive(Default)]
-pub struct Provide {}
-
-#[Provider]
-#[async_trait]
-impl Provider<Validator> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Validator>> {
-        let jwks = i.get(&JWKS).await?;
-
-        let validator = Validator::KeySet(jwks);
-
-        Ok(Arc::new(validator))
-    }
-}
-
-/// Provide the test ***unverified*** AuthState used in testing, which trusts any token given to it
-///
-/// **WARNING: This is insecure and should only be used in testing**
-///
-/// **Provides:** `Validator`
-#[derive(Default)]
-pub struct ProvideUnverified {}
-
-#[Provider]
-#[async_trait]
-impl Provider<Validator> for ProvideUnverified {
-    async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<Validator>> {
-        let validator = Validator::Unverified;
-
-        Ok(Arc::new(validator))
-    }
 }

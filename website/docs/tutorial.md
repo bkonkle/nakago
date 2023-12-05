@@ -48,7 +48,7 @@ It includes a barebones `init::app()` function that will load your configuration
 
 The `main.rs` uses the [pico-args](https://docs.rs/pico-args/0.5.0/pico_args/) to parse a simple command-line argument to specify an alternate config path, which is useful for many deployment scenarios that dynamically map a config file to a certain mount point within a container filesystem.
 
-In the `http/` folder, you'll find an empty AppState with a dependency injection Provider that you can fill in with your own dependencies. The router maps a simple `GET /health` route to a handler that returns a JSON response with a success message.
+In the `http/` folder, you'll find an Axum handler and a router initialization hook. The router maps a simple `GET /health` route to a handler that returns a JSON response with a success message.
 
 You now have a simple foundation to build on. Let's add some more functionality!
 
@@ -60,7 +60,7 @@ Follow the Installation instructions in the `README.md` to prepare your new loca
 
 One of the first things you'll probably want to add to your application is authentication, which establishes the user's identity. This is separate and distinct from authorization, which determines what the user is allowed to do.
 
-The only currently supported method of authentication is through JWT with JWKS keys. The `nakago-axum` library provides a request extension for for Axum that will use [biscuit](https://docs.rs/biscuit/0.6.0/biscuit/) to decode a JWT from the `Authorization` header, validate it with a JWKS key from the `/.well-known/jwks.json` path on the auth url, and then return the value of the `sub` claim from the payload.
+The only currently supported method of authentication is through JWT with JWKS keys, though other methods will be added in the future. The `nakago-axum` library provides a request extractor for for Axum that uses [biscuit](https://docs.rs/biscuit/0.6.0/biscuit/) with your Nakago application Config to decode a JWT from the `Authorization` header, validate it with a JWKS key from the `/.well-known/jwks.json` path on the auth url, and then return the value of the `sub` claim from the payload.
 
 *Configurable claims and other authentication methods will be added in the future.*
 
@@ -80,13 +80,7 @@ pub struct Config {
 }
 ```
 
-This auth `Config` is automatically loaded as part of the default config loaders in the `nakago-axum` crate, so this line in the `init.rs` ensures that it is populated from environment variables or the currently chosen config file:
-
-```rust
-use nakago_axum::config;
-
-app.on(&EventType::Load, config::AddLoaders::default());
-```
+This auth `Config` is automatically loaded as part of the default config loaders in the `nakago-axum` crate, which you'll see below.
 
 Next, add the following values to your `config/local.toml.example` file as a hint, so that new developers know they need to reach out to you for real values when they create their own `config/local.toml` file:
 
@@ -100,11 +94,29 @@ id = "client_id"
 secret = "client_secret"
 ```
 
-Add the real details to your own `config/local.toml` file, which should be excluded from git via the `.gitignore` file. If you don't have real values yet, leave them as the dummy values above. You can still run integration tests without having a real OAuth2 provider running, if you want.
+Add the real details to your own `config.toml` file, which should be excluded from git via the `.gitignore` file. If you don't have real values yet, leave them as the dummy values above. You can still run integration tests without having a real OAuth2 provider running, if you want.
 
 ### Initialization
 
-In your top-level `init.rs` file, you should use `jwks::Provide` and `auth::subject::Provide` providers to inject the pieces that Nakago-Axum's `Subject` extractor will use to retrieve the authentication data for a request.
+You're now ready to head over to your initialization routine. This is where you will provide all of the dependencies and lifecycle hooks your app needs in order to start up.
+
+This line already in the top-level `init.rs` ensures that your config is populated from environment variables or the currently chosen config file, along with the auth property you added above:
+
+```rust
+// This line should already be in your `init.rs` file
+app.on(&EventType::Load, config::AddLoaders::default());
+```
+
+First, add the default JWKS Validator from `nakago_axum`'s `auth` module using the `provide_type` method, which uses the type as the key for the Inject container:
+
+```rust
+app.provide_type::<Validator>(validator::Provide::default())
+    .await?;
+```
+
+This will be overridden in your tests to use the unverified variant, but we'll get to that later.
+
+Next you should use the `jwks::Provide` to inject the JWKS config with a tag, so we use the `provide` method rather than `provide_type`. This uses the tag as the key for the Inject container.
 
 ```rust
 use nakago_axum::auth::{self, jwks, Validator, JWKS};
@@ -114,11 +126,10 @@ use nakago_axum::auth::{self, jwks, Validator, JWKS};
 app.provide(&JWKS, jwks::Provide::default().with_config_tag(&CONFIG))
     .await?;
 
-app.provide_type::<Validator>(auth::subject::Provide::default())
-    .await?;
+// ...
 ```
 
-The `.with_config_tag(&CONFIG)` provides the custom Tag for your `AppConfig`, which will be unique to your app.
+The `.with_config_tag(&CONFIG)` provides the custom Tag for your app's custom `Config`.
 
 ### Axum Route
 
