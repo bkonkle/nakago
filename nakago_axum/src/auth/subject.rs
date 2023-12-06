@@ -1,6 +1,9 @@
 use async_trait::async_trait;
-use axum::extract::FromRequestParts;
-use http::{header::AUTHORIZATION, request::Parts, HeaderMap, HeaderValue};
+use axum::{
+    extract::FromRequestParts,
+    http::{request::Parts, HeaderValue},
+};
+use hyper::{header::AUTHORIZATION, HeaderMap};
 
 use crate::State;
 

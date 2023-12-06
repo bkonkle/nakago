@@ -1,12 +1,13 @@
 use std::{
     fmt::Debug,
+    net::SocketAddr,
     ops::{Deref, DerefMut},
     path::PathBuf,
 };
 
-use axum::{extract::FromRef, routing::IntoMakeService, Router, Server};
-use hyper::server::conn::AddrIncoming;
+use axum::{extract::FromRef, serve::Serve, Router};
 use nakago::{self, inject, Application, Tag};
+use tokio::net::TcpListener;
 use tower_http::trace;
 
 use crate::{
@@ -83,7 +84,7 @@ where
     pub async fn run(
         &self,
         config_path: Option<PathBuf>,
-    ) -> inject::Result<Server<AddrIncoming, IntoMakeService<Router>>>
+    ) -> inject::Result<(Serve<Router, Router>, SocketAddr)>
     where
         Config: FromRef<C>,
     {
@@ -96,14 +97,17 @@ where
 
         let http = Config::from_ref(&*config);
 
-        let server = Server::bind(
-            &format!("0.0.0.0:{}", http.port)
-                .parse()
-                .expect("Unable to parse bind address"),
-        )
-        .serve(router.into_make_service());
+        let addr: SocketAddr = format!("0.0.0.0:{}", http.port)
+            .parse()
+            .expect("Unable to parse bind address");
 
-        Ok(server)
+        let listener = TcpListener::bind(&addr)
+            .await
+            .unwrap_or_else(|_| panic!("Unable to bind to address: {}", addr));
+
+        let server = axum::serve(listener, router);
+
+        Ok((server, addr))
     }
 
     async fn get_router(&self) -> inject::Result<Router> {

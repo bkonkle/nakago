@@ -4,9 +4,8 @@ use std::{
 };
 
 use async_trait::async_trait;
-use axum::extract::FromRequestParts;
+use axum::{extract::FromRequestParts, http::request::Parts};
 use derive_new::new;
-use http::request::Parts;
 
 #[derive(Clone, new)]
 /// Axum State used to carry the injection container

@@ -1,23 +1,17 @@
-use std::sync::Arc;
-
 use anyhow::Result;
-use async_trait::async_trait;
+use axum::body::Body;
 use derive_new::new;
-use http::{Method, Request};
-use hyper::{client::HttpConnector, Body, Client};
-use hyper_tls::HttpsConnector;
-use nakago::{inject, Inject, Provider, Tag};
-use nakago_derive::Provider;
+use hyper::{Method, Request};
 use serde_json::Value;
 
-/// Utilities for testing HTTP GraphQL endpoints with Hyper
+/// Utilities for testing HTTP endpoints with Hyper
 #[derive(new)]
 pub struct Http {
     base_url: String,
 }
 
 impl Http {
-    /// Create a GraphQL query request for Hyper with an optional auth token
+    /// Create an HTTP request for Hyper with an optional auth token
     pub fn call(
         &self,
         method: Method,
@@ -42,27 +36,5 @@ impl Http {
         let body = serde_json::to_string(&body)?;
 
         req.body(Body::from(body)).map_err(|err| err.into())
-    }
-}
-
-/// A Tag for the Test HTTP Client
-///   - Tag(nakago_axum::test::HttpClient)
-pub const CLIENT: Tag<Client<HttpsConnector<HttpConnector>>> =
-    Tag::new("nakago_axum::test::HttpClient");
-
-/// A Dependency Injection provider for a simple Test HTTP client using hyper
-#[derive(Default)]
-pub struct ProvideClient {}
-
-#[Provider]
-#[async_trait]
-impl Provider<Client<HttpsConnector<HttpConnector>>> for ProvideClient {
-    async fn provide(
-        self: Arc<Self>,
-        _i: Inject,
-    ) -> inject::Result<Arc<Client<HttpsConnector<HttpConnector>>>> {
-        Ok(Arc::new(
-            Client::builder().build::<_, Body>(HttpsConnector::new()),
-        ))
     }
 }

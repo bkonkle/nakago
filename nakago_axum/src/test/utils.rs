@@ -1,4 +1,4 @@
-use std::{default::Default, net::SocketAddr, sync::Arc, time::Duration};
+use std::{default::Default, future::IntoFuture, net::SocketAddr, time::Duration};
 
 use axum::extract::FromRef;
 use biscuit::{
@@ -6,14 +6,12 @@ use biscuit::{
     jws::{RegisteredHeader, Secret},
     ClaimsSet, Empty, RegisteredClaims, SingleOrMultiple, JWT,
 };
-use hyper::{client::HttpConnector, Client};
-use hyper_tls::HttpsConnector;
 use nakago::{self, inject};
 use tokio::time::sleep;
 
 use crate::{auth, AxumApplication, Config};
 
-use super::http::{Http, ProvideClient, CLIENT};
+use super::http::Http;
 
 /// Common test utils
 pub struct Utils<C>
@@ -28,9 +26,6 @@ where
 
     /// The test HTTP Request helper
     pub http: Http,
-
-    /// The test HTTP client
-    pub http_client: Arc<Client<HttpsConnector<HttpConnector>>>,
 }
 
 impl<C> Utils<C>
@@ -45,13 +40,10 @@ where
         config_path: &str,
         base_url: &str,
     ) -> inject::Result<Self> {
-        app.provide(&CLIENT, ProvideClient::default()).await?;
-
-        let server = app.run(Some(config_path.into())).await?;
-        let addr = server.local_addr();
+        let (server, addr) = app.run(Some(config_path.into())).await?;
 
         // Spawn the server in the background
-        tokio::spawn(server);
+        tokio::spawn(server.into_future());
 
         // Wait for it to initialize
         sleep(Duration::from_millis(200)).await;
@@ -62,14 +54,7 @@ where
             base_url = base_url,
         ));
 
-        let http_client = app.get(&CLIENT).await?;
-
-        Ok(Utils {
-            app,
-            addr,
-            http,
-            http_client,
-        })
+        Ok(Utils { app, addr, http })
     }
 
     /// Create a test JWT token with a dummy secret
