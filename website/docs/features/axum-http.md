@@ -175,8 +175,7 @@ app.on(&EventType::Init, graphql::Init::default());
 Then, use `run` to start the application and return the connection details.
 
 ```rust
-let server = app.run(args.config_path).await?;
-let addr = server.local_addr();
+let (server, addr) = app.run(args.config_path).await?;
 
 info!("Started on port: {port}", port = addr.port());
 
@@ -185,23 +184,23 @@ server.await?;
 
 ## Integration Testing
 
-Testing is handled by initializing your application server in a way similar to Production, and using a Lazy OnceCell to hold an HttpConnector you can use to make requests to the application.
+Integration testing is handled by initializing your application server in a way similar to Production, using test utils to make requests to your server running in the background.
 
 ```rust
-static HTTP_CLIENT: Lazy<Client<HttpsConnector<HttpConnector>>> = Lazy::new(http_client);
+let app = init::app().await?;
 
-/// Creates an http/https client via Hyper
-pub fn http_client() -> Client<HttpsConnector<HttpConnector>> {
-    Client::builder().build::<_, Body>(HttpsConnector::new())
-}
-```
+let config_path = std::env::var("CONFIG_PATH").unwrap_or_else(|_| "test.toml".to_string());
 
-This can then be used to make requests to the running application instance for integration testing:
+let utils = nakago_axum::test::Utils::init(app, &config_path, "/").await?;
 
-```rust
-let mut req = Request::builder().method(Method::POST).uri(&self.url);
+let username = Ulid::new().to_string();
+let token = utils.create_jwt(&username).await?;
 
-let resp = http_client.request(req).await?;
+let resp = utils
+    .http
+    .request_json(Method::POST, "/username", Value::Null, Some(&token))
+    .send()
+    .await?;
 ```
 
 See the [Async-GraphQL Example's integration tests](https://github.com/bkonkle/nakago/tree/feature/nakago-sea-orm/examples/async-graphql/tests) for examples of how to use this pattern. This will evolve as more pieces are moved into the framework itself over time.
