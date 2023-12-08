@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use hyper::Method;
-use nakago::{inject, Hook, Inject};
+use nakago::{hooks, Hook, Inject};
 use nakago_axum::routes;
 
 use super::{events, graphql, health};
@@ -11,7 +11,7 @@ pub struct Load {}
 
 #[async_trait]
 impl Hook for Load {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         i.provide(&graphql::CONTROLLER, graphql::Provide::default())
             .await?;
 
@@ -28,7 +28,7 @@ pub struct Init {}
 
 #[async_trait]
 impl Hook for Init {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         let graphql_controller = i.get(&graphql::CONTROLLER).await?;
         let events_controller = i.get(&events::CONTROLLER).await?;
 

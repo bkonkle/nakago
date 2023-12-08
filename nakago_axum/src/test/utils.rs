@@ -6,7 +6,7 @@ use biscuit::{
     jws::{RegisteredHeader, Secret},
     ClaimsSet, Empty, RegisteredClaims, SingleOrMultiple, JWT,
 };
-use nakago::{self, inject};
+use nakago::{self, hooks, inject};
 use tokio::time::sleep;
 
 use crate::{auth, AxumApplication, Config};
@@ -39,7 +39,7 @@ where
         app: AxumApplication<C>,
         config_path: &str,
         base_url: &str,
-    ) -> inject::Result<Self> {
+    ) -> hooks::Result<Self> {
         let (server, addr) = app.run(Some(config_path.into())).await?;
 
         // Spawn the server in the background

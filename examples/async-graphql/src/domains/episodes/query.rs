@@ -4,7 +4,7 @@ use async_graphql::{Context, Enum, InputObject, Object, Result, SimpleObject};
 use async_trait::async_trait;
 use derive_new::new;
 use hyper::StatusCode;
-use nakago::{inject, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider, Tag};
 use nakago_async_graphql::utils::as_graphql_error;
 use nakago_axum::utils::{
     ManyResponse,
@@ -170,7 +170,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<EpisodesQuery> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<EpisodesQuery>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<EpisodesQuery>> {
         let service = i.get(&SERVICE).await?;
 
         Ok(Arc::new(EpisodesQuery::new(service)))

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use figment::providers::Env;
 use nakago::{
     config::{self},
-    inject, Hook, Inject,
+    hooks, Hook, Inject,
 };
 use serde::{Deserialize, Serialize};
 
@@ -63,7 +63,7 @@ impl Default for AddLoaders {
 
 #[async_trait]
 impl Hook for AddLoaders {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         self.0.handle(i).await
     }
 }

@@ -1,7 +1,7 @@
 use fnv::FnvHashMap;
 
 use crate::{
-    inject::{self, Hook},
+    inject::{hooks, Hook},
     Inject,
 };
 
@@ -45,7 +45,7 @@ impl Events {
     }
 
     /// Trigger the given lifecycle event and handle hooks with the given injection container
-    pub async fn trigger(&self, event: &EventType, i: Inject) -> inject::Result<()> {
+    pub async fn trigger(&self, event: &EventType, i: Inject) -> hooks::Result<()> {
         if let Some(hooks) = self.hooks.get(event) {
             for hook in hooks {
                 hook.handle(i.clone()).await?;

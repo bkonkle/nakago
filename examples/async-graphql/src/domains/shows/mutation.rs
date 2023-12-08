@@ -1,7 +1,7 @@
 use async_graphql::{InputObject, MaybeUndefined, SimpleObject};
 use async_trait::async_trait;
 use fake::{Dummy, Faker};
-use nakago::{inject, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider, Tag};
 use nakago_async_graphql::utils::dummy_maybe_undef;
 use nakago_derive::Provider;
 use rand::Rng;
@@ -195,7 +195,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<ShowsMutation> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<ShowsMutation>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<ShowsMutation>> {
         let service = i.get(&SERVICE).await?;
         let role_grants = i.get(&role_grants::SERVICE).await?;
 

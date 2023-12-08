@@ -1,8 +1,9 @@
-use std::any::Any;
+use std::{any::Any, sync::Arc};
 
 use async_trait::async_trait;
+use thiserror::Error;
 
-use super::{Inject, Result};
+use super::{errors, from_hook_error, provider, Inject};
 
 /// A hook that can be run at various points in the lifecycle of an application
 #[async_trait]
@@ -13,12 +14,39 @@ pub trait Hook: Any + Send {
 
 impl Inject {
     /// Handle a hook by running it against the Inject container
-    pub async fn handle<H>(&self, hook: H) -> Result<()>
+    pub async fn handle<H>(&self, hook: H) -> errors::Result<()>
     where
         H: Hook,
     {
-        hook.handle(self.clone()).await
+        hook.handle(self.clone()).await.map_err(from_hook_error)
     }
+}
+
+/// A Hook Result
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// Hook Errors
+#[derive(Error, Debug, Clone)]
+pub enum Error {
+    /// A generic error thrown from a Hook
+    #[error("hook failure")]
+    Any(#[from] Arc<anyhow::Error>),
+
+    /// An injection error thrown from a Hook
+    #[error("injection failure")]
+    Inject(#[from] errors::Error),
+
+    /// A Provider error thrown from a Hook
+    #[error("provider failure")]
+    Provider(#[from] provider::Error),
+}
+
+/// Wrap an error that can be converted into an Anyhow error with a Hook error
+pub fn to_hook_error<E>(e: E) -> Error
+where
+    anyhow::Error: From<E>,
+{
+    Error::Any(Arc::new(e.into()))
 }
 
 #[cfg(test)]
@@ -27,7 +55,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        inject::{self, container::test::TestService, tag::test::SERVICE_TAG, Key},
+        inject::{container::test::TestService, tag::test::SERVICE_TAG, Key},
         Inject,
     };
 
@@ -36,7 +64,7 @@ mod tests {
 
     #[async_trait]
     impl Hook for TestHook {
-        async fn handle(&self, i: Inject) -> inject::Result<()> {
+        async fn handle(&self, i: Inject) -> Result<()> {
             i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
                 .await?;
 

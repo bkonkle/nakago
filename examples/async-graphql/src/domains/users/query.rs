@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_graphql::{Context, Object, Result};
 use async_trait::async_trait;
-use nakago::{inject, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider, Tag};
 use nakago_derive::Provider;
 
 use super::model::User;
@@ -32,7 +32,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<UsersQuery> for Provide {
-    async fn provide(self: Arc<Self>, _: Inject) -> inject::Result<Arc<UsersQuery>> {
+    async fn provide(self: Arc<Self>, _: Inject) -> provider::Result<Arc<UsersQuery>> {
         Ok(Arc::new(UsersQuery::default()))
     }
 }

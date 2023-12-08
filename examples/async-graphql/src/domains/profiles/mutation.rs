@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use derive_new::new;
 use fake::{faker::internet::en::FreeEmail, Dummy, Fake, Faker};
 use hyper::StatusCode;
-use nakago::{inject, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider, Tag};
 use nakago_async_graphql::utils::{as_graphql_error, dummy_maybe_undef, graphql_error};
 use nakago_derive::Provider;
 use rand::Rng;
@@ -249,7 +249,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<ProfilesMutation> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<ProfilesMutation>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<ProfilesMutation>> {
         let service = i.get(&SERVICE).await?;
 
         Ok(Arc::new(ProfilesMutation::new(service)))

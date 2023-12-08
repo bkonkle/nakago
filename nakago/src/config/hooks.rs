@@ -3,7 +3,10 @@ use std::{marker::PhantomData, path::PathBuf, sync::Arc};
 use async_trait::async_trait;
 use derive_new::new;
 
-use crate::{inject, Hook, Inject, InjectError, Tag};
+use crate::{
+    inject::hooks::{Error, Result},
+    Hook, Inject, Tag,
+};
 
 use super::loader::{Config, LoadAll, Loader};
 
@@ -21,7 +24,7 @@ pub struct AddLoaders {
 
 #[async_trait]
 impl Hook for AddLoaders {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> Result<()> {
         let loaders = match i.consume(&LOADERS).await {
             Ok(loaders) => {
                 let mut updated = loaders.clone();
@@ -85,13 +88,13 @@ impl<C: Config> Init<C> {
 
 #[async_trait]
 impl<C: Config> Hook for Init<C> {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> Result<()> {
         let loaders = i.get(&LOADERS).await.unwrap_or_default().to_vec();
         let loader = LoadAll::<C>::new(loaders);
 
         let config = loader
             .load(self.custom_path.clone())
-            .map_err(|e| InjectError::Provider(Arc::new(e.into())))?;
+            .map_err(|e| Error::Any(Arc::new(e.into())))?;
 
         if let Some(tag) = self.tag {
             i.inject(tag, config).await?;
@@ -105,7 +108,6 @@ impl<C: Config> Hook for Init<C> {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use anyhow::Result;
     use figment::providers::Env;
 
     use crate::config::loader::test::Config;

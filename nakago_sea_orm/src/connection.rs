@@ -5,7 +5,7 @@ use std::{
 
 use async_trait::async_trait;
 use axum::extract::FromRef;
-use nakago::{self, inject, to_provider_error, Inject, Provider, Tag};
+use nakago::{self, provider, to_provider_error, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use sea_orm::{DatabaseBackend, DatabaseConnection, MockDatabase, MockDatabaseTrait};
 
@@ -50,7 +50,7 @@ impl<C: nakago::Config> Provider<DatabaseConnection> for Provide<C>
 where
     Config: FromRef<C>,
 {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<DatabaseConnection>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<DatabaseConnection>> {
         let dep = if let Some(tag) = self.config_tag {
             i.get(tag).await?
         } else {
@@ -98,7 +98,7 @@ impl Default for ProvideMock {
 #[Provider]
 #[async_trait]
 impl Provider<DatabaseConnection> for ProvideMock {
-    async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<DatabaseConnection>> {
+    async fn provide(self: Arc<Self>, _i: Inject) -> provider::Result<Arc<DatabaseConnection>> {
         let existing = self.db.lock().expect("Could not lock MockDatabase Mutex");
         let backend = existing.get_database_backend();
         drop(existing);

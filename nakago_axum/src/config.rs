@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use figment::providers::Env;
-use nakago::{config, inject, Hook, Inject};
+use nakago::{config, hooks, Hook, Inject};
 use serde::{Deserialize, Serialize};
 
 use crate::auth;
@@ -56,7 +56,7 @@ impl Default for AddLoaders {
 
 #[async_trait]
 impl Hook for AddLoaders {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         self.0.handle(i).await
     }
 }

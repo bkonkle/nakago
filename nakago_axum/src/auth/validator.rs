@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use biscuit::{jwa::SignatureAlgorithm, jwk::JWKSet, jws::Header, ClaimsSet, Empty, JWT};
-use nakago::{inject, Inject, Provider};
+use nakago::{provider, Inject, Provider};
 use nakago_derive::Provider;
 
 use super::{
@@ -75,7 +75,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<Validator> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Validator>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Validator>> {
         let jwks = i.get(&JWKS).await?;
 
         let validator = Validator::KeySet(jwks);
@@ -95,7 +95,7 @@ pub struct ProvideUnverified {}
 #[Provider]
 #[async_trait]
 impl Provider<Validator> for ProvideUnverified {
-    async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<Validator>> {
+    async fn provide(self: Arc<Self>, _i: Inject) -> provider::Result<Arc<Validator>> {
         let validator = Validator::Unverified;
 
         Ok(Arc::new(validator))

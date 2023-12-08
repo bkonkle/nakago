@@ -4,7 +4,7 @@ use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use async_trait::async_trait;
 use axum::response::{Html, IntoResponse};
-use nakago::{inject, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider, Tag};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
 
@@ -56,7 +56,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<Controller> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Controller>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Controller>> {
         let users = i.get(&users::SERVICE).await?;
         let schema = i.get(&graphql::SCHEMA).await?;
 

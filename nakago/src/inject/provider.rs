@@ -2,8 +2,9 @@ use std::{any::Any, collections::hash_map::Entry, sync::Arc};
 
 use async_trait::async_trait;
 use backtrace::Backtrace;
+use thiserror::Error;
 
-use super::{Dependency, Error, Inject, Injector, Key, Result};
+use super::{errors, Dependency, Inject, Injector, Key};
 
 /// A trait for async injection Providers
 #[async_trait]
@@ -18,9 +19,9 @@ impl Inject {
         &self,
         key: Key,
         provider: impl Provider<T> + Provider<Dependency> + 'static,
-    ) -> Result<()> {
+    ) -> errors::Result<()> {
         match self.0.write().await.entry(key.clone()) {
-            Entry::Occupied(_) => Err(Error::Occupied(key)),
+            Entry::Occupied(_) => Err(super::Error::Occupied(key)),
             Entry::Vacant(entry) => {
                 let _ = entry.insert(Injector::from_provider::<T>(provider));
 
@@ -34,7 +35,7 @@ impl Inject {
         &self,
         key: Key,
         provider: impl Provider<T> + Provider<Dependency> + 'static,
-    ) -> Result<()> {
+    ) -> errors::Result<()> {
         let available = self.get_available_keys().await;
 
         match self.0.write().await.entry(key.clone()) {
@@ -43,7 +44,7 @@ impl Inject {
 
                 Ok(())
             }
-            Entry::Vacant(_) => Err(Error::NotFound {
+            Entry::Vacant(_) => Err(super::Error::NotFound {
                 missing: key,
                 available,
                 backtrace: Arc::new(Backtrace::new()),
@@ -52,12 +53,27 @@ impl Inject {
     }
 }
 
-/// Wrap an error that can be converted into an Anyhow error with an inject Provider error
+/// A Provider Result
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// Provider Errors
+#[derive(Error, Debug, Clone)]
+pub enum Error {
+    /// A generic error thrown from a Provider
+    #[error("provider failure")]
+    Any(#[from] Arc<anyhow::Error>),
+
+    /// An injection error thrown from a Provider
+    #[error("injection failure")]
+    Inject(#[from] errors::Error),
+}
+
+/// Wrap an error that can be converted into an Anyhow error with a Provider error
 pub fn to_provider_error<E>(e: E) -> Error
 where
     anyhow::Error: From<E>,
 {
-    Error::Provider(Arc::new(e.into()))
+    Error::Any(Arc::new(e.into()))
 }
 
 #[cfg(test)]

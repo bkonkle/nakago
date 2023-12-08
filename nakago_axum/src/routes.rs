@@ -8,7 +8,7 @@ use axum::{
     Router,
 };
 use hyper::Method;
-use nakago::{inject, Hook, Inject};
+use nakago::{hooks, Hook, Inject};
 use tokio::sync::Mutex;
 
 use crate::State;
@@ -45,7 +45,7 @@ where
     T: Send + Sync + Any,
     H: Handler<T, State> + Send + Sync,
 {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         let router = match self.method {
             Method::HEAD => head(self.handler.clone()),
             Method::GET => get(self.handler.clone()),
@@ -55,7 +55,7 @@ where
             Method::PUT => put(self.handler.clone()),
             Method::TRACE => trace(self.handler.clone()),
             _ => {
-                return Err(inject::Error::Provider(Arc::new(anyhow!(format!(
+                return Err(hooks::Error::Any(Arc::new(anyhow!(format!(
                     "Unsupported Route Method: {}",
                     self.method
                 )))))
