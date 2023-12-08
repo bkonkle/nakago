@@ -12,8 +12,8 @@ use crossterm::{execute, style::Print};
 use tracing_subscriber::prelude::*;
 
 use crate::{
-    config,
-    inject::{self, Hook},
+    config, hooks,
+    inject::{self, from_hook_error, Hook},
     lifecycle::Events,
     Config, EventType, Inject, Tag,
 };
@@ -75,16 +75,17 @@ where
     }
 
     /// Trigger the given lifecycle event
-    pub async fn trigger(&mut self, event: &EventType) -> inject::Result<()> {
+    pub async fn trigger(&mut self, event: &EventType) -> hooks::Result<()> {
         self.events.trigger(event, self.i.clone()).await
     }
 
     /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
-    pub async fn load(&self, config_path: Option<PathBuf>) -> inject::Result<()> {
+    pub async fn load(&self, config_path: Option<PathBuf>) -> hooks::Result<()> {
         // Trigger the Load lifecycle event
         self.events
             .trigger(&EventType::Load, self.i.clone())
-            .await?;
+            .await
+            .map_err(from_hook_error)?;
 
         // Load the Config using the given path
         self.i
@@ -95,7 +96,7 @@ where
     }
 
     /// Initialize the App and provide the top-level Config. Triggers the Init lifecycle event.
-    pub async fn init(&self) -> inject::Result<()> {
+    pub async fn init(&self) -> hooks::Result<()> {
         // Trigger the Init lifecycle event
         self.events
             .trigger(&EventType::Init, self.i.clone())
@@ -115,7 +116,7 @@ where
     }
 
     /// Trigger the Startup lifecycle event.
-    pub async fn start(&self) -> inject::Result<()> {
+    pub async fn start(&self) -> hooks::Result<()> {
         self.events
             .trigger(&EventType::Startup, self.i.clone())
             .await?;
@@ -124,7 +125,7 @@ where
     }
 
     /// Trigger the Shutdown lifecycle event.
-    pub async fn stop(&self) -> inject::Result<()> {
+    pub async fn stop(&self) -> hooks::Result<()> {
         self.events
             .trigger(&EventType::Shutdown, self.i.clone())
             .await?;

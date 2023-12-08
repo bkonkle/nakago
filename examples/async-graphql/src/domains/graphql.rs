@@ -1,6 +1,6 @@
 use async_graphql::{self, EmptySubscription, MergedObject};
 use async_trait::async_trait;
-use nakago::{inject, Hook, Inject, Tag};
+use nakago::{hooks, Hook, Inject, Tag};
 use nakago_async_graphql::schema;
 
 use crate::{authz::OSO, config::CONFIG};
@@ -38,7 +38,7 @@ pub struct Load {}
 
 #[async_trait]
 impl Hook for Load {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         i.handle(users::schema::Load::default()).await?;
         i.handle(profiles::schema::Load::default()).await?;
         i.handle(role_grants::schema::Load::default()).await?;
@@ -55,7 +55,7 @@ pub struct Init {}
 
 #[async_trait]
 impl Hook for Init {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         let config = i.get(&CONFIG).await?;
         let oso = i.get(&OSO).await?;
 

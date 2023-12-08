@@ -4,7 +4,7 @@ use async_graphql::{Context, InputObject, Object, Result, SimpleObject};
 use async_trait::async_trait;
 use derive_new::new;
 use hyper::StatusCode;
-use nakago::{inject, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider, Tag};
 use nakago_async_graphql::utils::{as_graphql_error, graphql_error};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
@@ -157,7 +157,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<UsersMutation> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<UsersMutation>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<UsersMutation>> {
         let service = i.get(&SERVICE).await?;
         let profiles = i.get(&profiles::SERVICE).await?;
 

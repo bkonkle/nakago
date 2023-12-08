@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use derive_new::new;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{inject, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider, Tag};
 use nakago_axum::utils::{ManyResponse, Ordering};
 use nakago_derive::Provider;
 use nakago_sea_orm::{DatabaseConnection, CONNECTION};
@@ -285,7 +285,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<Box<dyn Service>> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Box<dyn Service>>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Box<dyn Service>>> {
         let db = i.get(&CONNECTION).await?;
 
         Ok(Arc::new(Box::new(DefaultService::new(db))))
@@ -305,7 +305,7 @@ pub(crate) mod test {
     #[Provider]
     #[async_trait]
     impl Provider<Box<dyn Service>> for ProvideMock {
-        async fn provide(self: Arc<Self>, _i: Inject) -> inject::Result<Arc<Box<dyn Service>>> {
+        async fn provide(self: Arc<Self>, _i: Inject) -> provider::Result<Arc<Box<dyn Service>>> {
             Ok(Arc::new(Box::<MockService>::default()))
         }
     }

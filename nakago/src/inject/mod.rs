@@ -23,8 +23,8 @@ pub mod provider;
 pub mod injector;
 
 pub use container::Inject;
-pub use errors::{Error, Result};
-pub use hooks::Hook;
+pub use errors::{from_hook_error, from_provider_error, Error, Result};
+pub use hooks::{to_hook_error, Hook};
 pub use injector::{Dependency, Pending};
 pub use key::{Id, Key};
 pub use provider::{to_provider_error, Provider};

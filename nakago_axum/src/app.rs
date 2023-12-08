@@ -7,7 +7,7 @@ use std::{
 };
 
 use axum::{extract::FromRef, serve::Serve, Router};
-use nakago::{self, inject, Application, Tag};
+use nakago::{self, hooks, inject, Application, Tag};
 use tokio::net::TcpListener;
 use tower_http::trace;
 
@@ -85,7 +85,7 @@ where
     pub async fn run(
         &self,
         config_path: Option<PathBuf>,
-    ) -> inject::Result<(Serve<Router, Router>, SocketAddr)>
+    ) -> hooks::Result<(Serve<Router, Router>, SocketAddr)>
     where
         Config: FromRef<C>,
     {
@@ -108,7 +108,7 @@ where
 
         let actual_addr = listener
             .local_addr()
-            .map_err(|e| inject::Error::Provider(Arc::new(e.into())))?; // TODO: Error refactoring
+            .map_err(|e| hooks::Error::Any(Arc::new(e.into())))?;
 
         let server = axum::serve(listener, router);
 

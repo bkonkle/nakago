@@ -6,7 +6,7 @@ use biscuit::{
     jwk::{AlgorithmParameters, JWKSet, JWK},
     jws::Secret,
 };
-use nakago::{self, inject, Inject, Provider, Tag};
+use nakago::{self, provider, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use thiserror::Error;
 
@@ -124,7 +124,7 @@ impl<C: nakago::Config> Provider<JWKSet<biscuit::Empty>> for Provide<C>
 where
     Config: FromRef<C>,
 {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<JWKSet<biscuit::Empty>>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<JWKSet<biscuit::Empty>>> {
         let config = if let Some(tag) = self.config_tag {
             i.get(tag).await?
         } else {

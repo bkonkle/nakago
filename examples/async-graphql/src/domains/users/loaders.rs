@@ -6,7 +6,7 @@ use async_graphql::{
 };
 use async_trait::async_trait;
 use derive_new::new;
-use nakago::{inject, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider, Tag};
 use nakago_derive::Provider;
 
 use super::{
@@ -51,7 +51,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<DataLoader<Loader>> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<DataLoader<Loader>>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<DataLoader<Loader>>> {
         let users_service = i.get(&SERVICE).await?;
 
         Ok(Arc::new(DataLoader::new(

@@ -16,8 +16,8 @@ pub mod lifecycle;
 pub use app::Application;
 pub use config::Config;
 pub use inject::{
-    to_provider_error, Dependency, Error as InjectError, Hook, Inject, Provider,
-    Result as InjectResult, Tag,
+    hooks, provider, to_hook_error, to_provider_error, Dependency, Error as InjectError, Hook,
+    Inject, Provider, Result as InjectResult, Tag,
 };
 pub use lifecycle::EventType;
 

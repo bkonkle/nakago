@@ -10,7 +10,7 @@ use backtrace::Backtrace;
 use futures::{Future, FutureExt};
 use tokio::sync::RwLock;
 
-use super::{Dependency, Error, Injector, Key, Result};
+use super::{errors, provider, Dependency, Error, Injector, Key, Result};
 
 /// A Dependency Injection container based on the concept of Shared Futures, which multiple
 /// independent threads can await. The container holds a map of Keys to Injectors, and provides
@@ -43,7 +43,7 @@ impl Inject {
     pub async fn get_key_opt<T: Any + Send + Sync>(&self, key: Key) -> Result<Option<Arc<T>>> {
         if let Some(injector) = self.0.read().await.get(&key) {
             let pending = injector.request(self.clone()).await;
-            let value = pending.await?;
+            let value = pending.await.map_err(errors::from_provider_error)?;
 
             return value
                 .downcast::<T>()
@@ -89,20 +89,22 @@ impl Inject {
     pub async fn override_key<T: Any + Send + Sync>(&self, key: Key, dep: T) -> Result<bool> {
         match self.0.write().await.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
-                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
-                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
-                        dep,
-                    ))));
+                let pending: Pin<
+                    Box<dyn Future<Output = provider::Result<Arc<Dependency>>> + Send>,
+                > = Box::pin(ready::<provider::Result<Arc<dyn Any + Send + Sync>>>(Ok(
+                    Arc::new(dep),
+                )));
 
                 let _ = entry.insert(Injector::from_pending(pending.shared()));
 
                 Ok(true)
             }
             Entry::Vacant(entry) => {
-                let pending: Pin<Box<dyn Future<Output = Result<Arc<Dependency>>> + Send>> =
-                    Box::pin(ready::<Result<Arc<dyn Any + Send + Sync>>>(Ok(Arc::new(
-                        dep,
-                    ))));
+                let pending: Pin<
+                    Box<dyn Future<Output = provider::Result<Arc<Dependency>>> + Send>,
+                > = Box::pin(ready::<provider::Result<Arc<dyn Any + Send + Sync>>>(Ok(
+                    Arc::new(dep),
+                )));
 
                 let _ = entry.insert(Injector::from_pending(pending.shared()));
 

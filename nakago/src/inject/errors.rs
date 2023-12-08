@@ -3,7 +3,10 @@ use std::{fmt::Debug, sync::Arc};
 use backtrace::Backtrace;
 use thiserror::Error;
 
-use super::Key;
+use super::{hooks, provider, Key};
+
+/// A Dependency Injection Result
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// Injection Errors
 #[derive(Error, Debug, Clone)]
@@ -30,7 +33,11 @@ pub enum Error {
 
     /// An error thrown from a Provider
     #[error("provider failure")]
-    Provider(#[from] Arc<anyhow::Error>),
+    Provider(#[from] Box<provider::Error>),
+
+    /// An error thrown from a Hook
+    #[error("hook failure")]
+    Hook(#[from] Box<hooks::Error>),
 
     /// An error thrown when an Any type cannot be downcast to the given concrete type
     #[error("{0} was not able to be downcast to {}", .0.type_name)]
@@ -75,5 +82,12 @@ fn format_backtrace(backtrace: &Arc<Backtrace>) -> String {
     }
 }
 
-/// A Dependency Injection Result
-pub type Result<T> = std::result::Result<T, Error>;
+/// Convert a Provider error into an Inject error
+pub fn from_provider_error(e: provider::Error) -> Error {
+    Error::Provider(Box::new(e))
+}
+
+/// Convert a Hook error into an Inject error
+pub fn from_hook_error(e: hooks::Error) -> Error {
+    Error::Hook(Box::new(e))
+}

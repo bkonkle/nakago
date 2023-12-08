@@ -2,7 +2,7 @@ use std::any::Any;
 
 use async_graphql::{ObjectType, Schema, SchemaBuilder, SubscriptionType};
 use async_trait::async_trait;
-use nakago::{inject, Hook, Inject, Tag};
+use nakago::{hooks, Hook, Inject, Tag};
 
 /// Initialize the GraphQL Schema and inject it with the given Tag
 pub struct Init<Query: Any, Mutation: Any, Subscription: Any> {
@@ -49,7 +49,7 @@ where
     Mutation: ObjectType + 'static,
     Subscription: SubscriptionType + 'static,
 {
-    async fn handle(&self, inject: Inject) -> inject::Result<()> {
+    async fn handle(&self, inject: Inject) -> hooks::Result<()> {
         let schema_builder = if let Some(tag) = self.builder_tag {
             inject.consume(tag).await?
         } else {

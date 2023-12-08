@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use derive_new::new;
 use fake::{Dummy, Fake, Faker};
 use hyper::StatusCode;
-use nakago::{inject, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider, Tag};
 use nakago_async_graphql::utils::{as_graphql_error, dummy_maybe_undef, graphql_error};
 use nakago_derive::Provider;
 use oso::Oso;
@@ -243,7 +243,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<EpisodesMutation> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<EpisodesMutation>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<EpisodesMutation>> {
         let service = i.get(&SERVICE).await?;
         let shows = i.get(&shows::SERVICE).await?;
 

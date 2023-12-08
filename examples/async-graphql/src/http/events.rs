@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use axum::{extract::WebSocketUpgrade, response::IntoResponse};
-use nakago::{inject, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider, Tag};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
 
@@ -46,7 +46,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<Controller> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Controller>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Controller>> {
         let users = i.get(&users::SERVICE).await?;
         let handler = i.get(&socket::HANDLER).await?;
 

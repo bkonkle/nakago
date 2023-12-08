@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0]
+
+### Changed
+
+- `nakago`: Errors were split into 3 - one for Injection, one for Providers, and one for Hooks.
+- `nakago-derive`: Updated to use the updated error type for Providers.
+
 ## [0.17.0]
 
 This is a big release! It includes updates from `http` to v1.0, `hyper` to v1.0, and `axum` to v0.7. It refactors the test utils to use `reqwest` instead of the minimal hyper Client that is changing in v1.0. There are a number of small behind-the-scenes changes to support these new versions, and Nakago is currently relying on a few temporary forks as the community catches up to the big releases in recent weeks.
@@ -300,6 +307,7 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
+[0.18.0]: https://github.com/bkonkle/nakago/compare/0.17.0...0.18.0
 [0.17.0]: https://github.com/bkonkle/nakago/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/bkonkle/nakago/compare/0.15.0...0.16.0
 [0.15.0]: https://github.com/bkonkle/nakago/compare/0.14.1...0.15.0

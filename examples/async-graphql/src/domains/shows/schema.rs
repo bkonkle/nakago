@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use nakago::{inject, Hook, Inject};
+use nakago::{hooks, Hook, Inject};
 
 use crate::domains::graphql;
 
@@ -16,7 +16,7 @@ pub struct Load {}
 
 #[async_trait]
 impl Hook for Load {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         i.provide(&SERVICE, service::Provide::default()).await?;
         i.provide(&LOADER, loaders::Provide::default()).await?;
         i.provide(&QUERY, query::Provide::default()).await?;
@@ -32,7 +32,7 @@ pub struct Init {}
 
 #[async_trait]
 impl Hook for Init {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         let loader = i.get(&LOADER).await?;
 
         i.modify(&graphql::SCHEMA_BUILDER, |builder| {
@@ -49,7 +49,7 @@ pub(crate) mod test {
     use std::sync::Arc;
 
     use async_graphql::{self, EmptySubscription};
-    use nakago::{Provider, Tag};
+    use nakago::{provider, Provider, Tag};
 
     use crate::domains::{
         role_grants,
@@ -76,7 +76,7 @@ pub(crate) mod test {
 
     #[async_trait]
     impl Provider<Schema> for ProvideSchema {
-        async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Schema>> {
+        async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Schema>> {
             let service = i.get(&SERVICE).await?;
             let role_grants = i.get(&role_grants::SERVICE).await?;
 
