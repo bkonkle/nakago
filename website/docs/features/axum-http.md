@@ -74,7 +74,7 @@ pub struct Provide {}
 #[Provider]
 #[async_trait]
 impl Provider<Controller> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> inject::Result<Arc<Controller>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Controller>> {
         let users = i.get(&users::SERVICE).await?;
         let handler = i.get(&socket::HANDLER).await?;
 
@@ -91,7 +91,7 @@ pub struct Init {}
 
 #[async_trait]
 impl Hook for Init {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         let events_controller = i.get(&events::CONTROLLER).await?;
 
         i.handle(routes::Init::new(
@@ -148,7 +148,7 @@ pub struct Init {}
 
 #[async_trait]
 impl Hook for Init {
-    async fn handle(&self, _i: Inject) -> inject::Result<()> {
+    async fn handle(&self, _i: Inject) -> hooks::Result<()> {
         i.handle(routes::Init::new(
             Method::GET,
             "/events",

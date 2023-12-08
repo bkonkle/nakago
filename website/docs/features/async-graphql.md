@@ -50,7 +50,7 @@ pub struct Load {}
 
 #[async_trait]
 impl Hook for Load {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         i.provide(&SERVICE, service::Provide::default()).await?;
         i.provide(&LOADER, loaders::Provide::default()).await?;
         i.provide(&QUERY, query::Provide::default()).await?;
@@ -71,7 +71,7 @@ pub struct Load {}
 
 #[async_trait]
 impl Hook for Load {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         i.handle(users::schema::Load::default()).await?;
         i.handle(profiles::schema::Load::default()).await?;
         i.handle(role_grants::schema::Load::default()).await?;
@@ -142,7 +142,7 @@ pub struct Init {}
 
 #[async_trait]
 impl Hook for Init {
-    async fn handle(&self, i: Inject) -> inject::Result<()> {
+    async fn handle(&self, i: Inject) -> hooks::Result<()> {
         let users_query = i.consume(&users::QUERY).await?;
         let profiles_query = i.consume(&profiles::QUERY).await?;
 
