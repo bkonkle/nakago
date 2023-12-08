@@ -22,7 +22,7 @@ async-graphql-axum = { git = "https://github.com/bkonkle/async-graphql.git", bra
 async-trait = "0.1"
 axum = { version = "0.7", features = ["ws", "macros"] }
 chrono = { version = "0.4.19", features = ["serde"] }
-derive-new = "0.5"
+derive-new = "0.6"
 fake = { version = "2.9", features = [
     'derive',
     'chrono',
@@ -64,7 +64,7 @@ futures-util = { version = "0.3", default-features = false, features = [
     "sink",
     "std",
 ] }
-hyper-tls = "0.5"
+hyper-tls = "0.6"
 maplit = { version = "1" }
 mockall = "0.11"
 pretty_assertions = "1.2"
