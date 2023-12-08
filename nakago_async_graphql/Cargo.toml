@@ -28,7 +28,7 @@ fake = { version = "2.9", features = [
 figment = { version = "0.10", features = ["env"] }
 hyper = "1.0"
 log = "0.4"
-nakago = "0.14"
+nakago = "0.17"
 nakago-axum = "0.17"
 nakago-derive = "0.8"
 pretty_env_logger = "0.5"
