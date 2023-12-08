@@ -1,5 +1,5 @@
 use axum::response::{IntoResponse, Response};
-use http::StatusCode;
+use hyper::StatusCode;
 
 /// A wrapper to implement IntoResponse for Nakago injection errors
 pub struct Error(pub nakago::inject::Error);

@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0]
+
+This is a big release! It includes updates from `http` to v1.0, `hyper` to v1.0, and `axum` to v0.7. It refactors the test utils to use `reqwest` instead of the minimal hyper Client that is changing in v1.0. There are a number of small behind-the-scenes changes to support these new versions, and Nakago is currently relying on a few temporary forks as the community catches up to the big releases in recent weeks.
+
+### Changed
+
+- Dependency updates to `http` v1.0, `hyper` v1.0, and `axum` v0.7 across the board.
+- `nakago-axum`: `AxumApplication.run()` now returns a tuple with the server and the actual address that it is bound to.
+- `nakago-axum`: The `jwks` utils now use `reqwest` to retrieve the "known-hosts.json" file.
+- `nakago-axum`: The `Route` and `Routes` types no longer take a `Body` type parameter.
+- `nakago-axum`: Moved the test HTTP utilities to `reqwest`, eliminating the need for an injected HTTP test client.
+- `nakago-async-graphql`: Moved the test HTTP utilities to `reqwest`, and made the integration with the plain HTTP test utils more seamless.
+
+### Removed
+
+- `nakago-axum`: Removed the `test::CLIENT` tag, because it is no longer needed.
+
+### Upgrade Guide
+
+To update your project from Nakago v0.16 to v0.17:
+
+- Update all Nakago crates to v0.17.
+
+- Update usages of `AxumApplication.run()` to use the new return type, which is a tuple of `(Server, SocketAddr)`.
+
+```rust
+    // From:
+    let server = app.run(args.config_path).await?;
+    let addr = server.local_addr();
+
+    // To:
+    let (server, addr) = app.run(args.config_path).await?;
+```
+
+- Update tests to use `reqwest` instead of the injected HTTP client.
+
+```rust
+    // From:
+    let req = utils
+        .http
+        .call(Method::GET, "/username", Value::Null, Some(&token))?;
+
+    let resp = utils.http_client.request(req).await?;
+
+    let status = resp.status();
+    let body = to_bytes(resp.into_body()).await?;
+
+    let json: Value = serde_json::from_slice(&body)?;
+
+    // To:
+    let resp = utils
+        .http
+        .get_json("/username", Some(&token))
+        .send()
+        .await?;
+
+    let status = resp.status();
+
+    let json = resp.json::<Value>().await?;
+```
+
+
 ## [0.16.0]
 
 ### Added
@@ -238,6 +300,7 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
+[0.17.0]: https://github.com/bkonkle/nakago/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/bkonkle/nakago/compare/0.15.0...0.16.0
 [0.15.0]: https://github.com/bkonkle/nakago/compare/0.14.1...0.15.0
 [0.14.1]: https://github.com/bkonkle/nakago/compare/0.14.0...0.14.1

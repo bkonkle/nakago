@@ -7,17 +7,17 @@ use axum::{
     routing::{get, head, options, patch, post, put, trace},
     Router,
 };
-use hyper::{Body, Method};
+use hyper::Method;
 use nakago::{inject, Hook, Inject};
 use tokio::sync::Mutex;
 
 use crate::State;
 
 /// A Route that will be nested within a higher-level Router, wrapped in a Mutex to safely move
-pub type Route<B = Body> = Mutex<Router<State, B>>;
+pub type Route = Mutex<Router<State>>;
 
 /// A collection of Routes
-pub type Routes<B = Body> = Mutex<Vec<Route<B>>>;
+pub type Routes = Mutex<Vec<Route>>;
 
 /// A hook to initialize a particular route
 pub struct Init<H, T> {

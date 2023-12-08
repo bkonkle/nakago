@@ -1,68 +1,75 @@
-use std::sync::Arc;
+use std::ops::{Deref, DerefMut};
 
-use anyhow::Result;
-use async_trait::async_trait;
-use derive_new::new;
-use http::{Method, Request};
-use hyper::{client::HttpConnector, Body, Client};
-use hyper_tls::HttpsConnector;
-use nakago::{inject, Inject, Provider, Tag};
-use nakago_derive::Provider;
+use reqwest::{Client, Method, RequestBuilder};
 use serde_json::Value;
 
-/// Utilities for testing HTTP GraphQL endpoints with Hyper
-#[derive(new)]
+/// Utilities for testing HTTP endpoints with Hyper
 pub struct Http {
+    /// The HTTP client instance
+    pub client: Client,
+
     base_url: String,
 }
 
 impl Http {
-    /// Create a GraphQL query request for Hyper with an optional auth token
-    pub fn call(
+    /// Create a new instance of the `Http` struct with a base URL for requests
+    pub fn new(base_url: String) -> Self {
+        Http {
+            client: Client::new(),
+            base_url,
+        }
+    }
+
+    /// Create an HTTP GET request with an optional auth token
+    pub fn get_json(&self, path: &str, token: Option<&str>) -> RequestBuilder {
+        let mut req = self.client.get(self.get_url(path));
+
+        if let Some(token) = token {
+            req = req.header("Authorization", format!("Bearer {}", token));
+        }
+
+        req
+    }
+
+    /// Create an HTTP request for Hyper with an optional auth token
+    pub fn request_json(
         &self,
         method: Method,
         path: &str,
-        body: Value,
+        json: Value,
         token: Option<&str>,
-    ) -> Result<Request<Body>> {
+    ) -> RequestBuilder {
+        let mut req = self.client.request(method, self.get_url(path));
+
+        if let Some(token) = token {
+            req = req.header("Authorization", format!("Bearer {}", token));
+        }
+
+        req.body(serde_json::to_string(&json).expect("Unable to serialize body"))
+    }
+
+    /// Return the given path with the base URL prepended
+    pub fn get_url(&self, path: &str) -> String {
         let base_url = if path.starts_with('/') {
             self.base_url.strip_suffix('/').unwrap_or(&self.base_url)
         } else {
             &self.base_url
         };
 
-        let mut req = Request::builder()
-            .method(method)
-            .uri(format!("{}{}", base_url, path));
-
-        if let Some(token) = token {
-            req = req.header("Authorization", format!("Bearer {}", token));
-        }
-
-        let body = serde_json::to_string(&body)?;
-
-        req.body(Body::from(body)).map_err(|err| err.into())
+        format!("{}{}", base_url, path)
     }
 }
 
-/// A Tag for the Test HTTP Client
-///   - Tag(nakago_axum::test::HttpClient)
-pub const CLIENT: Tag<Client<HttpsConnector<HttpConnector>>> =
-    Tag::new("nakago_axum::test::HttpClient");
+impl Deref for Http {
+    type Target = Client;
 
-/// A Dependency Injection provider for a simple Test HTTP client using hyper
-#[derive(Default)]
-pub struct ProvideClient {}
+    fn deref(&self) -> &Self::Target {
+        &self.client
+    }
+}
 
-#[Provider]
-#[async_trait]
-impl Provider<Client<HttpsConnector<HttpConnector>>> for ProvideClient {
-    async fn provide(
-        self: Arc<Self>,
-        _i: Inject,
-    ) -> inject::Result<Arc<Client<HttpsConnector<HttpConnector>>>> {
-        Ok(Arc::new(
-            Client::builder().build::<_, Body>(HttpsConnector::new()),
-        ))
+impl DerefMut for Http {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.client
     }
 }

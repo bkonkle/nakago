@@ -2,7 +2,6 @@
 
 use anyhow::Result;
 use fake::{Fake, Faker};
-use hyper::body::to_bytes;
 use nakago_examples_async_graphql::domains::{
     role_grants::{self, model::CreateRoleGrantInput},
     shows::{self, mutation::CreateShowInput},
@@ -65,22 +64,24 @@ async fn test_episode_create_simple() -> Result<()> {
         })
         .await?;
 
-    let req = utils.graphql.query(
-        CREATE_EPISODE,
-        json!({
-            "input": {
-                "title": "Test Episode 1",
-                "showId": show.id.clone(),
-            }
-        }),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            CREATE_EPISODE,
+            json!({
+                "input": {
+                    "title": "Test Episode 1",
+                    "showId": show.id.clone(),
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_episode = &json["data"]["createEpisode"]["episode"];
     let json_show = &json_episode["show"];
@@ -100,15 +101,15 @@ async fn test_episode_create_requires_title_show_id() -> Result<()> {
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(CREATE_EPISODE, json!({ "input": {}}), Some(&token))?;
+        .query(CREATE_EPISODE, json!({ "input": {}}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(
@@ -117,21 +118,23 @@ async fn test_episode_create_requires_title_show_id() -> Result<()> {
     );
 
     // Now provide the "email" and try again
-    let req = utils.graphql.query(
-        CREATE_EPISODE,
-        json!({
-            "input": {
-                "title": "Test Episode 1",
-            }
-        }),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            CREATE_EPISODE,
+            json!({
+                "input": {
+                    "title": "Test Episode 1",
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(
@@ -153,23 +156,24 @@ async fn test_episode_create_authn() -> Result<()> {
     let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
-    let req = utils.graphql.query(
-        CREATE_EPISODE,
-        json!({
-            "input": {
-                "title": "dummy-title",
-                "showId": show.id
-            }
-        }),
-        None,
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            CREATE_EPISODE,
+            json!({
+                "input": {
+                    "title": "dummy-title",
+                    "showId": show.id
+                }
+            }),
+            None,
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");
@@ -196,23 +200,24 @@ async fn test_episode_create_authz() -> Result<()> {
     let users = utils.app.get(&users::SERVICE).await?;
     let _ = users.create(&username).await?;
 
-    let req = utils.graphql.query(
-        CREATE_EPISODE,
-        json!({
-            "input": {
-                "title": "Test Episode 1",
-                "showId": show.id,
-            }
-        }),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            CREATE_EPISODE,
+            json!({
+                "input": {
+                    "title": "Test Episode 1",
+                    "showId": show.id,
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Forbidden");
@@ -250,16 +255,15 @@ async fn test_episode_get() -> Result<()> {
         .create_show_and_episode("Test Show", "Test Episode 1")
         .await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(GET_EPISODE, json!({ "id": episode.id,}), Some(&token))?;
+        .query(GET_EPISODE, json!({ "id": episode.id,}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_episode = &json["data"]["getEpisode"];
     let json_show = &json_episode["show"];
@@ -280,15 +284,15 @@ async fn test_episode_get_empty() -> Result<()> {
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(GET_EPISODE, json!({ "id": "dummy-id",}), Some(&token))?;
+        .query(GET_EPISODE, json!({ "id": "dummy-id",}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["data"]["getEpisode"], Value::Null);
@@ -345,22 +349,23 @@ async fn test_episode_get_many() -> Result<()> {
         .create_show_and_episode("Test Show 2", "Test Episode 1")
         .await?;
 
-    let req = utils.graphql.query(
-        GET_MANY_EPISODES,
-        json!({
-            "where": {
-                "idsIn": vec![episode.id.clone(), other_episode.id.clone()],
-            }
-        }),
-        Some(&token),
-    )?;
-    let resp = utils.http_client.request(req).await?;
+    let resp = utils
+        .graphql
+        .query(
+            GET_MANY_EPISODES,
+            json!({
+                "where": {
+                    "idsIn": vec![episode.id.clone(), other_episode.id.clone()],
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_episode = &json["data"]["getManyEpisodes"]["data"][0];
     let json_show = &json_episode["show"];
@@ -432,23 +437,24 @@ async fn test_episode_update() -> Result<()> {
         })
         .await?;
 
-    let req = utils.graphql.query(
-        UPDATE_EPISODE,
-        json!({
-            "id": episode.id,
-            "input": {
-                "summary": "Test Summary"
-            }
-        }),
-        Some(&token),
-    )?;
-    let resp = utils.http_client.request(req).await?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_EPISODE,
+            json!({
+                "id": episode.id,
+                "input": {
+                    "summary": "Test Summary"
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_episode = &json["data"]["updateEpisode"]["episode"];
     let json_show = &json_episode["show"];
@@ -468,22 +474,24 @@ async fn test_episode_update() -> Result<()> {
 async fn test_episode_update_not_found() -> Result<()> {
     let utils = Utils::init().await?;
 
-    let req = utils.graphql.query(
-        UPDATE_EPISODE,
-        json!({
-            "id": "test-id",
-            "input": {
-                "summary": "Test Summary"
-            }
-        }),
-        None,
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_EPISODE,
+            json!({
+                "id": "test-id",
+                "input": {
+                    "summary": "Test Summary"
+                }
+            }),
+            None,
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(
@@ -504,23 +512,24 @@ async fn test_episode_update_authn() -> Result<()> {
         .create_show_and_episode("Test Show", "Test Episode 1")
         .await?;
 
-    let req = utils.graphql.query(
-        UPDATE_EPISODE,
-        json!({
-            "id": episode.id,
-            "input": {
-                "summary": "Test Summary"
-            }
-        }),
-        None,
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_EPISODE,
+            json!({
+                "id": episode.id,
+                "input": {
+                    "summary": "Test Summary"
+                }
+            }),
+            None,
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");
@@ -545,23 +554,24 @@ async fn test_episode_update_authz() -> Result<()> {
         .create_show_and_episode("Test Show 2", "Test Episode 1")
         .await?;
 
-    let req = utils.graphql.query(
-        UPDATE_EPISODE,
-        json!({
-            "id": episode.id,
-            "input": {
-                "summary": "Test Summary"
-            }
-        }),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_EPISODE,
+            json!({
+                "id": episode.id,
+                "input": {
+                    "summary": "Test Summary"
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Forbidden");
@@ -606,16 +616,15 @@ async fn test_episode_delete() -> Result<()> {
         })
         .await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_EPISODE, json!({"id": episode.id}), Some(&token))?;
-    let resp = utils.http_client.request(req).await?;
+        .query(DELETE_EPISODE, json!({"id": episode.id}), Some(&token))
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert!(json["data"]["deleteEpisode"].as_bool().unwrap());
@@ -628,15 +637,15 @@ async fn test_episode_delete() -> Result<()> {
 async fn test_episode_delete_not_found() -> Result<()> {
     let utils = Utils::init().await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_EPISODE, json!({"id": "test-id"}), None)?;
+        .query(DELETE_EPISODE, json!({"id": "test-id"}), None)
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(
@@ -657,16 +666,15 @@ async fn test_episode_delete_authn() -> Result<()> {
         .create_show_and_episode("Test Show", "Test Episode 1")
         .await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_EPISODE, json!({"id": episode.id}), None)?;
-    let resp = utils.http_client.request(req).await?;
+        .query(DELETE_EPISODE, json!({"id": episode.id}), None)
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");
@@ -691,16 +699,15 @@ async fn test_episode_delete_authz() -> Result<()> {
         .create_show_and_episode("Test Show 2", "Test Episode 1")
         .await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_EPISODE, json!({"id": episode.id}), Some(&token))?;
+        .query(DELETE_EPISODE, json!({"id": episode.id}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Forbidden");

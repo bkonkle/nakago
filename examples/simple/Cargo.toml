@@ -1,6 +1,6 @@
 [package]
 name = "nakago-examples-simple"
-version = "0.10.0"
+version = "0.17.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A lightweight Rust framework for sharp services 😎"
@@ -15,19 +15,25 @@ integration = []
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
-axum = { version = "0.6", features = ["ws", "macros"] }
+axum = { version = "0.7", features = ["ws", "macros"] }
 chrono = { version = "0.4.19", features = ["serde"] }
-fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
+fake = { version = "2.9", features = [
+    'derive',
+    'chrono',
+    'http',
+    'uuid',
+], git = "https://github.com/cksac/fake-rs.git" }
 figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
-hyper = "0.14"
+hyper = "1.0"
 log = "0.4"
-nakago = "0.14"
-nakago-axum = "0.16"
+nakago = "0.17"
+nakago-axum = "0.17"
 nakago-derive = "0.8"
 pico-args = "0.5.0"
 pretty_env_logger = "0.5"
 rand = "0.8"
+reqwest = { version = "0.11", features = ["json"] }
 sea-orm = { version = "0.12", features = [
     "macros",
     "mock",
@@ -46,14 +52,13 @@ ulid = "1.0"
 [dev-dependencies]
 biscuit = "0.7.0"
 criterion = "0.5"
-fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 futures-util = { version = "0.3", default-features = false, features = [
     "sink",
     "std",
 ] }
-hyper-tls = "0.5"
+hyper-tls = "0.6"
 maplit = { version = "1" }
 mockall = "0.11"
 pretty_assertions = "1.2"
-tokio-tungstenite = "0.20"
+tokio-tungstenite = "0.21"
 url = "2.0.0"

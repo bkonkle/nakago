@@ -148,11 +148,10 @@ impl Utils {
         .into_client_request()?;
 
         if let Some(token) = token {
+            let value = HeaderValue::from_str(&format!("Bearer {}", token))?;
+
             let headers = req.headers_mut();
-            headers.insert(
-                "Authorization",
-                HeaderValue::from_str(&format!("Bearer {}", token))?,
-            );
+            headers.insert("Authorization", value);
         }
 
         let result = connect_async(req).await;

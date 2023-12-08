@@ -2,7 +2,6 @@
 
 use anyhow::Result;
 use fake::{faker::internet::en::FreeEmail, Fake};
-use hyper::body::to_bytes;
 use nakago_examples_async_graphql::domains::users;
 use pretty_assertions::assert_eq;
 use serde_json::{json, Value};
@@ -46,22 +45,24 @@ async fn test_profile_create_simple() -> Result<()> {
     let users = utils.app.get(&users::SERVICE).await?;
     let user = users.create(&username).await?;
 
-    let req = utils.graphql.query(
-        CREATE_PROFILE,
-        json!({
-            "input": {
-                "email": email,
-                "userId": user.id.clone(),
-            }
-        }),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            CREATE_PROFILE,
+            json!({
+                "input": {
+                    "email": email,
+                    "userId": user.id.clone(),
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_profile = &json["data"]["createProfile"]["profile"];
     let json_user = &json_profile["user"];
@@ -82,15 +83,15 @@ async fn test_profile_create_requires_email_user_id() -> Result<()> {
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(CREATE_PROFILE, json!({ "input": {}}), Some(&token))?;
+        .query(CREATE_PROFILE, json!({ "input": {}}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(
@@ -99,21 +100,23 @@ async fn test_profile_create_requires_email_user_id() -> Result<()> {
     );
 
     // Now provide the "email" and try again
-    let req = utils.graphql.query(
-        CREATE_PROFILE,
-        json!({
-            "input": {
-                "email": email,
-            }
-        }),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            CREATE_PROFILE,
+            json!({
+                "input": {
+                    "email": email,
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(
@@ -129,22 +132,24 @@ async fn test_profile_create_requires_email_user_id() -> Result<()> {
 async fn test_profile_create_authn() -> Result<()> {
     let utils = Utils::init().await?;
 
-    let req = utils.graphql.query(
-        CREATE_PROFILE,
-        json!({
-            "input": {
-                "email": "dummy-email",
-                "userId": "dummy-user-id"
-            }
-        }),
-        None,
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            CREATE_PROFILE,
+            json!({
+                "input": {
+                    "email": "dummy-email",
+                    "userId": "dummy-user-id"
+                }
+            }),
+            None,
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");
@@ -166,23 +171,24 @@ async fn test_profile_create_authz() -> Result<()> {
     let users = utils.app.get(&users::SERVICE).await?;
     let _ = users.create(&username).await?;
 
-    let req = utils.graphql.query(
-        CREATE_PROFILE,
-        json!({
-            "input": {
-                "email": email,
-                "userId": "dummy-user-id",
-            }
-        }),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            CREATE_PROFILE,
+            json!({
+                "input": {
+                    "email": email,
+                    "userId": "dummy-user-id",
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Forbidden");
@@ -221,16 +227,15 @@ async fn test_profile_get_simple() -> Result<()> {
     // Create a user and profile with this username
     let (user, profile) = utils.create_user_and_profile(&username, &email).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(GET_PROFILE, json!({ "id": profile.id,}), Some(&token))?;
+        .query(GET_PROFILE, json!({ "id": profile.id,}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_profile = &json["data"]["getProfile"];
     let json_user = &json_profile["user"];
@@ -255,16 +260,15 @@ async fn test_profile_get_empty() -> Result<()> {
     let users = utils.app.get(&users::SERVICE).await?;
     let _ = users.create(&username).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(GET_PROFILE, json!({ "id": "dummy-id",}), Some(&token))?;
+        .query(GET_PROFILE, json!({ "id": "dummy-id",}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["data"]["getProfile"], Value::Null);
@@ -283,16 +287,15 @@ async fn test_profile_get_authn() -> Result<()> {
     // Create a user and profile with this username
     let (_, profile) = utils.create_user_and_profile(&username, &email).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(GET_PROFILE, json!({ "id": profile.id,}), None)?;
+        .query(GET_PROFILE, json!({ "id": profile.id,}), None)
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_profile = &json["data"]["getProfile"];
 
@@ -320,16 +323,15 @@ async fn test_profile_get_authz() -> Result<()> {
         .create_user_and_profile(&dummy_username, &email)
         .await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(GET_PROFILE, json!({ "id": profile.id,}), Some(&token))?;
+        .query(GET_PROFILE, json!({ "id": profile.id,}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_profile = &json["data"]["getProfile"];
 
@@ -394,22 +396,23 @@ async fn test_profile_get_many_simple() -> Result<()> {
         .create_user_and_profile(&dummy_username, "other@email.address")
         .await?;
 
-    let req = utils.graphql.query(
-        GET_MANY_PROFILES,
-        json!({
-            "where": {
-                "idsIn": vec![profile.id.clone(), other_profile.id.clone()],
-            },
-        }),
-        Some(&token),
-    )?;
-    let resp = utils.http_client.request(req).await?;
+    let resp = utils
+        .graphql
+        .query(
+            GET_MANY_PROFILES,
+            json!({
+                "where": {
+                    "idsIn": vec![profile.id.clone(), other_profile.id.clone()],
+                },
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_profile = &json["data"]["getManyProfiles"]["data"][0];
     let json_user = &json_profile["user"];
@@ -445,22 +448,23 @@ async fn test_profile_get_many_anon() -> Result<()> {
     // Create a user and profile with this username
     let (_, profile) = utils.create_user_and_profile(&username, &email).await?;
 
-    let req = utils.graphql.query(
-        GET_MANY_PROFILES,
-        json!({
-            "where": {
-                "idsIn": vec![profile.id.clone()],
-            },
-        }),
-        None,
-    )?;
-    let resp = utils.http_client.request(req).await?;
+    let resp = utils
+        .graphql
+        .query(
+            GET_MANY_PROFILES,
+            json!({
+                "where": {
+                    "idsIn": vec![profile.id.clone()],
+                },
+            }),
+            None,
+        )
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_profile = &json["data"]["getManyProfiles"]["data"][0];
 
@@ -505,23 +509,24 @@ async fn test_profile_update_simple() -> Result<()> {
     // Create a user and profile with this username
     let (user, profile) = utils.create_user_and_profile(&username, &email).await?;
 
-    let req = utils.graphql.query(
-        UPDATE_PROFILE,
-        json!({
-            "id": profile.id,
-            "input": {
-                "displayName": "Test Name"
-            }
-        }),
-        Some(&token),
-    )?;
-    let resp = utils.http_client.request(req).await?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_PROFILE,
+            json!({
+                "id": profile.id,
+                "input": {
+                    "displayName": "Test Name"
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_profile = &json["data"]["updateProfile"]["profile"];
     let json_user = &json_profile["user"];
@@ -547,23 +552,24 @@ async fn test_profile_update_authn() -> Result<()> {
     // Create a user and profile with this username
     let (_, profile) = utils.create_user_and_profile(&username, &email).await?;
 
-    let req = utils.graphql.query(
-        UPDATE_PROFILE,
-        json!({
-            "id": profile.id,
-            "input": {
-                "displayName": "Test Name"
-            }
-        }),
-        None,
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_PROFILE,
+            json!({
+                "id": profile.id,
+                "input": {
+                    "displayName": "Test Name"
+                }
+            }),
+            None,
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");
@@ -577,22 +583,24 @@ async fn test_profile_update_authn() -> Result<()> {
 async fn test_profile_update_not_found() -> Result<()> {
     let utils = Utils::init().await?;
 
-    let req = utils.graphql.query(
-        UPDATE_PROFILE,
-        json!({
-            "id": "test-id",
-            "input": {
-                "displayName": "Test Name"
-            }
-        }),
-        None,
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_PROFILE,
+            json!({
+                "id": "test-id",
+                "input": {
+                    "displayName": "Test Name"
+                }
+            }),
+            None,
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(
@@ -623,23 +631,24 @@ async fn test_profile_update_authz() -> Result<()> {
     // Create a user and profile for the Alt user
     let _ = utils.create_user_and_profile(&username, &email).await?;
 
-    let req = utils.graphql.query(
-        UPDATE_PROFILE,
-        json!({
-            "id": profile.id,
-            "input": {
-                "displayName": "Test Name"
-            }
-        }),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_PROFILE,
+            json!({
+                "id": profile.id,
+                "input": {
+                    "displayName": "Test Name"
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Forbidden");
@@ -670,16 +679,15 @@ async fn test_profile_delete_simple() -> Result<()> {
     // Create a user and profile with this username
     let (_, profile) = utils.create_user_and_profile(&username, &email).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_PROFILE, json!({"id": profile.id}), Some(&token))?;
-    let resp = utils.http_client.request(req).await?;
+        .query(DELETE_PROFILE, json!({"id": profile.id}), Some(&token))
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert!(json["data"]["deleteProfile"].as_bool().unwrap());
@@ -698,16 +706,15 @@ async fn test_profile_delete_authn() -> Result<()> {
     // Create a user and profile with this username
     let (_, profile) = utils.create_user_and_profile(&username, &email).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_PROFILE, json!({"id": profile.id}), None)?;
-    let resp = utils.http_client.request(req).await?;
+        .query(DELETE_PROFILE, json!({"id": profile.id}), None)
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");
@@ -721,15 +728,15 @@ async fn test_profile_delete_authn() -> Result<()> {
 async fn test_profile_delete_not_found() -> Result<()> {
     let utils = Utils::init().await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_PROFILE, json!({"id": "test-id"}), None)?;
+        .query(DELETE_PROFILE, json!({"id": "test-id"}), None)
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(
@@ -760,16 +767,15 @@ async fn test_profile_delete_authz() -> Result<()> {
     // Create a user and profile for the Alt user
     let _ = utils.create_user_and_profile(&username, &email).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_PROFILE, json!({"id": profile.id}), Some(&token))?;
+        .query(DELETE_PROFILE, json!({"id": profile.id}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Forbidden");
