@@ -2,7 +2,6 @@
 
 use anyhow::Result;
 use fake::{faker::internet::en::FreeEmail, Fake, Faker};
-use hyper::body::to_bytes;
 use nakago_examples_async_graphql::domains::{
     role_grants::{self, model::CreateRoleGrantInput},
     shows::{self, mutation::CreateShowInput},
@@ -46,22 +45,23 @@ async fn test_show_create_simple() -> Result<()> {
     // Create a user and profile with this username
     let _ = utils.create_user_and_profile(&username, &email).await?;
 
-    let req = utils.graphql.query(
-        CREATE_SHOW,
-        json!({
-            "input": {
-                "title": "Test Show"
-            }
-        }),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            CREATE_SHOW,
+            json!({
+                "input": {
+                    "title": "Test Show"
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_show = &json["data"]["createShow"]["show"];
 
@@ -79,15 +79,15 @@ async fn test_show_create_requires_title() -> Result<()> {
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(CREATE_SHOW, json!({ "input": {}}), Some(&token))?;
+        .query(CREATE_SHOW, json!({ "input": {}}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(
@@ -106,21 +106,23 @@ async fn test_show_create_requires_authn() -> Result<()> {
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
-    let req = utils.graphql.query(
-        CREATE_SHOW,
-        json!({
-            "input": {
-                "title": "Test Show"
-            }
-        }),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            CREATE_SHOW,
+            json!({
+                "input": {
+                    "title": "Test Show"
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");
@@ -158,16 +160,15 @@ async fn test_show_get_simple() -> Result<()> {
     let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(GET_SHOW, json!({ "id": show.id,}), Some(&token))?;
+        .query(GET_SHOW, json!({ "id": show.id,}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_show = &json["data"]["getShow"];
 
@@ -186,15 +187,15 @@ async fn test_show_get_empty() -> Result<()> {
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(GET_SHOW, json!({ "id": "dummy-id",}), Some(&token))?;
+        .query(GET_SHOW, json!({ "id": "dummy-id",}), Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["data"]["getShow"], Value::Null);
@@ -251,21 +252,23 @@ async fn test_show_get_many() -> Result<()> {
 
     let other_show = shows.create(&other_show_input).await?;
 
-    let req = utils.graphql.query(
-        GET_MANY_SHOWS,
-        json!({
-            "where": {
-                "idsIn": vec![show.id.clone(), other_show.id.clone()],
-            },
-        }),
-        None,
-    )?;
-    let resp = utils.http_client.request(req).await?;
+    let resp = utils
+        .graphql
+        .query(
+            GET_MANY_SHOWS,
+            json!({
+                "where": {
+                    "idsIn": vec![show.id.clone(), other_show.id.clone()],
+                },
+            }),
+            None,
+        )
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_result = &json["data"]["getManyShows"];
     let json_show = &json_result["data"][0];
@@ -335,23 +338,24 @@ async fn test_show_update_simple() -> Result<()> {
         })
         .await?;
 
-    let req = utils.graphql.query(
-        UPDATE_SHOW,
-        json!({
-            "id": show.id,
-            "input": {
-                "summary": "Something else"
-            }
-        }),
-        Some(&token),
-    )?;
-    let resp = utils.http_client.request(req).await?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_SHOW,
+            json!({
+                "id": show.id,
+                "input": {
+                    "summary": "Something else"
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_show = &json["data"]["updateShow"]["show"];
 
@@ -369,22 +373,24 @@ async fn test_show_update_simple() -> Result<()> {
 async fn test_show_update_not_found() -> Result<()> {
     let utils = Utils::init().await?;
 
-    let req = utils.graphql.query(
-        UPDATE_SHOW,
-        json!({
-            "id": "test-id",
-            "input": {
-                "summary": "Something else"
-            }
-        }),
-        None,
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_SHOW,
+            json!({
+                "id": "test-id",
+                "input": {
+                    "summary": "Something else"
+                }
+            }),
+            None,
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unable to find existing Show");
@@ -404,22 +410,24 @@ async fn test_show_update_requires_authn() -> Result<()> {
     let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
-    let req = utils.graphql.query(
-        UPDATE_SHOW,
-        json!({
-            "id": show.id,
-            "input": {
-                "summary": "Something else"
-            }
-        }),
-        None,
-    )?;
-    let resp = utils.http_client.request(req).await?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_SHOW,
+            json!({
+                "id": show.id,
+                "input": {
+                    "summary": "Something else"
+                }
+            }),
+            None,
+        )
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");
@@ -446,23 +454,24 @@ async fn test_show_update_requires_authz() -> Result<()> {
     let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
-    let req = utils.graphql.query(
-        UPDATE_SHOW,
-        json!({
-            "id": show.id,
-            "input": {
-                "summary": "Something else"
-            }
-        }),
-        Some(&token),
-    )?;
-    let resp = utils.http_client.request(req).await?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_SHOW,
+            json!({
+                "id": show.id,
+                "input": {
+                    "summary": "Something else"
+                }
+            }),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Forbidden");
@@ -510,16 +519,15 @@ async fn test_show_delete_simple() -> Result<()> {
         })
         .await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_SHOW, json!({"id": show.id}), Some(&token))?;
-    let resp = utils.http_client.request(req).await?;
+        .query(DELETE_SHOW, json!({"id": show.id}), Some(&token))
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert!(json["data"]["deleteShow"].as_bool().unwrap());
@@ -532,15 +540,15 @@ async fn test_show_delete_simple() -> Result<()> {
 async fn test_show_delete_not_found() -> Result<()> {
     let utils = Utils::init().await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_SHOW, json!({"id": "test-id"}), None)?;
+        .query(DELETE_SHOW, json!({"id": "test-id"}), None)
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unable to find existing Show");
@@ -560,15 +568,15 @@ async fn test_show_delete_requires_authn() -> Result<()> {
     let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_SHOW, json!({"id": show.id}), None)?;
-    let resp = utils.http_client.request(req).await?;
+        .query(DELETE_SHOW, json!({"id": show.id}), None)
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");
@@ -595,16 +603,15 @@ async fn test_show_delete_requires_authz() -> Result<()> {
     let shows = utils.app.get(&shows::SERVICE).await?;
     let show = shows.create(&show_input).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(DELETE_SHOW, json!({"id": show.id}), Some(&token))?;
-    let resp = utils.http_client.request(req).await?;
+        .query(DELETE_SHOW, json!({"id": show.id}), Some(&token))
+        .send()
+        .await?;
 
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Forbidden");

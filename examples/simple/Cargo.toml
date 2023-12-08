@@ -17,7 +17,12 @@ anyhow = "1.0"
 async-trait = "0.1"
 axum = { version = "0.7", features = ["ws", "macros"] }
 chrono = { version = "0.4.19", features = ["serde"] }
-fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
+fake = { version = "2.9", features = [
+    'derive',
+    'chrono',
+    'http',
+    'uuid',
+], git = "https://github.com/cksac/fake-rs.git" }
 figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
 hyper = "1.0"
@@ -28,6 +33,7 @@ nakago-derive = "0.8"
 pico-args = "0.5.0"
 pretty_env_logger = "0.5"
 rand = "0.8"
+reqwest = { version = "0.11", features = ["json"] }
 sea-orm = { version = "0.12", features = [
     "macros",
     "mock",
@@ -46,7 +52,6 @@ ulid = "1.0"
 [dev-dependencies]
 biscuit = "0.7.0"
 criterion = "0.5"
-fake = { version = "2.4", features = ['derive', 'chrono', 'http', 'uuid'] }
 futures-util = { version = "0.3", default-features = false, features = [
     "sink",
     "std",

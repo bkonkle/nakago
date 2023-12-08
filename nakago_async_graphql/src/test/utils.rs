@@ -44,10 +44,12 @@ impl<C: Config> Utils<C> {
             base_url
         };
 
-        let graphql = GraphQL::new(format!(
+        let graphql_endpoint = format!(
             "http://localhost:{port}{base_url}{graphql_url}",
             port = utils.addr.port()
-        ));
+        );
+
+        let graphql = GraphQL::new(utils.http.clone(), graphql_endpoint);
 
         Ok(Self { utils, graphql })
     }

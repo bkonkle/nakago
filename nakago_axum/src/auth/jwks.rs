@@ -6,14 +6,9 @@ use biscuit::{
     jwk::{AlgorithmParameters, JWKSet, JWK},
     jws::Secret,
 };
-use bytes::Bytes;
-use http_body_util::{BodyExt, Empty};
-use hyper::{body::Buf, Request};
-use hyper_util::rt::TokioIo;
 use nakago::{self, inject, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use thiserror::Error;
-use tokio::net::TcpStream;
 
 use super::Config;
 
@@ -43,36 +38,8 @@ impl Client {
 
     /// Get a `JWKSet` from the configured Auth url
     pub async fn get_key_set(&self) -> anyhow::Result<JWKSet<biscuit::Empty>> {
-        let url: hyper::Uri = format!("{}/.well-known/jwks.json", &self.config.url).parse()?;
-
-        debug!("Fetching keys from '{}'", url);
-
-        let host = url.host().expect("uri has no host");
-        let port = url.port_u16().unwrap_or(80);
-        let addr = format!("{}:{}", host, port);
-
-        let stream = TcpStream::connect(addr).await?;
-        let io = TokioIo::new(stream);
-
-        let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await?;
-        tokio::task::spawn(async move {
-            if let Err(err) = conn.await {
-                println!("JWKS connection failed: {:?}", err);
-            }
-        });
-
-        let authority = url.authority().unwrap().clone();
-
-        let req = Request::builder()
-            .uri(url)
-            .header(hyper::header::HOST, authority.as_str())
-            .body(Empty::<Bytes>::new())?;
-
-        let res = sender.send_request(req).await?;
-
-        let body = res.collect().await?.aggregate();
-
-        let jwks = serde_json::from_reader(body.reader())?;
+        let response = reqwest::get(format!("{}/.well-known/jwks.json", &self.config.url)).await?;
+        let jwks = response.json::<JWKSet<biscuit::Empty>>().await?;
 
         Ok(jwks)
     }

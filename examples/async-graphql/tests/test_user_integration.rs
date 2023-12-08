@@ -2,7 +2,6 @@
 
 use anyhow::Result;
 use fake::{faker::internet::en::FreeEmail, Fake};
-use hyper::body::to_bytes;
 use nakago_examples_async_graphql::domains::{
     profiles,
     role_grants::{self, model::CreateRoleGrantInput},
@@ -58,16 +57,15 @@ async fn test_user_get_current_simple() -> Result<()> {
         })
         .await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(GET_CURRENT_USER, Value::Null, Some(&token))?;
+        .query(GET_CURRENT_USER, Value::Null, Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_user = &json["data"]["getCurrentUser"];
     let json_roles = &json_user["roles"];
@@ -88,15 +86,15 @@ async fn test_user_get_current_no_user() -> Result<()> {
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(GET_CURRENT_USER, Value::Null, Some(&token))?;
+        .query(GET_CURRENT_USER, Value::Null, Some(&token))
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["data"]["getCurrentUser"], Value::Null);
@@ -147,18 +145,19 @@ async fn test_user_get_or_create_current_existing() -> Result<()> {
         })
         .await?;
 
-    let req = utils.graphql.query(
-        GET_OR_CREATE_CURRENT_USER,
-        json!({ "input": {}}),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            GET_OR_CREATE_CURRENT_USER,
+            json!({ "input": {}}),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_user = &json["data"]["getOrCreateCurrentUser"]["user"];
     let json_roles = &json_user["roles"];
@@ -179,21 +178,23 @@ async fn test_user_get_or_create_current_create() -> Result<()> {
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
-    let req = utils.graphql.query(
-        GET_OR_CREATE_CURRENT_USER,
-        json!({ "input": {
-           "profile": {
-               "email": email,
-           }
-        }}),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            GET_OR_CREATE_CURRENT_USER,
+            json!({ "input": {
+               "profile": {
+                   "email": email,
+               }
+            }}),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_user = &json["data"]["getOrCreateCurrentUser"]["user"];
 
@@ -216,15 +217,15 @@ async fn test_user_get_or_create_current_create() -> Result<()> {
 async fn test_user_get_or_create_current_requires_authn() -> Result<()> {
     let utils = Utils::init().await?;
 
-    let req = utils
+    let resp = utils
         .graphql
-        .query(GET_OR_CREATE_CURRENT_USER, json!({ "input": {}}), None)?;
+        .query(GET_OR_CREATE_CURRENT_USER, json!({ "input": {}}), None)
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");
@@ -275,19 +276,21 @@ async fn test_user_update_current() -> Result<()> {
         })
         .await?;
 
-    let req = utils.graphql.query(
-        UPDATE_CURRENT_USER,
-        json!({ "input": {
-           "isActive": false
-        }}),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_CURRENT_USER,
+            json!({ "input": {
+               "isActive": false
+            }}),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     let json_user = &json["data"]["updateCurrentUser"]["user"];
     let json_roles = &json_user["roles"];
@@ -304,19 +307,21 @@ async fn test_user_update_current() -> Result<()> {
 async fn test_user_update_current_requires_authn() -> Result<()> {
     let utils = Utils::init().await?;
 
-    let req = utils.graphql.query(
-        UPDATE_CURRENT_USER,
-        json!({ "input": {
-           "isActive": false
-        }}),
-        None,
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_CURRENT_USER,
+            json!({ "input": {
+               "isActive": false
+            }}),
+            None,
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");
@@ -332,19 +337,21 @@ async fn test_user_update_current_requires_user() -> Result<()> {
     let username = Ulid::new().to_string();
     let token = utils.create_jwt(&username).await?;
 
-    let req = utils.graphql.query(
-        UPDATE_CURRENT_USER,
-        json!({ "input": {
-           "isActive": false
-        }}),
-        Some(&token),
-    )?;
+    let resp = utils
+        .graphql
+        .query(
+            UPDATE_CURRENT_USER,
+            json!({ "input": {
+               "isActive": false
+            }}),
+            Some(&token),
+        )
+        .send()
+        .await?;
 
-    let resp = utils.http_client.request(req).await?;
     let status = resp.status();
 
-    let body = to_bytes(resp.into_body()).await?;
-    let json: Value = serde_json::from_slice(&body)?;
+    let json = resp.json::<Value>().await?;
 
     assert_eq!(status, 200);
     assert_eq!(json["errors"][0]["message"], "Unauthorized");

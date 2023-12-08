@@ -1,33 +1,36 @@
-use anyhow::Result;
-use axum::{
-    body::Body,
-    http::{Method, Request},
-};
-use derive_new::new;
+use std::{ops::Deref, sync::Arc};
+
+use nakago_axum::test::http::Http;
+use reqwest::{Method, RequestBuilder};
 use serde_json::{json, Value};
 
 /// Utilities for testing HTTP GraphQL endpoints with Hyper
-#[derive(new)]
 pub struct GraphQL {
-    url: String,
+    /// The HTTP utils instance
+    pub http: Arc<Http>,
+
+    endpoint: String,
 }
 
 impl GraphQL {
+    /// Create a new instance of the `GraphQL` struct with a base URL for requests
+    pub fn new(http: Arc<Http>, endpoint: String) -> Self {
+        GraphQL { http, endpoint }
+    }
+
     /// Create a GraphQL query request for Hyper with an optional auth token
-    pub fn query(
-        &self,
-        query: &str,
-        variables: Value,
-        token: Option<&str>,
-    ) -> Result<Request<Body>> {
-        let mut req = Request::builder().method(Method::POST).uri(&self.url);
+    pub fn query(&self, query: &str, variables: Value, token: Option<&str>) -> RequestBuilder {
+        let json = json!({ "query": query, "variables": variables });
 
-        if let Some(token) = token {
-            req = req.header("Authorization", format!("Bearer {}", token));
-        }
+        self.http
+            .request_json(Method::POST, &self.get_url(&self.endpoint), json, token)
+    }
+}
 
-        let body = serde_json::to_string(&json!({ "query": query, "variables": variables }))?;
+impl Deref for GraphQL {
+    type Target = Http;
 
-        req.body(Body::from(body)).map_err(|err| err.into())
+    fn deref(&self) -> &Self::Target {
+        &self.http
     }
 }

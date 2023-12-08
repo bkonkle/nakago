@@ -1,4 +1,4 @@
-use std::{default::Default, future::IntoFuture, net::SocketAddr, time::Duration};
+use std::{default::Default, future::IntoFuture, net::SocketAddr, sync::Arc, time::Duration};
 
 use axum::extract::FromRef;
 use biscuit::{
@@ -25,7 +25,7 @@ where
     pub addr: SocketAddr,
 
     /// The test HTTP Request helper
-    pub http: Http,
+    pub http: Arc<Http>,
 }
 
 impl<C> Utils<C>
@@ -48,11 +48,11 @@ where
         // Wait for it to initialize
         sleep(Duration::from_millis(200)).await;
 
-        let http = Http::new(format!(
+        let http = Arc::new(Http::new(format!(
             "http://localhost:{port}{base_url}",
             port = addr.port(),
             base_url = base_url,
-        ));
+        )));
 
         Ok(Utils { app, addr, http })
     }

@@ -37,9 +37,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let app = init::app().await?;
-    let server = app.run(args.config_path).await?;
-
-    let addr = server.local_addr();
+    let (server, addr) = app.run(args.config_path).await?;
 
     info!("Started on port: {port}", port = addr.port());
 
