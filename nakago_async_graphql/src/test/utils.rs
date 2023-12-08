@@ -35,21 +35,9 @@ impl<C: Config> Utils<C> {
         nakago_axum::Config: FromRef<C>,
         auth::Config: FromRef<C>,
     {
-        let utils =
-            nakago_axum::test::utils::Utils::init(app, config_path, base_url.clone()).await?;
+        let utils = nakago_axum::test::utils::Utils::init(app, config_path, base_url).await?;
 
-        let base_url = if graphql_url.starts_with('/') {
-            base_url.strip_suffix('/').unwrap_or(base_url)
-        } else {
-            base_url
-        };
-
-        let graphql_endpoint = format!(
-            "http://localhost:{port}{base_url}{graphql_url}",
-            port = utils.addr.port()
-        );
-
-        let graphql = GraphQL::new(utils.http.clone(), graphql_endpoint);
+        let graphql = GraphQL::new(utils.http.clone(), graphql_url.to_string());
 
         Ok(Self { utils, graphql })
     }

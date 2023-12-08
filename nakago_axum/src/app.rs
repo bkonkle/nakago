@@ -3,6 +3,7 @@ use std::{
     net::SocketAddr,
     ops::{Deref, DerefMut},
     path::PathBuf,
+    sync::Arc,
 };
 
 use axum::{extract::FromRef, serve::Serve, Router};
@@ -105,9 +106,13 @@ where
             .await
             .unwrap_or_else(|_| panic!("Unable to bind to address: {}", addr));
 
+        let actual_addr = listener
+            .local_addr()
+            .map_err(|e| inject::Error::Provider(Arc::new(e.into())))?; // TODO: Error refactoring
+
         let server = axum::serve(listener, router);
 
-        Ok((server, addr))
+        Ok((server, actual_addr))
     }
 
     async fn get_router(&self) -> inject::Result<Router> {

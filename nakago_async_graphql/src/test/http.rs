@@ -23,7 +23,7 @@ impl GraphQL {
         let json = json!({ "query": query, "variables": variables });
 
         self.http
-            .request_json(Method::POST, &self.get_url(&self.endpoint), json, token)
+            .request_json(Method::POST, &self.endpoint, json, token)
     }
 }
 
