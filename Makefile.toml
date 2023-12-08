@@ -82,7 +82,14 @@ args = ["nextest", "run", "--features=integration", "--workspace"]
 [tasks.audit]
 command = "cargo"
 # Ignore RUSTSEC-2020-0071 due to https://github.com/launchbadge/sqlx/issues/1586
-args = ["audit", "--ignore", "RUSTSEC-2020-0071"]
+# Ignore RUSTSEC-2023-0071 until SeaORM can be updated with an rsa fix
+args = [
+    "audit",
+    "--ignore",
+    "RUSTSEC-2020-0071",
+    "--ignore",
+    "RUSTSEC-2023-0071",
+]
 
 [tasks.timings]
 script = '''
