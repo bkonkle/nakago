@@ -58,7 +58,7 @@ futures-util = { version = "0.3", default-features = false, features = [
 ] }
 hyper-tls = "0.6"
 maplit = { version = "1" }
-mockall = "0.11"
+mockall = "0.12"
 pretty_assertions = "1.2"
 tokio-tungstenite = "0.21"
 url = "2.0.0"
