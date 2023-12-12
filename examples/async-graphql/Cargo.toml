@@ -68,5 +68,5 @@ hyper-tls = "0.6"
 maplit = { version = "1" }
 mockall = "0.12"
 pretty_assertions = "1.2"
-tokio-tungstenite = { git = "https://github.com/bkonkle/tokio-tungstenite.git", branch = "server-custom-accept/hyper.v1" }
+tokio-tungstenite = "0.21"
 url = "2.0.0"
