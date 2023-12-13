@@ -6,29 +6,26 @@ use std::{
     sync::Arc,
 };
 
-use axum::{serve::Serve, Router};
-use nakago::{self, hooks, utils::FromRef, Application, Tag};
-use tokio::net::TcpListener;
-use tower_http::trace;
+use anyhow::anyhow;
+use nakago::{hooks, utils::FromRef, Application, Tag};
+use tokio::sync::Mutex;
+use warp::{filters::BoxedFilter, reject::Rejection, reply::Reply, Filter, Future};
 
-use crate::{
-    routes::{Route, Routes},
-    Config, State,
-};
+use crate::{config::Config, errors::handle_rejection};
 
-/// An Axum HTTP Application
-pub struct AxumApplication<C>
+/// A Warp HTTP Application
+pub struct WarpApplication<C>
 where
     C: nakago::Config,
 {
     app: Application<C>,
 }
 
-impl<C> AxumApplication<C>
+impl<C> WarpApplication<C>
 where
     C: nakago::Config,
 {
-    /// Create a new AxumApplication instance
+    /// Create a new WarpApplication instance
     pub fn new(config_tag: Option<&'static Tag<C>>) -> Self {
         Self {
             app: Application::new(config_tag),
@@ -43,7 +40,7 @@ where
     }
 }
 
-impl<C> Default for AxumApplication<C>
+impl<C> Default for WarpApplication<C>
 where
     C: nakago::Config,
 {
@@ -52,7 +49,7 @@ where
     }
 }
 
-impl<C> Deref for AxumApplication<C>
+impl<C> Deref for WarpApplication<C>
 where
     C: nakago::Config + Debug,
 {
@@ -63,7 +60,7 @@ where
     }
 }
 
-impl<C> DerefMut for AxumApplication<C>
+impl<C> DerefMut for WarpApplication<C>
 where
     C: nakago::Config + Debug,
 {
@@ -72,7 +69,7 @@ where
     }
 }
 
-impl<C> AxumApplication<C>
+impl<C> WarpApplication<C>
 where
     C: nakago::Config + Debug,
 {
@@ -85,7 +82,7 @@ where
     pub async fn run(
         &self,
         config_path: Option<PathBuf>,
-    ) -> hooks::Result<(Serve<Router, Router>, SocketAddr)>
+    ) -> hooks::Result<(impl Future<Output = ()>, SocketAddr)>
     where
         Config: FromRef<C>,
     {
@@ -102,37 +99,28 @@ where
             .parse()
             .expect("Unable to parse bind address");
 
-        let listener = TcpListener::bind(&addr)
-            .await
-            .unwrap_or_else(|_| panic!("Unable to bind to address: {}", addr));
-
-        let actual_addr = listener
-            .local_addr()
-            .map_err(|e| hooks::Error::Any(Arc::new(e.into())))?;
-
-        let server = axum::serve(listener, router);
+        let (actual_addr, server) =
+            warp::serve(router.with(warp::log("warp")).recover(handle_rejection))
+                .bind_ephemeral(addr);
 
         Ok((server, actual_addr))
     }
 
-    async fn get_router(&self) -> hooks::Result<Router> {
-        let mut router = Router::<State>::new();
-
+    async fn get_router(&self) -> hooks::Result<BoxedFilter<(Box<dyn Reply>,)>> {
         if let Some(routes) = self.app.get_type_opt::<Routes>().await? {
-            let routes: Vec<Route> = routes.lock().await.drain(..).collect();
-            for route in routes {
-                router = router.nest("/", route.into_inner());
+            if routes.length() > 0 {
+                if let Some(route) = routes.lock().await.drain(..).reduce(|a, b| a.or(b).boxed()) {
+                    return Ok(route);
+                };
             }
-        };
+        }
 
-        let router = Router::new()
-            .layer(
-                trace::TraceLayer::new_for_http()
-                    .make_span_with(trace::DefaultMakeSpan::new().level(tracing::Level::INFO))
-                    .on_response(trace::DefaultOnResponse::new().level(tracing::Level::INFO)),
-            )
-            .merge(router.with_state(State::new(self.app.clone())));
-
-        Ok(router)
+        Err(hooks::Error::Any(Arc::new(anyhow!(
+            "No routes defined for application"
+        ))))?
     }
 }
+
+pub type Route = BoxedFilter<(Box<dyn Reply>,)>;
+
+pub type Routes = Mutex<Vec<Route>>;

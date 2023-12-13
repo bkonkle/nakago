@@ -4,8 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use axum::extract::FromRef;
-use nakago::{self, provider, to_provider_error, Inject, Provider, Tag};
+use nakago::{self, provider, to_provider_error, utils::FromRef, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use sea_orm::{DatabaseBackend, DatabaseConnection, MockDatabase, MockDatabaseTrait};
 

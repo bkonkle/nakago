@@ -1,12 +1,11 @@
 use std::{marker::PhantomData, sync::Arc};
 
 use async_trait::async_trait;
-use axum::extract::FromRef;
 use biscuit::{
     jwk::{AlgorithmParameters, JWKSet, JWK},
     jws::Secret,
 };
-use nakago::{self, provider, Inject, Provider, Tag};
+use nakago::{self, provider, utils::FromRef, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use thiserror::Error;
 
