@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use nakago::{hooks, Hook, Inject};
 use nakago_warp::routes;
+use warp::http::Method;
 
 use super::{health, user};
 

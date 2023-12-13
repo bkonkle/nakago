@@ -1,6 +1,6 @@
 use nakago::Inject;
 use warp::{
-    filters::header::headers_cloned,
+    filters::{header::headers_cloned, BoxedFilter},
     http::{header::AUTHORIZATION, HeaderMap, HeaderValue},
     reject::Rejection,
     Filter,
@@ -18,12 +18,17 @@ const BEARER: &str = "Bearer ";
 pub struct Subject(pub Option<String>);
 
 /// A Warp Filter to add Authentication context
-pub fn with_auth(i: Inject) -> impl Filter<Extract = (Subject,), Error = Rejection> + Clone {
+pub fn with_auth(i: Inject) -> BoxedFilter<(Inject, Subject)> {
     headers_cloned()
         .and_then(move |headers: HeaderMap<HeaderValue>| authenticate(i.clone(), headers))
+        .untuple_one()
+        .boxed()
 }
 
-async fn authenticate(i: Inject, headers: HeaderMap<HeaderValue>) -> Result<Subject, Rejection> {
+async fn authenticate(
+    i: Inject,
+    headers: HeaderMap<HeaderValue>,
+) -> Result<(Inject, Subject), Rejection> {
     let validator = i
         .get_type::<Validator>()
         .await
@@ -36,9 +41,9 @@ async fn authenticate(i: Inject, headers: HeaderMap<HeaderValue>) -> Result<Subj
 
             debug!("Successfully verified token with subject: {:?}", subject);
 
-            Ok(Subject(subject))
+            Ok((i, Subject(subject)))
         }
-        Ok(None) => Ok(Subject(None)),
+        Ok(None) => Ok((i, Subject(None))),
         Err(e) => Err(warp::reject::custom(e)),
     }
 }
