@@ -1,8 +1,7 @@
 use std::convert::Infallible;
 
-use reqwest::StatusCode;
 use serde::Serialize;
-use warp::{reply, Rejection, Reply};
+use warp::{http::StatusCode, reply, Rejection, Reply};
 
 /// An API error serializable to JSON.
 #[derive(Serialize)]

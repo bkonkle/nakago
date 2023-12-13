@@ -3,15 +3,12 @@ use std::{
     net::SocketAddr,
     ops::{Deref, DerefMut},
     path::PathBuf,
-    sync::Arc,
 };
 
-use anyhow::anyhow;
 use nakago::{hooks, utils::FromRef, Application, Tag};
-use tokio::sync::Mutex;
-use warp::{filters::BoxedFilter, reject::Rejection, reply::Reply, Filter, Future};
+use warp::{filters::BoxedFilter, reply::Reply, Filter, Future};
 
-use crate::{config::Config, errors::handle_rejection};
+use crate::{config::Config, errors::handle_rejection, routes::Routes};
 
 /// A Warp HTTP Application
 pub struct WarpApplication<C>
@@ -106,21 +103,26 @@ where
         Ok((server, actual_addr))
     }
 
-    async fn get_router(&self) -> hooks::Result<BoxedFilter<(Box<dyn Reply>,)>> {
+    async fn get_router(&self) -> hooks::Result<BoxedFilter<(impl Reply,)>> {
         if let Some(routes) = self.app.get_type_opt::<Routes>().await? {
-            if routes.length() > 0 {
-                if let Some(route) = routes.lock().await.drain(..).reduce(|a, b| a.or(b).boxed()) {
+            let mut routes = routes.lock().await;
+
+            if routes.len() > 0 {
+                if let Some(route) = routes.drain(..).reduce(|a, b| a.or(b).unify().boxed()) {
                     return Ok(route);
                 };
             }
         }
 
-        Err(hooks::Error::Any(Arc::new(anyhow!(
-            "No routes defined for application"
-        ))))?
+        Ok(warp::any()
+            .map(|| {
+                let reply: Box<dyn Reply> = Box::new(warp::reply::with_status(
+                    "No routes defined for application",
+                    warp::http::StatusCode::NOT_FOUND,
+                ));
+
+                reply
+            })
+            .boxed())
     }
 }
-
-pub type Route = BoxedFilter<(Box<dyn Reply>,)>;
-
-pub type Routes = Mutex<Vec<Route>>;
