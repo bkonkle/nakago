@@ -25,17 +25,8 @@ impl Reply for UsernameResponse {
     }
 }
 
-/// Create a Get Username Route
-pub fn get_username(i: Inject) -> Route {
-    warp::path("events")
-        .and(with_auth(i.clone()))
-        .and_then(handle_get_username)
-        .map(|a| Box::new(a) as Box<dyn Reply>)
-        .boxed()
-}
-
 /// Handle Get Username requests
-async fn handle_get_username(sub: Subject) -> Result<UsernameResponse, Infallible> {
+async fn get_username(_: Inject, sub: Subject) -> Result<UsernameResponse, Infallible> {
     let username = if let Subject(Some(username)) = sub {
         username.clone()
     } else {
