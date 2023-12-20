@@ -1,7 +1,6 @@
 use std::ops::Deref;
 
-use axum::extract::FromRef;
-use nakago::{hooks, Config};
+use nakago::{hooks, utils::FromRef, Config};
 use nakago_axum::{self, auth, AxumApplication};
 
 use super::http::GraphQL;

@@ -1,13 +1,5 @@
-use std::{any::Any, marker::PhantomData, sync::Arc};
-
-use anyhow::anyhow;
 use async_trait::async_trait;
-use axum::{
-    handler::Handler,
-    routing::{get, head, options, patch, post, put, trace},
-    Router,
-};
-use hyper::Method;
+use axum::Router;
 use nakago::{hooks, Hook, Inject};
 use tokio::sync::Mutex;
 
@@ -20,54 +12,28 @@ pub type Route = Mutex<Router<State>>;
 pub type Routes = Mutex<Vec<Route>>;
 
 /// A hook to initialize a particular route
-pub struct Init<H, T> {
-    path: String,
-    handler: H,
-    method: Method,
-    _phantom: PhantomData<T>,
+pub struct Init {
+    router: Mutex<Router<State>>,
 }
 
-impl<H, T> Init<H, T> {
+impl Init {
     /// Create a new Init instance
-    pub fn new(method: Method, path: &str, handler: H) -> Self {
+    pub fn new(router: Router<State>) -> Self {
         Self {
-            method,
-            path: path.to_string(),
-            handler,
-            _phantom: Default::default(),
+            router: Mutex::new(router),
         }
     }
 }
 
 #[async_trait]
-impl<H, T> Hook for Init<H, T>
-where
-    T: Send + Sync + Any,
-    H: Handler<T, State> + Send + Sync,
-{
+impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let router = match self.method {
-            Method::HEAD => head(self.handler.clone()),
-            Method::GET => get(self.handler.clone()),
-            Method::OPTIONS => options(self.handler.clone()),
-            Method::PATCH => patch(self.handler.clone()),
-            Method::POST => post(self.handler.clone()),
-            Method::PUT => put(self.handler.clone()),
-            Method::TRACE => trace(self.handler.clone()),
-            _ => {
-                return Err(hooks::Error::Any(Arc::new(anyhow!(format!(
-                    "Unsupported Route Method: {}",
-                    self.method
-                )))))
-            }
-        };
-
-        let route = Router::new().route(&self.path, router);
+        let router = self.router.lock().await.clone();
 
         if let Some(routes) = i.get_type_opt::<Routes>().await? {
-            routes.lock().await.push(Mutex::new(route));
+            routes.lock().await.push(Mutex::new(router));
         } else {
-            i.inject_type::<Routes>(Mutex::new(vec![Mutex::new(route)]))
+            i.inject_type::<Routes>(Mutex::new(vec![Mutex::new(router)]))
                 .await?;
         }
 

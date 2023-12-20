@@ -3,7 +3,10 @@ use darling::FromMeta;
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, ItemImpl};
 
+use crate::utils::expand_with;
+
 mod args;
+mod from_ref;
 mod provider;
 mod utils;
 
@@ -35,4 +38,12 @@ pub fn Provider(args: TokenStream, input: TokenStream) -> TokenStream {
         Ok(expanded) => expanded,
         Err(err) => err.write_errors().into(),
     }
+}
+
+/// Derive an implementation of [`FromRef`] for each field in a struct.
+///
+/// [`FromRef`]: https://docs.rs/axum/0.7/axum/extract/trait.FromRef.html
+#[proc_macro_derive(FromRef, attributes(from_ref))]
+pub fn derive_from_ref(item: TokenStream) -> TokenStream {
+    expand_with(item, from_ref::expand)
 }

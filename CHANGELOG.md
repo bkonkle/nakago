@@ -7,11 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Updated
-
-- Updated `mockall` and `tokio-tungstenite` requirements, and removed temporary tokio-tungstenite fork.
+## [0.19.0]
 
 ### Added
+
+- `nakago-warp`: A new Warp adapter that works in a similar way to the Axum adapter.
+- `nakago-examples-simple-warp`: A new example project that uses the Warp adapter.
+- `nakago`: Added a copy of Axum's `FromRef` utility, so that it can be used without importing Axum itself.
+- `nakago-derive`: Updated to support the FromRef utility.
+
+### Changed
+
+- Updated `mockall` and `tokio-tungstenite` requirements, and removed temporary tokio-tungstenite fork.
+- `nakago-axum`: Simplified the route Init Hook.
+- `nakago-axum`, `nakago-async-graphql`, `nakago-sea-orm`: Updated to use the new FromRef utility.
 
 ## [0.18.0]
 
@@ -315,7 +324,8 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
-[unreleased]: https://github.com/bkonkle/nakago/compare/0.18.0...HEAD
+[unreleased]: https://github.com/bkonkle/nakago/compare/0.19.0...HEAD
+[0.19.0]: https://github.com/bkonkle/nakago/compare/0.18.0...0.19.0
 [0.18.0]: https://github.com/bkonkle/nakago/compare/0.17.0...0.18.0
 [0.17.0]: https://github.com/bkonkle/nakago/compare/0.16.0...0.17.0
 [0.16.0]: https://github.com/bkonkle/nakago/compare/0.15.0...0.16.0

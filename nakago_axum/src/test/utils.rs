@@ -1,12 +1,11 @@
 use std::{default::Default, future::IntoFuture, net::SocketAddr, sync::Arc, time::Duration};
 
-use axum::extract::FromRef;
 use biscuit::{
     jwa::SignatureAlgorithm,
     jws::{RegisteredHeader, Secret},
     ClaimsSet, Empty, RegisteredClaims, SingleOrMultiple, JWT,
 };
-use nakago::{self, hooks, inject};
+use nakago::{self, hooks, inject, utils::FromRef};
 use tokio::time::sleep;
 
 use crate::{auth, AxumApplication, Config};

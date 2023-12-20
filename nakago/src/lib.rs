@@ -13,6 +13,9 @@ pub mod app;
 /// Lifecycle hooks
 pub mod lifecycle;
 
+/// Utils
+pub mod utils;
+
 pub use app::Application;
 pub use config::Config;
 pub use inject::{
