@@ -126,6 +126,12 @@ command = "cargo"
 args = ["run", "-p", "nakago-examples-async-graphql"]
 watch = true
 
+[tasks.run-auth-server]
+env = { "RUST_LOG" = "info,sqlx::query=warn" }
+command = "cargo"
+args = ["run", "-p", "nakago-examples-auth-server"]
+watch = true
+
 # Database tasks for example projects
 
 [tasks.db-create]
@@ -190,6 +196,19 @@ args = [
 
 [tasks.docker-async-graphql]
 cwd = "./examples/async-graphql"
+command = "docker-compose"
+args = [
+    "-f",
+    "../../docker-compose.yml",
+    "-f",
+    "docker-compose.app.yml",
+    "--env-file",
+    "../../.env",
+    "${@}",
+]
+
+[tasks.docker-auth-server]
+cwd = "./examples/auth-server"
 command = "docker-compose"
 args = [
     "-f",

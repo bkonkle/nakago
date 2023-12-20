@@ -1,6 +1,6 @@
 [package]
-name = "nakago-axum"
-version = "0.19.0"
+name = "nakago-auth"
+version = "0.20.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "An Axum HTTP routes integration for Nakago"
@@ -12,7 +12,6 @@ license = "MIT"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
-axum = { version = "0.7", features = ["ws", "macros"] }
 biscuit = "0.7.0"
 bytes = "1"
 derive-new = "0.6"
@@ -22,21 +21,16 @@ fake = { version = "2.9", features = [
     'http',
     'uuid',
 ], git = "https://github.com/cksac/fake-rs.git" }
-figment = { version = "0.10", features = ["env"] }
-hyper = "1.0"
 jsonwebtoken = "9.0"
 log = "0.4"
 nakago = "0.19"
 nakago-derive = "0.19"
 pretty_env_logger = "0.5"
 rand = "0.8"
-reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = "1.0"
 thiserror = "1.0"
-tower-http = { version = "0.5", features = ["trace"] }
-tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 
 [dev-dependencies]
