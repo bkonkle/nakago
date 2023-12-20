@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "nakago",
-    "nakago/derive",
+    "nakago_derive",
     "nakago_axum",
     "nakago_warp",
     "nakago_sea_orm",
@@ -11,7 +11,7 @@ members = [
 ]
 default-members = [
     "nakago",
-    "nakago/derive",
+    "nakago_derive",
     "nakago_axum",
     "nakago_warp",
     "nakago_sea_orm",
@@ -22,7 +22,7 @@ default-members = [
 nakago = { path = "./nakago" }
 nakago-axum = { path = "./nakago_axum" }
 nakago-warp = { path = "./nakago_warp" }
-nakago-derive = { path = "./nakago/derive" }
+nakago-derive = { path = "./nakago_derive" }
 nakago-sea-orm = { path = "./nakago_sea_orm" }
 nakago-async-graphql = { path = "./nakago_async_graphql" }
 
