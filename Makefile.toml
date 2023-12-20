@@ -114,6 +114,12 @@ command = "cargo"
 args = ["run", "-p", "nakago-examples-simple"]
 watch = true
 
+[tasks.run-simple-warp]
+env = { "RUST_LOG" = "info,sqlx::query=warn" }
+command = "cargo"
+args = ["run", "-p", "nakago-examples-simple-warp"]
+watch = true
+
 [tasks.run-async-graphql]
 env = { "RUST_LOG" = "info,sqlx::query=warn" }
 command = "cargo"
@@ -158,6 +164,19 @@ args = ["-f", "docker-compose.yml", "${@}"]
 
 [tasks.docker-simple]
 cwd = "./examples/simple"
+command = "docker-compose"
+args = [
+    "-f",
+    "../../docker-compose.yml",
+    "-f",
+    "docker-compose.app.yml",
+    "--env-file",
+    "../../.env",
+    "${@}",
+]
+
+[tasks.docker-simple-warp]
+cwd = "./examples/simple-warp"
 command = "docker-compose"
 args = [
     "-f",

@@ -6,8 +6,8 @@ use std::{
     sync::Arc,
 };
 
-use axum::{extract::FromRef, serve::Serve, Router};
-use nakago::{self, hooks, inject, Application, Tag};
+use axum::{serve::Serve, Router};
+use nakago::{self, hooks, utils::FromRef, Application, Tag};
 use tokio::net::TcpListener;
 use tower_http::trace;
 
@@ -115,7 +115,7 @@ where
         Ok((server, actual_addr))
     }
 
-    async fn get_router(&self) -> inject::Result<Router> {
+    async fn get_router(&self) -> hooks::Result<Router> {
         let mut router = Router::<State>::new();
 
         if let Some(routes) = self.app.get_type_opt::<Routes>().await? {

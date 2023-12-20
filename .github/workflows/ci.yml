@@ -69,6 +69,7 @@ jobs:
       DATABASE_URL_ASYNC_GRAPHQL: postgresql://nakago:nakago@localhost:1701/async-graphql
       CONFIG_PATH_ASYNC_GRAPHQL: examples/async-graphql/config/ci.toml
       CONFIG_PATH_SIMPLE: examples/simple/config/ci.toml
+      CONFIG_PATH_SIMPLE_WARP: examples/simple-warp/config/ci.toml
 
     steps:
       - name: Checkout repository

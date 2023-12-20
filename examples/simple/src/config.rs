@@ -1,6 +1,6 @@
-use axum::extract::FromRef;
 use nakago::{self, Tag};
 use nakago_axum::{self, auth};
+use nakago_derive::FromRef;
 use serde::Serialize;
 use serde_derive::Deserialize;
 

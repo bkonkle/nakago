@@ -4,6 +4,7 @@ members = [
     "nakago",
     "nakago/derive",
     "nakago_axum",
+    "nakago_warp",
     "nakago_sea_orm",
     "nakago_async_graphql",
     "examples/*",
@@ -12,6 +13,7 @@ default-members = [
     "nakago",
     "nakago/derive",
     "nakago_axum",
+    "nakago_warp",
     "nakago_sea_orm",
     "nakago_async_graphql",
 ]
@@ -19,6 +21,7 @@ default-members = [
 [patch.crates-io]
 nakago = { path = "./nakago" }
 nakago-axum = { path = "./nakago_axum" }
+nakago-warp = { path = "./nakago_warp" }
 nakago-derive = { path = "./nakago/derive" }
 nakago-sea-orm = { path = "./nakago_sea_orm" }
 nakago-async-graphql = { path = "./nakago_async_graphql" }

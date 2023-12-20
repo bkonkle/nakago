@@ -1,0 +1,7 @@
+# Local testing
+
+port = 0
+
+[auth.client]
+id = "client_id"
+secret = "client_secret"
