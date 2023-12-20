@@ -22,10 +22,6 @@ fake = { version = "2.9", features = [
     'uuid',
 ], git = "https://github.com/cksac/fake-rs.git" }
 figment = { version = "0.10", features = ["env"] }
-futures-util = { version = "0.3", default-features = false, features = [
-    "sink",
-    "std",
-] }
 hyper = "1.0"
 jsonwebtoken = "9.0"
 log = "0.4"
