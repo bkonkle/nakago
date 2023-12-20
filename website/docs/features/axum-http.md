@@ -97,9 +97,7 @@ impl Hook for Init {
         i.handle(routes::Init::new(
             Method::GET,
             "/events",
-            move |sub, ws| async move {
-                events::Controller::upgrade(events_controller, sub, ws).await
-            },
+            move |sub, ws| async move { events_controller.upgrade(sub, ws).await },
         ))
         .await?;
 
