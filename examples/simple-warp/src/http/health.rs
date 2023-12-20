@@ -24,7 +24,9 @@ impl Reply for HealthResponse {
 
 /// Create a Health Check Route
 pub fn health_check(filter: BoxedFilter<(Inject,)>) -> Route {
-    filter
+    warp::path("health")
+        .and(warp::get())
+        .and(filter)
         .and_then(health_handler)
         .map(|a| Box::new(a) as Box<dyn Reply>)
         .boxed()

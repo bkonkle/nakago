@@ -6,7 +6,7 @@ use nakago_warp::{
     Route,
 };
 use serde_derive::{Deserialize, Serialize};
-use warp::{filters::BoxedFilter, wrap_fn, Filter, Reply};
+use warp::{filters::BoxedFilter, Filter, Reply};
 
 /// A Username Response
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,8 +27,9 @@ impl Reply for UsernameResponse {
 
 /// Create a Get Username Route
 pub fn get_username(filter: BoxedFilter<(Inject,)>) -> Route {
-    filter
-        .with(wrap_fn(with_auth))
+    warp::path("username")
+        .and(warp::get())
+        .and(with_auth(filter))
         .and_then(handle_get_username)
         .map(|a| Box::new(a) as Box<dyn Reply>)
         .boxed()
