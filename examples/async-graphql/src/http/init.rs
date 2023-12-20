@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use hyper::Method;
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use nakago::{hooks, Hook, Inject};
 use nakago_axum::routes;
 
@@ -33,35 +36,25 @@ impl Hook for Init {
         let events_controller = i.get(&events::CONTROLLER).await?;
 
         i.handle(routes::Init::new(
-            Method::GET,
-            "/health",
-            health::health_check,
+            Router::new().route("/health", get(health::health_check)),
         ))
         .await?;
 
         i.handle(routes::Init::new(
-            Method::GET,
+            Router::new().route("/graphql", get(graphql::Controller::graphiql)),
+        ))
+        .await?;
+
+        i.handle(routes::Init::new(Router::new().route(
             "/graphql",
-            graphql::Controller::graphiql,
-        ))
+            post(move |sub, req| async move { graphql_controller.resolve(sub, req).await }),
+        )))
         .await?;
 
-        i.handle(routes::Init::new(
-            Method::POST,
-            "/graphql",
-            move |sub, req| async move {
-                graphql::Controller::resolve(graphql_controller, sub, req).await
-            },
-        ))
-        .await?;
-
-        i.handle(routes::Init::new(
-            Method::GET,
+        i.handle(routes::Init::new(Router::new().route(
             "/events",
-            move |sub, ws| async move {
-                events::Controller::upgrade(events_controller, sub, ws).await
-            },
-        ))
+            get(move |sub, ws| async move { events_controller.upgrade(sub, ws).await }),
+        )))
         .await?;
 
         Ok(())
