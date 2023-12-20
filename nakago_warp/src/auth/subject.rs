@@ -18,9 +18,10 @@ const BEARER: &str = "Bearer ";
 pub struct Subject(pub Option<String>);
 
 /// A Warp Filter to add Authentication context
-pub fn with_auth(i: Inject) -> BoxedFilter<(Inject, Subject)> {
-    headers_cloned()
-        .and_then(move |headers: HeaderMap<HeaderValue>| authenticate(i.clone(), headers))
+pub fn with_auth(filter: BoxedFilter<(Inject,)>) -> BoxedFilter<(Inject, Subject)> {
+    filter
+        .and(headers_cloned())
+        .and_then(authenticate)
         .untuple_one()
         .boxed()
 }

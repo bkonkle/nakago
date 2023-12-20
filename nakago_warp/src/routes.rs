@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use nakago::{hooks, Hook, Inject};
 use tokio::sync::Mutex;
-use warp::{filters::BoxedFilter, http::Method, reply::Reply, Filter};
+use warp::{filters::BoxedFilter, http::Method, reply::Reply, wrap_fn, Filter};
 
 /// A Route that will be nested within a higher-level Router, wrapped in a Mutex to safely move
 pub type Route = BoxedFilter<(Box<dyn Reply>,)>;
@@ -15,7 +15,7 @@ pub type Routes = Mutex<Vec<Route>>;
 /// A hook to initialize a particular route
 pub struct Init<F>
 where
-    F: Fn(BoxedFilter<(Inject,)>) -> BoxedFilter<(Box<dyn Reply>,)>,
+    F: Fn(BoxedFilter<(Inject,)>) -> BoxedFilter<(Box<dyn Reply>,)> + Clone,
 {
     path: String,
     handler: F,
@@ -24,7 +24,7 @@ where
 
 impl<F> Init<F>
 where
-    F: Fn(BoxedFilter<(Inject,)>) -> BoxedFilter<(Box<dyn Reply>,)>,
+    F: Fn(BoxedFilter<(Inject,)>) -> BoxedFilter<(Box<dyn Reply>,)> + Clone,
 {
     /// Create a new Init instance
     pub fn new(method: Method, path: &str, handler: F) -> Self {
@@ -39,10 +39,10 @@ where
 #[async_trait]
 impl<F> Hook for Init<F>
 where
-    F: Fn(BoxedFilter<(Inject,)>) -> BoxedFilter<(Box<dyn Reply>,)> + Send + Sync + Any,
+    F: Fn(BoxedFilter<(Inject,)>) -> BoxedFilter<(Box<dyn Reply>,)> + Send + Sync + Any + Clone,
 {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let router = match self.method {
+        let method = match self.method {
             Method::HEAD => warp::head().boxed(),
             Method::GET => warp::get().boxed(),
             Method::OPTIONS => warp::options().boxed(),
@@ -57,12 +57,11 @@ where
             }
         };
 
-        let route = (self.handler)(
-            warp::path(self.path.clone())
-                .and(router)
-                .and(with_injection(i.clone()))
-                .boxed(),
-        );
+        let route = warp::path(self.path.clone())
+            .and(method)
+            .and(with_injection(i.clone()))
+            .boxed()
+            .with(wrap_fn(self.handler.clone()));
 
         if let Some(routes) = i.get_type_opt::<Routes>().await? {
             routes.lock().await.push(route);
