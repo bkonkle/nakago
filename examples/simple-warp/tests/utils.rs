@@ -23,7 +23,7 @@ impl TestUtils {
             .await?;
 
         let config_path = std::env::var("CONFIG_PATH_SIMPLE_WARP")
-            .unwrap_or_else(|_| "examples/simple-warp/config/test.toml".to_string());
+            .unwrap_or_else(|_| "examples/simple-warp/config.test.toml".to_string());
 
         let utils = nakago_warp::test::Utils::init(app, &config_path, "/").await?;
 
