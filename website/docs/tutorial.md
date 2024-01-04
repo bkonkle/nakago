@@ -82,7 +82,7 @@ pub struct Config {
 
 This auth `Config` is automatically loaded as part of the default config loaders in the `nakago-axum` crate, which you'll see below.
 
-Next, add the following values to your `config/local.toml.example` file as a hint, so that new developers know they need to reach out to you for real values when they create their own `config/local.toml` file:
+Next, add the following values to your `config.local.toml.example` file as a hint, so that new developers know they need to reach out to you for real values when they create their own `config.local.toml` file:
 
 ```toml
 [auth]
@@ -194,7 +194,7 @@ thread '<unnamed>' panicked at 'Unable to retrieve JWKS: invalid format'
 
 This is okay - you don't have to have a properly configured auth provider to run the integration tests for your app. You can use the "unverified" `AuthState` variant during integration testing, and skip the rest of this section.
 
-If you *do* have a valid OAuth2 provider, then you'll want to create a `config/local.toml` file and set the following property in it:
+If you *do* have a valid OAuth2 provider, then you'll want to create a `config.local.toml` file and set the following property in it:
 
 ```toml
 [auth]
