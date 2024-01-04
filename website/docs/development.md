@@ -87,6 +87,29 @@ cargo update
 cargo outdated
 ```
 
+### SQLx CLI
+
+The cargo-make setup task installs the SQLx CLI for running database migrations for the example projects.
+
+Create a database based on the `DATABASE_URL` in the `.envrc`, if you haven't already:
+
+```sh
+cargo make db-create
+```
+
+Run migrations:
+
+```sh
+cargo make db-migrate
+```
+
+If you want to wipe your database and start over:
+
+```sh
+cargo make db-reset
+```
+
+
 ## Examples: Docker Build
 
 To build locally, use Buildkit:
