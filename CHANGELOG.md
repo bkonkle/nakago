@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `nakago-example-async-graphql`: Cleaned up some imports that weren't being used.
+- Removed the 'config' directories in the example projects and moved the config files up to the root folder of each project.
 
 ## [0.19.0]
 
