@@ -3,10 +3,7 @@ use nakago::{hooks, Hook, Inject};
 
 use crate::domains::graphql;
 
-use super::{
-    loaders::{self, LOADER},
-    service::{self, SERVICE},
-};
+use super::{loaders, service, LOADER, SERVICE};
 
 /// Provide dependencies needed for the RoleGrants domain
 #[derive(Default)]
