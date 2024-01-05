@@ -277,7 +277,7 @@ impl Utils {
 }
 ```
 
-Again, replace `simple` with your actual project name. The `CONFIG_PATH` variable is used so that you can replace that with `config/ci.toml` or whatever you need for testing in different environments.
+Again, replace `simple` with your actual project name. The `CONFIG_PATH` variable is used so that you can replace that with `config.ci.toml` or whatever you need for testing in different environments.
 
 Now, create a `test_users_int.rs` to represent your User integration tests, which will currently just test the `/username` endpoint.
 
