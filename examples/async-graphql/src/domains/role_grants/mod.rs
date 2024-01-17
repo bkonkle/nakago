@@ -16,5 +16,5 @@ pub mod service;
 #[cfg(test)]
 mod tests;
 
-pub use loaders::{Loader, LOADER};
+pub use loaders::LOADER;
 pub use service::{Service, SERVICE};
