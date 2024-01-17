@@ -44,7 +44,7 @@ impl Utils {
             .await?;
 
         let config_path = std::env::var("CONFIG_PATH_ASYNC_GRAPHQL")
-            .unwrap_or_else(|_| "examples/async-graphql/config/test.toml".to_string());
+            .unwrap_or_else(|_| "examples/async-graphql/config.test.toml".to_string());
 
         let utils =
             nakago_async_graphql::test::Utils::init(app, &config_path, "/", "/graphql").await?;

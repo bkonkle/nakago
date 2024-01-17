@@ -23,7 +23,7 @@ impl TestUtils {
             .await?;
 
         let config_path = std::env::var("CONFIG_PATH_SIMPLE")
-            .unwrap_or_else(|_| "examples/simple/config/test.toml".to_string());
+            .unwrap_or_else(|_| "examples/simple/config.test.toml".to_string());
 
         let utils = nakago_axum::test::Utils::init(app, &config_path, "/").await?;
 

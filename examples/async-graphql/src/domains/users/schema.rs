@@ -3,12 +3,7 @@ use nakago::{hooks, Hook, Inject};
 
 use crate::domains::graphql;
 
-use super::{
-    loaders::{self, LOADER},
-    mutation, query,
-    service::{self, SERVICE},
-    MUTATION, QUERY,
-};
+use super::{loaders, mutation, query, service, LOADER, MUTATION, QUERY, SERVICE};
 
 /// Provide dependencies needed for the Users domain
 #[derive(Default)]

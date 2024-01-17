@@ -38,12 +38,7 @@ One strategy to keep things encapsulated is to use a domain-specific Load lifecy
 For example, a Load hook for a Users domain might want to provide a Service and a DataLoader along with a Query and a Mutation that will use them, all focused on Users:
 
 ```rust
-use super::{
-    loaders::{self, LOADER},
-    mutation, query,
-    service::{self, SERVICE},
-    MUTATION, QUERY,
-};
+use super::{loaders, mutation, query, service, LOADER, MUTATION, SERVICE, QUERY};
 
 #[derive(Default)]
 pub struct Load {}

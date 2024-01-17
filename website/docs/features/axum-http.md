@@ -187,7 +187,7 @@ Integration testing is handled by initializing your application server in a way 
 ```rust
 let app = init::app().await?;
 
-let config_path = std::env::var("CONFIG_PATH").unwrap_or_else(|_| "test.toml".to_string());
+let config_path = std::env::var("CONFIG_PATH").unwrap_or_else(|_| "config.test.toml".to_string());
 
 let utils = nakago_axum::test::Utils::init(app, &config_path, "/").await?;
 

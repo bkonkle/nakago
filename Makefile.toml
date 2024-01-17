@@ -11,18 +11,21 @@ script = '''
     pre-commit --version || pip install pre-commit
     pre-commit install || echo "failed to install git hooks!" 1>&2
 
-    echo # things required for `cargo make test`
+    echo # requirements for `cargo make test`
     cargo install cargo-nextest
 
-    echo # things required by `cargo make pre-commit`
+    echo # requirements by `cargo make pre-commit`
     cargo install cargo-spellcheck
 
-    echo # things required by `cargo make coverage`
+    echo # requirements by `cargo make coverage`
     rustup component add llvm-tools-preview
     cargo install cargo-llvm-cov
 
-    echo # things required by `cargo make audit`
+    echo # requirements by `cargo make audit`
     cargo install cargo-audit
+
+    echo # requirements for `cargo make db-` tasks
+    cargo install sqlx-cli --no-default-features --features rustls,postgres
 '''
 
 [tasks.check]
