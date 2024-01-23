@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `nakago-example-async-graphql`: Cleaned up some imports that weren't being used.
 - Removed the 'config' directories in the example projects and moved the config files up to the root folder of each project.
+- Moved config loaders to act on Figments, making it easy to take full advantage of the Figment library.
 
 ## [0.19.0]
 

@@ -94,6 +94,7 @@ impl<C: Config> Hook for Init<C> {
 
         let config = loader
             .load(self.custom_path.clone())
+            .extract()
             .map_err(|e| Error::Any(Arc::new(e.into())))?;
 
         if let Some(tag) = self.tag {
@@ -108,7 +109,7 @@ impl<C: Config> Hook for Init<C> {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use figment::providers::Env;
+    use figment::Figment;
 
     use crate::config::loader::test::Config;
 
@@ -118,8 +119,8 @@ pub(crate) mod test {
     pub struct TestLoader {}
 
     impl Loader for TestLoader {
-        fn load_env(&self, env: Env) -> Env {
-            env
+        fn load(&self, figment: Figment) -> Figment {
+            figment
         }
     }
 
