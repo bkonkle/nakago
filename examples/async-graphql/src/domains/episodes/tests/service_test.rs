@@ -320,7 +320,7 @@ async fn test_episodes_service_get_many_pagination() -> Result<()> {
         vec![
             Transaction::from_sql_and_values(
                 DatabaseBackend::Postgres,
-                r#"SELECT COUNT(*) AS num_items FROM (SELECT "episodes"."id", "episodes"."created_at", "episodes"."updated_at", "episodes"."title", "episodes"."summary", "episodes"."picture", "episodes"."show_id" FROM "episodes" ORDER BY "episodes"."created_at" DESC) AS "sub_query""#,
+                r#"SELECT COUNT(*) AS num_items FROM (SELECT "episodes"."id", "episodes"."created_at", "episodes"."updated_at", "episodes"."title", "episodes"."summary", "episodes"."picture", "episodes"."show_id" FROM "episodes") AS "sub_query""#,
                 vec![]
             ),
             Transaction::from_sql_and_values(
@@ -415,7 +415,7 @@ async fn test_episodes_service_get_many_pagination_with_related() -> Result<()> 
         vec![
             Transaction::from_sql_and_values(
                 DatabaseBackend::Postgres,
-                r#"SELECT COUNT(*) AS num_items FROM (SELECT "episodes"."id" AS "A_id", "episodes"."created_at" AS "A_created_at", "episodes"."updated_at" AS "A_updated_at", "episodes"."title" AS "A_title", "episodes"."summary" AS "A_summary", "episodes"."picture" AS "A_picture", "episodes"."show_id" AS "A_show_id", "shows"."id" AS "B_id", "shows"."created_at" AS "B_created_at", "shows"."updated_at" AS "B_updated_at", "shows"."title" AS "B_title", "shows"."summary" AS "B_summary", "shows"."picture" AS "B_picture" FROM "episodes" LEFT JOIN "shows" ON "episodes"."show_id" = "shows"."id" ORDER BY "episodes"."created_at" DESC) AS "sub_query""#,
+                r#"SELECT COUNT(*) AS num_items FROM (SELECT "episodes"."id" AS "A_id", "episodes"."created_at" AS "A_created_at", "episodes"."updated_at" AS "A_updated_at", "episodes"."title" AS "A_title", "episodes"."summary" AS "A_summary", "episodes"."picture" AS "A_picture", "episodes"."show_id" AS "A_show_id", "shows"."id" AS "B_id", "shows"."created_at" AS "B_created_at", "shows"."updated_at" AS "B_updated_at", "shows"."title" AS "B_title", "shows"."summary" AS "B_summary", "shows"."picture" AS "B_picture" FROM "episodes" LEFT JOIN "shows" ON "episodes"."show_id" = "shows"."id") AS "sub_query""#,
                 vec![]
             ),
             Transaction::from_sql_and_values(
