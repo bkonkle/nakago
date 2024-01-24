@@ -545,6 +545,24 @@ pub(crate) mod test {
     }
 
     #[tokio::test]
+    async fn test_consume_provider_in_use() -> Result<()> {
+        let i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+            .await?;
+
+        let _borrow = i.get(&SERVICE_TAG).await?;
+
+        let result = i.consume(&SERVICE_TAG).await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_consume_provider_multiple() -> Result<()> {
         let i = Inject::default();
 
@@ -700,6 +718,31 @@ pub(crate) mod test {
     }
 
     #[tokio::test]
+    async fn test_modify_in_use() -> Result<()> {
+        let i = Inject::default();
+
+        let initial: String = fake::uuid::UUIDv4.fake();
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide(&SERVICE_TAG, TestServiceProvider::new(initial.clone()))
+            .await?;
+
+        let _borrow = i.get(&SERVICE_TAG).await?;
+
+        let result = i
+            .modify(&SERVICE_TAG, |mut t| {
+                t.id = expected.clone();
+
+                Ok(t)
+            })
+            .await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_remove_provider_success() -> Result<()> {
         let i = Inject::default();
 
@@ -805,6 +848,24 @@ pub(crate) mod test {
         assert!(result
             .to_string()
             .starts_with("Tag(in_memory::test::Service) was not found"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eject_provider_in_use() -> Result<()> {
+        let i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+            .await?;
+
+        let _borrow = i.get(&SERVICE_TAG).await?;
+
+        let result = i.eject(&SERVICE_TAG).await;
+
+        assert!(result.is_err());
 
         Ok(())
     }

@@ -111,7 +111,7 @@ impl<C: Config> Hook for Init<C> {
 pub(crate) mod test {
     use figment::Figment;
 
-    use crate::config::loader::test::Config;
+    use crate::config::loader::test::{Config, CONFIG};
 
     use super::*;
 
@@ -164,7 +164,17 @@ pub(crate) mod test {
     async fn test_init_success() -> Result<()> {
         let i = Inject::default();
 
-        let hook = Init::<Config>::new(None, None);
+        let hook = Init::<Config>::default();
+        assert!(hook.custom_path.is_none());
+        assert!(hook.tag.is_none());
+
+        i.handle(hook).await?;
+
+        let hook = Init::<Config>::default().with_path("TEST_PATH".into());
+        assert!(hook.custom_path.is_some());
+
+        let hook = Init::<Config>::default().with_tag(&CONFIG);
+        assert!(hook.tag.is_some());
 
         i.handle(hook).await?;
 

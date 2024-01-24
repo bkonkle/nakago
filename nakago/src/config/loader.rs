@@ -70,12 +70,17 @@ impl<C: Config> LoadAll<C> {
 pub(crate) mod test {
     use anyhow::Result;
 
+    use crate::Tag;
+
     use super::*;
 
-    #[derive(Default, Debug, Serialize, Deserialize, Clone)]
+    #[derive(Default, Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
     pub struct Config {}
 
     impl crate::Config for Config {}
+
+    /// Tag(app::Config)
+    pub const CONFIG: Tag<Config> = Tag::new("app::Config");
 
     #[tokio::test]
     async fn test_load_all_success() -> Result<()> {
@@ -90,9 +95,10 @@ pub(crate) mod test {
     async fn test_load_all_custom_path() -> Result<()> {
         let loader = LoadAll::<Config>::new(vec![]);
 
-        let custom_path = PathBuf::from("config.toml");
-
-        let _config: Config = loader.load(Some(custom_path)).extract()?;
+        let _figment: Figment = loader.load(Some("config.toml".into()));
+        let _figment: Figment = loader.load(Some("config.yml".into()));
+        let _figment: Figment = loader.load(Some("config.yaml".into()));
+        let _figment: Figment = loader.load(Some("config.json".into()));
 
         Ok(())
     }

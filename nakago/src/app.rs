@@ -75,15 +75,14 @@ where
     }
 
     /// Trigger the given lifecycle event
-    pub async fn trigger(&mut self, event: &EventType) -> hooks::Result<()> {
+    pub async fn trigger(&self, event: &EventType) -> hooks::Result<()> {
         self.events.trigger(event, self.i.clone()).await
     }
 
     /// Load the App's dependencies and configuration. Triggers the Load lifecycle event.
     pub async fn load(&self, config_path: Option<PathBuf>) -> hooks::Result<()> {
         // Trigger the Load lifecycle event
-        self.events
-            .trigger(&EventType::Load, self.i.clone())
+        self.trigger(&EventType::Load)
             .await
             .map_err(from_hook_error)?;
 
@@ -98,9 +97,7 @@ where
     /// Initialize the App and provide the top-level Config. Triggers the Init lifecycle event.
     pub async fn init(&self) -> hooks::Result<()> {
         // Trigger the Init lifecycle event
-        self.events
-            .trigger(&EventType::Init, self.i.clone())
-            .await?;
+        self.trigger(&EventType::Init).await?;
 
         tracing_subscriber::registry()
             .with(tracing_subscriber::EnvFilter::new(
@@ -117,20 +114,12 @@ where
 
     /// Trigger the Startup lifecycle event.
     pub async fn start(&self) -> hooks::Result<()> {
-        self.events
-            .trigger(&EventType::Startup, self.i.clone())
-            .await?;
-
-        Ok(())
+        self.trigger(&EventType::Startup).await
     }
 
     /// Trigger the Shutdown lifecycle event.
     pub async fn stop(&self) -> hooks::Result<()> {
-        self.events
-            .trigger(&EventType::Shutdown, self.i.clone())
-            .await?;
-
-        Ok(())
+        self.trigger(&EventType::Shutdown).await
     }
 
     /// Get the top-level Config by tag or type
@@ -174,9 +163,25 @@ fn handle_panic(info: &PanicInfo<'_>) {
 pub mod test {
     use anyhow::Result;
 
-    use crate::config::{hooks::test::TestLoader, loader::test::Config, AddLoaders, Loader};
+    use crate::config::{
+        hooks::test::TestLoader,
+        loader::test::{Config, CONFIG},
+        AddLoaders, Loader,
+    };
 
     use super::*;
+
+    #[tokio::test]
+    async fn test_app_deref_success() -> Result<()> {
+        let mut app = Application::<Config>::default();
+
+        let keys = app.get_available_keys().await;
+        assert_eq!(keys.len(), 0);
+
+        let mut _m = &mut *app;
+
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_app_load_success() -> Result<()> {
@@ -203,7 +208,13 @@ pub mod test {
 
     #[tokio::test]
     async fn test_app_init_success() -> Result<()> {
-        let app = Application::<Config>::default();
+        let mut app = Application::<Config>::new(None);
+
+        assert_eq!(app.config_tag, None);
+
+        app = app.with_config_tag(&CONFIG);
+
+        assert_eq!(app.config_tag, Some(&CONFIG));
 
         app.init().await?;
 
@@ -224,6 +235,33 @@ pub mod test {
         let app = Application::<Config>::default();
 
         app.stop().await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_app_getconfig_success() -> Result<()> {
+        let mut app = Application::<Config>::default();
+
+        let config = app.get_config().await;
+        assert!(config.is_err());
+
+        app.inject_type(Config::default()).await?;
+
+        let config = app.get_config().await;
+        assert!(config.is_ok());
+
+        app.remove_type::<Config>().await?;
+
+        app = app.with_config_tag(&CONFIG);
+
+        let config = app.get_config().await;
+        assert!(config.is_err());
+
+        app.inject(&CONFIG, Config::default()).await?;
+
+        let config = app.get_config().await;
+        assert!(config.is_ok());
 
         Ok(())
     }
