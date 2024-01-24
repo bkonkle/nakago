@@ -181,7 +181,7 @@ async fn test_shows_service_get_many_pagination() -> Result<()> {
         vec![
             Transaction::from_sql_and_values(
                 DatabaseBackend::Postgres,
-                r#"SELECT COUNT(*) AS num_items FROM (SELECT "shows"."id", "shows"."created_at", "shows"."updated_at", "shows"."title", "shows"."summary", "shows"."picture" FROM "shows" ORDER BY "shows"."created_at" DESC) AS "sub_query""#,
+                r#"SELECT COUNT(*) AS num_items FROM (SELECT "shows"."id", "shows"."created_at", "shows"."updated_at", "shows"."title", "shows"."summary", "shows"."picture" FROM "shows") AS "sub_query""#,
                 vec![]
             ),
             Transaction::from_sql_and_values(

@@ -342,7 +342,7 @@ async fn test_profiles_service_get_many_pagination() -> Result<()> {
         vec![
             Transaction::from_sql_and_values(
                 DatabaseBackend::Postgres,
-                r#"SELECT COUNT(*) AS num_items FROM (SELECT "profiles"."id", "profiles"."created_at", "profiles"."updated_at", "profiles"."email", "profiles"."display_name", "profiles"."picture", "profiles"."city", "profiles"."state_province", "profiles"."user_id" FROM "profiles" ORDER BY "profiles"."created_at" DESC) AS "sub_query""#,
+                r#"SELECT COUNT(*) AS num_items FROM (SELECT "profiles"."id", "profiles"."created_at", "profiles"."updated_at", "profiles"."email", "profiles"."display_name", "profiles"."picture", "profiles"."city", "profiles"."state_province", "profiles"."user_id" FROM "profiles") AS "sub_query""#,
                 vec![]
             ),
             Transaction::from_sql_and_values(
@@ -442,7 +442,7 @@ async fn test_profiles_service_get_many_pagination_with_related() -> Result<()> 
         vec![
             Transaction::from_sql_and_values(
                 DatabaseBackend::Postgres,
-                r#"SELECT COUNT(*) AS num_items FROM (SELECT "profiles"."id" AS "A_id", "profiles"."created_at" AS "A_created_at", "profiles"."updated_at" AS "A_updated_at", "profiles"."email" AS "A_email", "profiles"."display_name" AS "A_display_name", "profiles"."picture" AS "A_picture", "profiles"."city" AS "A_city", "profiles"."state_province" AS "A_state_province", "profiles"."user_id" AS "A_user_id", "users"."id" AS "B_id", "users"."created_at" AS "B_created_at", "users"."updated_at" AS "B_updated_at", "users"."username" AS "B_username", "users"."is_active" AS "B_is_active" FROM "profiles" LEFT JOIN "users" ON "profiles"."user_id" = "users"."id" ORDER BY "profiles"."created_at" DESC) AS "sub_query""#,
+                r#"SELECT COUNT(*) AS num_items FROM (SELECT "profiles"."id" AS "A_id", "profiles"."created_at" AS "A_created_at", "profiles"."updated_at" AS "A_updated_at", "profiles"."email" AS "A_email", "profiles"."display_name" AS "A_display_name", "profiles"."picture" AS "A_picture", "profiles"."city" AS "A_city", "profiles"."state_province" AS "A_state_province", "profiles"."user_id" AS "A_user_id", "users"."id" AS "B_id", "users"."created_at" AS "B_created_at", "users"."updated_at" AS "B_updated_at", "users"."username" AS "B_username", "users"."is_active" AS "B_is_active" FROM "profiles" LEFT JOIN "users" ON "profiles"."user_id" = "users"."id") AS "sub_query""#,
                 vec![]
             ),
             Transaction::from_sql_and_values(
