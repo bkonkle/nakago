@@ -5,4 +5,6 @@
 !target/release/nakago-examples-async-graphql
 
 # Configs
-!examples/async-graphql/config/
+!examples/async-graphql/config.*
+examples/async-graphql/config.test.toml
+examples/async-graphql/config.local.toml

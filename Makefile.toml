@@ -98,7 +98,7 @@ args = [
 script = '''
     cargo clean
     cargo build --release --quiet --timings
-    xdg-open /target/cargo-timings/cargo-timing.html
+    xdg-open target/cargo-timings/cargo-timing.html
 '''
 
 [tasks.pre-commit]

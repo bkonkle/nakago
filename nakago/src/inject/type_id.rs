@@ -538,6 +538,24 @@ pub(crate) mod test {
     }
 
     #[tokio::test]
+    async fn test_consume_type_provider_in_use() -> Result<()> {
+        let i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide_type::<TestService>(TestServiceProvider::new(expected.clone()))
+            .await?;
+
+        let _borrow = i.get_type::<TestService>().await?;
+
+        let result = i.consume_type::<TestService>().await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_consume_type_pending_multiple() -> Result<()> {
         let i = Inject::default();
 
@@ -683,6 +701,31 @@ pub(crate) mod test {
     }
 
     #[tokio::test]
+    async fn test_modify_type_in_use() -> Result<()> {
+        let i = Inject::default();
+
+        let initial: String = fake::uuid::UUIDv4.fake();
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide_type::<TestService>(TestServiceProvider::new(initial.clone()))
+            .await?;
+
+        let _borrow = i.get_type::<TestService>().await?;
+
+        let result = i
+            .modify_type::<TestService, _>(|mut t| {
+                t.id = expected.clone();
+
+                Ok(t)
+            })
+            .await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_eject_key_pending_success() -> Result<()> {
         let i = Inject::default();
 
@@ -731,6 +774,24 @@ pub(crate) mod test {
         assert!(result
             .to_string()
             .starts_with("nakago::inject::container::test::TestService"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_eject_key_provider_in_use() -> Result<()> {
+        let i = Inject::default();
+
+        let expected: String = fake::uuid::UUIDv4.fake();
+
+        i.provide_type::<TestService>(TestServiceProvider::new(expected.clone()))
+            .await?;
+
+        let _borrow = i.get_type::<TestService>().await?;
+
+        let result = i.eject_type::<TestService>().await;
+
+        assert!(result.is_err());
 
         Ok(())
     }

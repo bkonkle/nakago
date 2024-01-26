@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use figment::providers::Env;
+use figment::{providers::Env, Figment};
 use nakago::{
     config::{self},
     hooks, Hook, Inject,
@@ -41,14 +41,17 @@ pub struct DatabasePool {
 pub struct Loader {}
 
 impl config::Loader for Loader {
-    fn load_env(&self, env: Env) -> Env {
+    fn load(&self, figment: Figment) -> Figment {
         // Split the Database variables
-        env.map(|key| {
-            key.as_str()
-                .replace("DATABASE_POOL_", "DATABASE.POOL.")
-                .into()
-        })
-        .map(|key| key.as_str().replace("DATABASE_", "DATABASE.").into())
+        figment.merge(
+            Env::prefixed("DATABASE")
+                .map(|key| {
+                    key.as_str()
+                        .replace("DATABASE_POOL_", "DATABASE.POOL.")
+                        .into()
+                })
+                .map(|key| key.as_str().replace("DATABASE_", "DATABASE.").into()),
+        )
     }
 }
 

@@ -1,17 +1,15 @@
 use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf, sync::Arc};
 
 use figment::{
-    providers::{Env, Format, Json, Serialized, Toml, Yaml},
+    providers::{Format, Json, Serialized, Toml, Yaml},
     Figment,
 };
 use serde::{Deserialize, Serialize};
 
 /// A Loader uses hooks to augment the Config loaded for the application
-///
-/// TODO: Add more hooks! 🙂
 pub trait Loader: Any + Send + Sync {
-    /// Apply transformations to the environment variables loaded by Figment
-    fn load_env(&self, env: Env) -> Env;
+    /// Apply transformations to the Figment provider
+    fn load(&self, figment: Figment) -> Figment;
 }
 
 /// Config is the final loaded result
@@ -36,7 +34,7 @@ impl<C: Config> LoadAll<C> {
     }
 
     /// Create a new Config by merging in various sources
-    pub fn load(&self, custom_path: Option<PathBuf>) -> figment::error::Result<C> {
+    pub fn load(&self, custom_path: Option<PathBuf>) -> Figment {
         let mut config = Figment::new()
             // Load defaults
             .merge(Serialized::defaults(C::default()))
@@ -59,19 +57,12 @@ impl<C: Config> LoadAll<C> {
             }
         }
 
-        // Environment Variables
-        // ---------------------
-
-        let mut env = Env::raw();
-
+        // Apply individual loaders to transform the Figment provider
         for loader in &self.loaders {
-            env = loader.load_env(env);
+            config = loader.load(config);
         }
 
-        config = config.merge(env);
-
-        // Serialize and freeze
-        config.extract()
+        config
     }
 }
 
@@ -79,18 +70,23 @@ impl<C: Config> LoadAll<C> {
 pub(crate) mod test {
     use anyhow::Result;
 
+    use crate::Tag;
+
     use super::*;
 
-    #[derive(Default, Debug, Serialize, Deserialize, Clone)]
+    #[derive(Default, Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
     pub struct Config {}
 
     impl crate::Config for Config {}
+
+    /// Tag(app::Config)
+    pub const CONFIG: Tag<Config> = Tag::new("app::Config");
 
     #[tokio::test]
     async fn test_load_all_success() -> Result<()> {
         let loader = LoadAll::<Config>::new(vec![]);
 
-        loader.load(None)?;
+        let _config: Config = loader.load(None).extract()?;
 
         Ok(())
     }
@@ -99,9 +95,10 @@ pub(crate) mod test {
     async fn test_load_all_custom_path() -> Result<()> {
         let loader = LoadAll::<Config>::new(vec![]);
 
-        let custom_path = PathBuf::from("config.toml");
-
-        loader.load(Some(custom_path))?;
+        let _figment: Figment = loader.load(Some("config.toml".into()));
+        let _figment: Figment = loader.load(Some("config.yml".into()));
+        let _figment: Figment = loader.load(Some("config.yaml".into()));
+        let _figment: Figment = loader.load(Some("config.json".into()));
 
         Ok(())
     }

@@ -19,7 +19,7 @@ RUN apt update && \
     chown async-graphql:async-graphql /usr/src/app
 
 COPY --chown=async-graphql:async-graphql ../../target/release/nakago-examples-async-graphql /usr/src/app/async-graphql
-COPY --chown=async-graphql:async-graphql ../../examples/async-graphql/config/*.toml /usr/src/app/config/
+COPY --chown=async-graphql:async-graphql ../../examples/async-graphql/config.*.toml /usr/src/app/config/
 
 USER async-graphql
 WORKDIR /usr/src/app

@@ -1,4 +1,4 @@
-use figment::providers::Env;
+use figment::{providers::Env, Figment};
 use nakago::config;
 use serde::{Deserialize, Serialize};
 
@@ -40,9 +40,12 @@ impl Default for Config {
 pub struct Loader {}
 
 impl config::Loader for Loader {
-    fn load_env(&self, env: Env) -> Env {
+    fn load(&self, figment: Figment) -> Figment {
         // Split the Auth variables
-        env.map(|key| key.as_str().replace("AUTH_CLIENT_", "AUTH.CLIENT.").into())
-            .map(|key| key.as_str().replace("AUTH_", "AUTH.").into())
+        figment.merge(
+            Env::prefixed("AUTH")
+                .map(|key| key.as_str().replace("AUTH_CLIENT_", "AUTH.CLIENT.").into())
+                .map(|key| key.as_str().replace("AUTH_", "AUTH.").into()),
+        )
     }
 }

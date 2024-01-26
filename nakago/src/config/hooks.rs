@@ -94,6 +94,7 @@ impl<C: Config> Hook for Init<C> {
 
         let config = loader
             .load(self.custom_path.clone())
+            .extract()
             .map_err(|e| Error::Any(Arc::new(e.into())))?;
 
         if let Some(tag) = self.tag {
@@ -108,9 +109,9 @@ impl<C: Config> Hook for Init<C> {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use figment::providers::Env;
+    use figment::Figment;
 
-    use crate::config::loader::test::Config;
+    use crate::config::loader::test::{Config, CONFIG};
 
     use super::*;
 
@@ -118,8 +119,8 @@ pub(crate) mod test {
     pub struct TestLoader {}
 
     impl Loader for TestLoader {
-        fn load_env(&self, env: Env) -> Env {
-            env
+        fn load(&self, figment: Figment) -> Figment {
+            figment
         }
     }
 
@@ -163,7 +164,17 @@ pub(crate) mod test {
     async fn test_init_success() -> Result<()> {
         let i = Inject::default();
 
-        let hook = Init::<Config>::new(None, None);
+        let hook = Init::<Config>::default();
+        assert!(hook.custom_path.is_none());
+        assert!(hook.tag.is_none());
+
+        i.handle(hook).await?;
+
+        let hook = Init::<Config>::default().with_path("TEST_PATH".into());
+        assert!(hook.custom_path.is_some());
+
+        let hook = Init::<Config>::default().with_tag(&CONFIG);
+        assert!(hook.tag.is_some());
 
         i.handle(hook).await?;
 

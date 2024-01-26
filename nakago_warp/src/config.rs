@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use figment::providers::Env;
+use figment::{providers::Env, Figment};
 use nakago::{config, hooks, Hook, Inject};
 use serde::{Deserialize, Serialize};
 
@@ -34,9 +34,10 @@ impl Default for Config {
 pub struct Loader {}
 
 impl config::Loader for Loader {
-    fn load_env(&self, env: Env) -> Env {
+    fn load(&self, figment: Figment) -> Figment {
         // Split the HTTP variables
-        env.map(|key| key.as_str().replace("HTTP_", "HTTP.").into())
+        figment
+            .merge(Env::prefixed("HTTP").map(|key| key.as_str().replace("HTTP_", "HTTP.").into()))
     }
 }
 
