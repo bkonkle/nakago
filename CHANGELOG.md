@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.1]
+
 ### Changed
 
 - `nakago-example-async-graphql`: Cleaned up some imports that weren't being used.
@@ -330,7 +332,8 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
-[unreleased]: https://github.com/bkonkle/nakago/compare/0.19.0...HEAD
+[unreleased]: https://github.com/bkonkle/nakago/compare/0.19.1...HEAD
+[0.19.1]: https://github.com/bkonkle/nakago/compare/0.19.0...0.19.1
 [0.19.0]: https://github.com/bkonkle/nakago/compare/0.18.0...0.19.0
 [0.18.0]: https://github.com/bkonkle/nakago/compare/0.17.0...0.18.0
 [0.17.0]: https://github.com/bkonkle/nakago/compare/0.16.0...0.17.0
