@@ -1,6 +1,6 @@
 [package]
 name = "nakago-examples-simple"
-version = "0.17.0"
+version = "0.19.1"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A lightweight Rust framework for sharp services 😎"
