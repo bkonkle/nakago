@@ -1,7 +1,9 @@
 use std::{any::Any, collections::HashMap, sync::Arc};
 
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use axum::extract::ws::Message;
+use derive_new::new;
 use nakago::{provider, Inject, Provider};
 use nakago_derive::Provider;
 use serde::{Deserialize, Serialize};
@@ -12,11 +14,23 @@ use tokio::sync::{
 use ulid::Ulid;
 
 /// User Connection for WebSocket connections
+#[derive(Debug, Clone, new)]
 pub struct Connection<U> {
     tx: mpsc::UnboundedSender<Message>,
 
     #[allow(dead_code)]
     session: Session<U>,
+}
+
+impl<U> Connection<U> {
+    /// Send a Message to the connection
+    pub fn send(&self, message: Message) -> Result<()> {
+        if let Err(_disconnected) = self.tx.send(message) {
+            // The tx is disconnected
+        }
+
+        Ok(())
+    }
 }
 
 /// The Connection for each currently connected User
@@ -47,12 +61,12 @@ impl<U: Clone> Connections<U> {
     }
 
     /// Send a Message to the given connection at the given id
-    pub async fn send(&self, conn_id: &str, message: Message) {
+    pub async fn send(&self, conn_id: &str, message: Message) -> Result<()> {
         if let Some(connection) = self.0.read().await.get(conn_id) {
-            if let Err(_disconnected) = connection.tx.send(message) {
-                // The tx is disconnected
-            }
+            return connection.send(message);
         }
+
+        Err(anyhow!("Connection not found"))
     }
 
     ///. Inserts a connection into the hash map, and returns the id

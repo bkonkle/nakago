@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use async_trait::async_trait;
-use axum::{extract::WebSocketUpgrade, response::IntoResponse};
+use axum::{
+    extract::{ws::Message, WebSocketUpgrade},
+    response::IntoResponse,
+};
 use nakago::{provider, Inject, Provider, Tag};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
@@ -10,15 +14,18 @@ use nakago_ws::{
     socket::{self, Handler},
 };
 
-use crate::domains::users::{self, model::User};
+use crate::{
+    domains::users::{self, model::User},
+    messages::{IncomingMessage, OutgoingMessage},
+};
 
 /// Events Controller
 pub const CONTROLLER: Tag<Controller> = Tag::new("events::Controller");
 
-// Connections
+/// Connections
 pub const CONNECTIONS: Tag<Connections<User>> = Tag::new("events::Connections");
 
-// Message Handler
+/// Message Handler
 pub const HANDLER: Tag<Handler<User>> = Tag::new("events::Handler");
 
 /// Events Controller
@@ -46,6 +53,28 @@ impl Controller {
         };
 
         Ok(ws.on_upgrade(|socket| async move { self.handler.handle(socket, user).await }))
+    }
+}
+
+/// WebSocket Event Handler
+pub struct Router {
+    connections: Arc<Connections<User>>,
+}
+
+impl Router {
+    async fn route(&self, conn_id: &str, msg: Message) -> anyhow::Result<()> {
+        let message: IncomingMessage = msg.into();
+
+        match message {
+            IncomingMessage::Ping => self.handle_ping(conn_id).await,
+            IncomingMessage::CannotDeserialize => Err(anyhow!("cannot deserialize message")),
+        }
+    }
+
+    async fn handle_ping(&self, conn_id: &str) -> Result<()> {
+        self.connections.send(conn_id, OutgoingMessage::Pong.into());
+
+        Ok(())
     }
 }
 

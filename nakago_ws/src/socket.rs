@@ -15,7 +15,7 @@ use super::connections::{Connections, Session};
 #[async_trait]
 pub trait Router: Send + Sync + Any {
     /// Route the given message to the appropriate handler
-    async fn route(&self, msg: Message) -> anyhow::Result<()>;
+    async fn route(&self, conn_id: &str, msg: Message) -> anyhow::Result<()>;
 }
 
 /// WebSocket Event Handler
@@ -56,7 +56,7 @@ impl<U: Clone> Handler<U> {
                 }
             };
 
-            if let Err(err) = self.router.route(msg).await {
+            if let Err(err) = self.router.route(&conn_id, msg).await {
                 eprintln!("json error(uid={conn_id}): {err}");
                 break;
             }
