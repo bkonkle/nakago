@@ -1,4 +1,4 @@
-//! # nakago-wary: A Warp HTTP routes integration for Nakago
+//! # nakago-warp: A Warp HTTP routes integration for Nakago
 #![forbid(unsafe_code)]
 
 /// The top-level Applicaiton

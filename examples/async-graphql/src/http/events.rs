@@ -5,8 +5,9 @@ use axum::{extract::WebSocketUpgrade, response::IntoResponse};
 use nakago::{provider, Inject, Provider, Tag};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
+use nakago_ws::socket;
 
-use crate::{domains::users, events::socket};
+use crate::domains::users::{self, model::User};
 
 /// Events Controller
 pub const CONTROLLER: Tag<Controller> = Tag::new("events::Controller");
@@ -15,7 +16,7 @@ pub const CONTROLLER: Tag<Controller> = Tag::new("events::Controller");
 #[derive(Clone)]
 pub struct Controller {
     users: Arc<Box<dyn users::Service>>,
-    handler: Arc<socket::Handler>,
+    handler: Arc<socket::Handler<User, R>>,
 }
 
 impl Controller {

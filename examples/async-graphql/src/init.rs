@@ -3,12 +3,12 @@ use nakago_axum::{
     auth::{jwks, validator, Validator, JWKS},
     AxumApplication,
 };
+use nakago_ws::socket;
 
 use crate::{
     authz::{self, ProvideOso, OSO},
     config::{Config, CONFIG},
     domains::graphql,
-    events::{self, socket},
     http,
 };
 
