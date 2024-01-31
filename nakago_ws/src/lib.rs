@@ -5,4 +5,11 @@
 pub mod connections;
 
 /// Event handler
-pub mod socket;
+pub mod handler;
+
+/// The Router trait
+pub mod router;
+
+pub use connections::Connections;
+pub use handler::Handler;
+pub use router::{Router, ROUTER};

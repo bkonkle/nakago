@@ -11,7 +11,7 @@ use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
 use nakago_ws::{
     connections::Connections,
-    socket::{self, Handler},
+    handler::{self, Handler},
 };
 
 use crate::{
@@ -32,7 +32,7 @@ pub const HANDLER: Tag<Handler<User>> = Tag::new("events::Handler");
 #[derive(Clone)]
 pub struct Controller {
     users: Arc<Box<dyn users::Service>>,
-    handler: Arc<socket::Handler<User>>,
+    handler: Arc<handler::Handler<User>>,
 }
 
 impl Controller {
@@ -62,6 +62,17 @@ pub struct Router {
 }
 
 impl Router {
+    async fn handle_ping(&self, conn_id: &str) -> Result<()> {
+        self.connections
+            .send(conn_id, OutgoingMessage::Pong.into())
+            .await?;
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl nakago_ws::Router for Router {
     async fn route(&self, conn_id: &str, msg: Message) -> anyhow::Result<()> {
         let message: IncomingMessage = msg.into();
 
@@ -69,12 +80,6 @@ impl Router {
             IncomingMessage::Ping => self.handle_ping(conn_id).await,
             IncomingMessage::CannotDeserialize => Err(anyhow!("cannot deserialize message")),
         }
-    }
-
-    async fn handle_ping(&self, conn_id: &str) -> Result<()> {
-        self.connections.send(conn_id, OutgoingMessage::Pong.into());
-
-        Ok(())
     }
 }
 
@@ -90,5 +95,22 @@ impl Provider<Controller> for Provide {
         let handler = i.get(&HANDLER).await?;
 
         Ok(Arc::new(Controller { users, handler }))
+    }
+}
+
+/// Router Provider
+#[derive(Default)]
+pub struct ProvideRouter {}
+
+#[Provider]
+#[async_trait]
+impl Provider<Box<dyn nakago_ws::Router>> for ProvideRouter {
+    async fn provide(
+        self: Arc<Self>,
+        i: Inject,
+    ) -> provider::Result<Arc<Box<dyn nakago_ws::Router>>> {
+        let connections = i.get(&CONNECTIONS).await?;
+
+        Ok(Arc::new(Box::new(Router { connections })))
     }
 }

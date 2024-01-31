@@ -1,7 +1,7 @@
 use std::{any::Any, sync::Arc};
 
 use async_trait::async_trait;
-use axum::extract::ws::{Message, WebSocket};
+use axum::extract::ws::WebSocket;
 use derive_new::new;
 use futures::{SinkExt, StreamExt, TryFutureExt};
 use nakago::{provider, Inject, Provider, Tag};
@@ -9,14 +9,9 @@ use nakago_derive::Provider;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use super::connections::{Connections, Session};
+use crate::Router;
 
-/// A Router routes Websocket messages to the appropriate handler
-#[async_trait]
-pub trait Router: Send + Sync + Any {
-    /// Route the given message to the appropriate handler
-    async fn route(&self, conn_id: &str, msg: Message) -> anyhow::Result<()>;
-}
+use super::connections::{Connections, Session};
 
 /// WebSocket Event Handler
 #[derive(Clone, new)]

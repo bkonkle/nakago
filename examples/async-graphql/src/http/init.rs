@@ -5,6 +5,7 @@ use axum::{
 };
 use nakago::{hooks, Hook, Inject};
 use nakago_axum::routes;
+use nakago_ws::ROUTER;
 
 use super::{events, graphql, health};
 
@@ -20,6 +21,8 @@ impl Hook for Load {
 
         i.provide(&events::CONTROLLER, events::Provide::default())
             .await?;
+
+        i.provide(&ROUTER, events::ProvideRouter::default()).await?;
 
         Ok(())
     }

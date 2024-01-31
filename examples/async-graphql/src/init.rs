@@ -3,13 +3,16 @@ use nakago_axum::{
     auth::{jwks, validator, Validator, JWKS},
     AxumApplication,
 };
-use nakago_ws::{connections, socket};
+use nakago_ws::{connections, handler, ROUTER};
 
 use crate::{
     authz::{self, ProvideOso, OSO},
     config::{Config, CONFIG},
     domains::graphql,
-    http::{self, events},
+    http::{
+        self,
+        events::{self, CONNECTIONS},
+    },
 };
 
 /// Create a default AxumApplication instance
@@ -18,7 +21,7 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     // Dependencies
 
-    app.provide(&JWKS, jwks::Provide::default().with_config_tag(&CONFIG))
+    app.provide(&JWKS, jwks::Provide::new(Some(&CONFIG)))
         .await?;
 
     app.provide_type::<Validator>(validator::Provide::default())
@@ -26,7 +29,7 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     app.provide(
         &nakago_sea_orm::CONNECTION,
-        nakago_sea_orm::connection::Provide::default().with_config_tag(&CONFIG),
+        nakago_sea_orm::connection::Provide::new(Some(&CONFIG)),
     )
     .await?;
 
@@ -35,8 +38,11 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
     app.provide(&events::CONNECTIONS, connections::Provide::default())
         .await?;
 
-    app.provide(&events::HANDLER, socket::Provide::default())
-        .await?;
+    app.provide(
+        &events::HANDLER,
+        handler::Provide::new(Some(&CONNECTIONS), Some(&ROUTER)),
+    )
+    .await?;
 
     // Loading
 
