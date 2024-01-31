@@ -13,22 +13,19 @@ use super::connections::{Connections, Session};
 
 /// A Router routes Websocket messages to the appropriate handler
 #[async_trait]
-pub trait Router {
+pub trait Router: Send + Sync + Any {
     /// Route the given message to the appropriate handler
     async fn route(&self, msg: Message) -> anyhow::Result<()>;
 }
 
 /// WebSocket Event Handler
 #[derive(Clone, new)]
-pub struct Handler<U, R>
-where
-    R: Router,
-{
+pub struct Handler<U> {
     connections: Arc<Connections<U>>,
-    router: Arc<R>,
+    router: Arc<Box<dyn Router>>,
 }
 
-impl<U: Clone, R: Router> Handler<U, R> {
+impl<U: Clone> Handler<U> {
     /// Handle `WebSocket` connections by setting up a message handler that deserializes them and
     /// determines how to handle
     pub async fn handle(&self, socket: WebSocket, user: Option<U>) {
@@ -73,13 +70,13 @@ impl<U: Clone, R: Router> Handler<U, R> {
 
 /// Provide a new WebSocket Event Handler
 #[derive(Default, new)]
-pub struct Provide<U: Any, R: Any> {
+pub struct Provide<U: Any> {
     connections_tag: Option<&'static Tag<Connections<U>>>,
-    router_tag: Option<&'static Tag<R>>,
-    _phantom: std::marker::PhantomData<(U, R)>,
+    router_tag: Option<&'static Tag<Box<dyn Router>>>,
+    _phantom: std::marker::PhantomData<U>,
 }
 
-impl<U: Any, R: Any> Provide<U, R> {
+impl<U: Any> Provide<U> {
     /// Set a Tag for the Connections instance this Provider requires
     pub fn with_connections_tag(self, connections_tag: &'static Tag<Connections<U>>) -> Self {
         Self {
@@ -89,7 +86,7 @@ impl<U: Any, R: Any> Provide<U, R> {
     }
 
     /// Set a Tag for the Connections instance this Provider requires
-    pub fn with_router_tag(self, router_tag: &'static Tag<R>) -> Self {
+    pub fn with_router_tag(self, router_tag: &'static Tag<Box<dyn Router>>) -> Self {
         Self {
             router_tag: Some(router_tag),
             ..self
@@ -99,12 +96,11 @@ impl<U: Any, R: Any> Provide<U, R> {
 
 #[Provider]
 #[async_trait]
-impl<U, R> Provider<Handler<U, R>> for Provide<U, R>
+impl<U> Provider<Handler<U>> for Provide<U>
 where
     U: Send + Sync + Any,
-    R: Router + Send + Sync + Any,
 {
-    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Handler<U, R>>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Handler<U>>> {
         let connections = if let Some(tag) = self.connections_tag {
             i.get(tag).await?
         } else {
@@ -114,7 +110,7 @@ where
         let router = if let Some(tag) = self.router_tag {
             i.get(tag).await?
         } else {
-            i.get_type::<R>().await?
+            i.get_type::<Box<dyn Router>>().await?
         };
 
         Ok(Arc::new(Handler::new(connections, router)))

@@ -3,13 +3,13 @@ use nakago_axum::{
     auth::{jwks, validator, Validator, JWKS},
     AxumApplication,
 };
-use nakago_ws::socket;
+use nakago_ws::{connections, socket};
 
 use crate::{
     authz::{self, ProvideOso, OSO},
     config::{Config, CONFIG},
     domains::graphql,
-    http,
+    http::{self, events},
 };
 
 /// Create a default AxumApplication instance
@@ -32,13 +32,10 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     app.provide(&OSO, ProvideOso::default()).await?;
 
-    app.provide(
-        &events::CONNECTIONS,
-        events::connections::Provide::default(),
-    )
-    .await?;
+    app.provide(&events::CONNECTIONS, connections::Provide::default())
+        .await?;
 
-    app.provide(&socket::HANDLER, socket::Provide::default())
+    app.provide(&events::HANDLER, socket::Provide::default())
         .await?;
 
     // Loading
