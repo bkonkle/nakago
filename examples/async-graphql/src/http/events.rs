@@ -2,28 +2,22 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use axum::{
-    extract::{ws::Message, WebSocketUpgrade},
-    response::IntoResponse,
-};
+use axum::extract::ws::Message;
 use nakago::{provider, Inject, Provider, Tag};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
-use nakago_ws::{
-    connections::Connections,
-    handler::{self, Handler},
-};
+use nakago_ws::{connections::Connections, handler::Handler};
 
 use crate::{
     domains::users::{self, model::User},
     messages::{IncomingMessage, OutgoingMessage},
 };
 
-/// Events Controller
-pub const CONTROLLER: Tag<Controller> = Tag::new("events::Controller");
-
 /// Connections
 pub const CONNECTIONS: Tag<Connections<User>> = Tag::new("events::Connections");
+
+/// Nakago WS Controller
+pub const CONTROLLER: Tag<Box<dyn nakago_ws::Controller<User>>> = Tag::new("nakago_ws::Controller");
 
 /// Message Handler
 pub const HANDLER: Tag<Handler<User>> = Tag::new("events::Handler");
@@ -31,48 +25,23 @@ pub const HANDLER: Tag<Handler<User>> = Tag::new("events::Handler");
 /// Events Controller
 #[derive(Clone)]
 pub struct Controller {
+    connections: Arc<Connections<User>>,
     users: Arc<Box<dyn users::Service>>,
-    handler: Arc<handler::Handler<User>>,
 }
 
-impl Controller {
-    /// Create a new Events handler
-    pub async fn upgrade(
-        self: Arc<Self>,
-        sub: Subject,
-        ws: WebSocketUpgrade,
-    ) -> axum::response::Result<impl IntoResponse> {
-        // Retrieve the request User, if username is present
-        let user = if let Subject(Some(ref username)) = sub {
+#[async_trait]
+impl nakago_ws::Controller<User> for Controller {
+    async fn get_user(&self, sub: Subject) -> Option<User> {
+        if let Subject(Some(ref username)) = sub {
             self.users
                 .get_by_username(username, &true)
                 .await
                 .unwrap_or(None)
         } else {
             None
-        };
-
-        Ok(ws.on_upgrade(|socket| async move { self.handler.handle(socket, user).await }))
+        }
     }
-}
 
-/// WebSocket Event Handler
-pub struct Router {
-    connections: Arc<Connections<User>>,
-}
-
-impl Router {
-    async fn handle_ping(&self, conn_id: &str) -> Result<()> {
-        self.connections
-            .send(conn_id, OutgoingMessage::Pong.into())
-            .await?;
-
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl nakago_ws::Router for Router {
     async fn route(&self, conn_id: &str, msg: Message) -> anyhow::Result<()> {
         let message: IncomingMessage = msg.into();
 
@@ -83,34 +52,31 @@ impl nakago_ws::Router for Router {
     }
 }
 
+impl Controller {
+    /// Handle a Ping message
+    async fn handle_ping(&self, conn_id: &str) -> Result<()> {
+        self.connections
+            .send(conn_id, OutgoingMessage::Pong.into())
+            .await?;
+
+        Ok(())
+    }
+}
+
 /// Events Provider
 #[derive(Default)]
 pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<Controller> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Controller>> {
-        let users = i.get(&users::SERVICE).await?;
-        let handler = i.get(&HANDLER).await?;
-
-        Ok(Arc::new(Controller { users, handler }))
-    }
-}
-
-/// Router Provider
-#[derive(Default)]
-pub struct ProvideRouter {}
-
-#[Provider]
-#[async_trait]
-impl Provider<Box<dyn nakago_ws::Router>> for ProvideRouter {
+impl Provider<Box<dyn nakago_ws::Controller<User>>> for Provide {
     async fn provide(
         self: Arc<Self>,
         i: Inject,
-    ) -> provider::Result<Arc<Box<dyn nakago_ws::Router>>> {
+    ) -> provider::Result<Arc<Box<dyn nakago_ws::Controller<User>>>> {
         let connections = i.get(&CONNECTIONS).await?;
+        let users = i.get(&users::SERVICE).await?;
 
-        Ok(Arc::new(Box::new(Router { connections })))
+        Ok(Arc::new(Box::new(Controller { connections, users })))
     }
 }

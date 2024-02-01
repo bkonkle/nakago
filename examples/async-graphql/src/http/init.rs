@@ -5,7 +5,6 @@ use axum::{
 };
 use nakago::{hooks, Hook, Inject};
 use nakago_axum::routes;
-use nakago_ws::ROUTER;
 
 use super::{events, graphql, health};
 
@@ -22,8 +21,6 @@ impl Hook for Load {
         i.provide(&events::CONTROLLER, events::Provide::default())
             .await?;
 
-        i.provide(&ROUTER, events::ProvideRouter::default()).await?;
-
         Ok(())
     }
 }
@@ -36,7 +33,7 @@ pub struct Init {}
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
         let graphql_controller = i.get(&graphql::CONTROLLER).await?;
-        let events_controller = i.get(&events::CONTROLLER).await?;
+        let events_handler = i.get(&events::HANDLER).await?;
 
         i.handle(routes::Init::new(
             Router::new().route("/health", get(health::health_check)),
@@ -56,7 +53,7 @@ impl Hook for Init {
 
         i.handle(routes::Init::new(Router::new().route(
             "/events",
-            get(move |sub, ws| async move { events_controller.upgrade(sub, ws).await }),
+            get(move |sub, ws| async move { events_handler.upgrade(sub, ws).await }),
         )))
         .await?;
 

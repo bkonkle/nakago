@@ -1,29 +1,43 @@
 use std::{any::Any, sync::Arc};
 
 use async_trait::async_trait;
-use axum::extract::ws::WebSocket;
+use axum::{
+    extract::{ws::WebSocket, WebSocketUpgrade},
+    response::IntoResponse,
+};
 use derive_new::new;
 use futures::{SinkExt, StreamExt, TryFutureExt};
 use nakago::{provider, Inject, Provider, Tag};
+use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use crate::Router;
-
-use super::connections::{Connections, Session};
+use super::{connections::Session, Connections, Controller};
 
 /// WebSocket Event Handler
 #[derive(Clone, new)]
 pub struct Handler<U> {
     connections: Arc<Connections<U>>,
-    router: Arc<Box<dyn Router>>,
+    controller: Arc<Box<dyn Controller<U>>>,
 }
 
-impl<U: Clone> Handler<U> {
+impl<U: Send + Sync + Clone + Any> Handler<U> {
+    /// Handle requests for new WebSocket connections
+    pub async fn upgrade(
+        self: Arc<Self>,
+        sub: Subject,
+        ws: WebSocketUpgrade,
+    ) -> axum::response::Result<impl IntoResponse> {
+        // Retrieve the request User, if username is present
+        let user = self.controller.get_user(sub).await;
+
+        Ok(ws.on_upgrade(|socket| async move { self.handle(socket, user).await }))
+    }
+
     /// Handle `WebSocket` connections by setting up a message handler that deserializes them and
     /// determines how to handle
-    pub async fn handle(&self, socket: WebSocket, user: Option<U>) {
+    async fn handle(&self, socket: WebSocket, user: Option<U>) {
         let (mut ws_write, mut ws_read) = socket.split();
 
         let (tx, rx) = mpsc::unbounded_channel();
@@ -51,7 +65,7 @@ impl<U: Clone> Handler<U> {
                 }
             };
 
-            if let Err(err) = self.router.route(&conn_id, msg).await {
+            if let Err(err) = self.controller.route(&conn_id, msg).await {
                 eprintln!("json error(uid={conn_id}): {err}");
                 break;
             }
@@ -67,7 +81,7 @@ impl<U: Clone> Handler<U> {
 #[derive(Default, new)]
 pub struct Provide<U: Any> {
     connections_tag: Option<&'static Tag<Connections<U>>>,
-    router_tag: Option<&'static Tag<Box<dyn Router>>>,
+    controller_tag: Option<&'static Tag<Box<dyn Controller<U>>>>,
     _phantom: std::marker::PhantomData<U>,
 }
 
@@ -80,10 +94,10 @@ impl<U: Any> Provide<U> {
         }
     }
 
-    /// Set a Tag for the Connections instance this Provider requires
-    pub fn with_router_tag(self, router_tag: &'static Tag<Box<dyn Router>>) -> Self {
+    /// Set a Tag for the Controller instance this Provider requires
+    pub fn with_controller_tag(self, controller_tag: &'static Tag<Box<dyn Controller<U>>>) -> Self {
         Self {
-            router_tag: Some(router_tag),
+            controller_tag: Some(controller_tag),
             ..self
         }
     }
@@ -102,12 +116,12 @@ where
             i.get_type::<Connections<U>>().await?
         };
 
-        let router = if let Some(tag) = self.router_tag {
+        let controller = if let Some(tag) = self.controller_tag {
             i.get(tag).await?
         } else {
-            i.get_type::<Box<dyn Router>>().await?
+            i.get_type::<Box<dyn Controller<U>>>().await?
         };
 
-        Ok(Arc::new(Handler::new(connections, router)))
+        Ok(Arc::new(Handler::new(connections, controller)))
     }
 }
