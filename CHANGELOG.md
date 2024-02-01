@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `nakago-ws`: New package for Websocket utilities
+
+### Changed
+
+- `nakago-examples-async-graphql`: Updated to use the new `nakago-ws` package for Websocket support.
+
 ## [0.19.1]
 
 ### Changed

@@ -10,8 +10,8 @@ pub mod config;
 /// App Initialization
 pub mod init;
 
-/// `WebSocket` Events
-pub mod events;
+/// `WebSocket` Messages
+pub mod messages;
 
 /// Application domains
 pub mod domains;

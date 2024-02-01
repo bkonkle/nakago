@@ -5,6 +5,7 @@ use axum::{
 };
 use nakago::{hooks, Hook, Inject};
 use nakago_axum::routes;
+use nakago_ws::{connections, controller};
 
 use super::{events, graphql, health};
 
@@ -18,8 +19,17 @@ impl Hook for Load {
         i.provide(&graphql::CONTROLLER, graphql::Provide::default())
             .await?;
 
-        i.provide(&events::CONTROLLER, events::Provide::default())
+        i.provide(&events::CONNECTIONS, connections::Provide::default())
             .await?;
+
+        i.provide(&events::HANDLER, events::Provide::default())
+            .await?;
+
+        i.provide(
+            &events::CONTROLLER,
+            controller::Provide::new(Some(&events::CONNECTIONS), Some(&events::HANDLER)),
+        )
+        .await?;
 
         Ok(())
     }

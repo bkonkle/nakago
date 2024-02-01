@@ -8,18 +8,21 @@ use serde::{Deserialize, Serialize};
 pub enum IncomingMessage {
     /// A Ping message, which should echo back a Pong
     Ping,
+
+    /// An indication that the message couldn't be serialized
+    CannotDeserialize,
 }
 
-impl IncomingMessage {
-    /// Create a new `IncomingMessage` from a `WebSocket` Message
-    pub fn from_message(msg: Message) -> Result<Option<Self>, serde_json::Error> {
+impl From<Message> for IncomingMessage {
+    fn from(msg: Message) -> IncomingMessage {
+        // IncomingMessage::from_message(msg).expect("Unable to deserialize IncomingMessage")
         let msg = if let Ok(message) = msg.to_text() {
             message
         } else {
-            return Ok(None);
+            return IncomingMessage::CannotDeserialize;
         };
 
-        serde_json::from_str(msg)
+        serde_json::from_str(msg).unwrap_or(IncomingMessage::CannotDeserialize)
     }
 }
 

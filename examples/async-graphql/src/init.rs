@@ -8,7 +8,6 @@ use crate::{
     authz::{self, ProvideOso, OSO},
     config::{Config, CONFIG},
     domains::graphql,
-    events::{self, socket},
     http,
 };
 
@@ -18,7 +17,7 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     // Dependencies
 
-    app.provide(&JWKS, jwks::Provide::default().with_config_tag(&CONFIG))
+    app.provide(&JWKS, jwks::Provide::new(Some(&CONFIG)))
         .await?;
 
     app.provide_type::<Validator>(validator::Provide::default())
@@ -26,20 +25,11 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     app.provide(
         &nakago_sea_orm::CONNECTION,
-        nakago_sea_orm::connection::Provide::default().with_config_tag(&CONFIG),
+        nakago_sea_orm::connection::Provide::new(Some(&CONFIG)),
     )
     .await?;
 
     app.provide(&OSO, ProvideOso::default()).await?;
-
-    app.provide(
-        &events::CONNECTIONS,
-        events::connections::Provide::default(),
-    )
-    .await?;
-
-    app.provide(&socket::HANDLER, socket::Provide::default())
-        .await?;
 
     // Loading
 

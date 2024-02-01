@@ -9,9 +9,9 @@ use pico_args::{Arguments, Error};
 mod authz;
 mod config;
 mod domains;
-mod events;
 mod http;
 mod init;
+mod messages;
 
 /// Error macros
 #[macro_use]
