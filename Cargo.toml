@@ -2,35 +2,41 @@
 resolver = "2"
 members = [
     "nakago",
-    "nakago_derive",
+    "nakago_async_graphql",
     "nakago_axum",
+    "nakago_cqrs",
+    "nakago_derive",
+    "nakago_sea_orm",
     "nakago_warp",
     "nakago_ws",
-    "nakago_sea_orm",
-    "nakago_async_graphql",
     "examples/*",
 ]
 default-members = [
     "nakago",
-    "nakago_derive",
+    "nakago_async_graphql",
     "nakago_axum",
+    "nakago_cqrs",
+    "nakago_derive",
+    "nakago_sea_orm",
     "nakago_warp",
     "nakago_ws",
-    "nakago_sea_orm",
-    "nakago_async_graphql",
 ]
 
 [patch.crates-io]
 nakago = { path = "./nakago" }
+nakago-async-graphql = { path = "./nakago_async_graphql" }
 nakago-axum = { path = "./nakago_axum" }
+nakago-cqrs = { path = "./nakago_cqrs" }
 nakago-warp = { path = "./nakago_warp" }
 nakago-ws = { path = "./nakago_ws" }
 nakago-derive = { path = "./nakago_derive" }
 nakago-sea-orm = { path = "./nakago_sea_orm" }
-nakago-async-graphql = { path = "./nakago_async_graphql" }
 
 [profile.release]
 strip = true      # Automatically strip symbols from the binary.
 opt-level = "z"   # Optimize for size.
 lto = true        # Link time optimization.
 codegen-units = 1 # Allow for maximum size reduction optimizations.
+
+[workspace.metadata.cargo-udeps.ignore]
+development = ["pretty_assertions"]

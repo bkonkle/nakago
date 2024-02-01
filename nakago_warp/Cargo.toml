@@ -15,35 +15,24 @@ async-trait = "0.1"
 biscuit = "0.7.0"
 bytes = "1"
 derive-new = "0.6"
-fake = { version = "2.9", features = [
-    'derive',
-    'chrono',
-    'http',
-    'uuid',
-], git = "https://github.com/cksac/fake-rs.git" }
 figment = { version = "0.10", features = ["env"] }
 futures-util = { version = "0.3", default-features = false, features = [
     "sink",
     "std",
 ] }
 hyper = "1.0"
-jsonwebtoken = "9.0"
 log = "0.4"
 nakago = "0.19"
 nakago-derive = "0.19"
-pretty_env_logger = "0.5"
 rand = "0.8"
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = "1.0"
 thiserror = "1.0"
-tower-http = { version = "0.5", features = ["trace"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 warp = "0.3"
 
 [dev-dependencies]
-criterion = "0.5"
-mockall = "0.12"
 pretty_assertions = "1.2"

@@ -20,7 +20,6 @@ fnv = "1.0.7"
 futures = "0.3.28"
 log = "0.4"
 nakago-derive = "0.19"
-pretty_env_logger = "0.5"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
@@ -31,12 +30,10 @@ thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
-criterion = "0.5"
 fake = { version = "2.9", features = [
     'derive',
     'chrono',
     'http',
     'uuid',
 ], git = "https://github.com/cksac/fake-rs.git" }
-mockall = "0.12"
 pretty_assertions = "1.2"

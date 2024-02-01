@@ -3,6 +3,7 @@
 use anyhow::Result;
 use futures_util::StreamExt;
 use nakago_examples_async_graphql::messages::{IncomingMessage, OutgoingMessage};
+use pretty_assertions::assert_eq;
 use tokio_tungstenite::tungstenite::Message;
 use ulid::Ulid;
 
