@@ -10,6 +10,7 @@ use axum::{
 };
 use derive_new::new;
 use futures::{SinkExt, StreamExt, TryFutureExt};
+use mockall::automock;
 use nakago::{provider, Inject, Provider, Tag};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
@@ -19,8 +20,9 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use super::{connections::Session, Connections};
 
 /// A Handler handles Websocket messages
+#[automock]
 #[async_trait]
-pub trait Handler<U>: Send + Sync + Any {
+pub trait Handler<U: Send + Sync + Any>: Send + Sync + Any {
     /// Route the given message to the appropriate handler
     async fn route(&self, conn_id: &str, msg: Message) -> anyhow::Result<()>;
 
