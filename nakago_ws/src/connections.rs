@@ -37,7 +37,7 @@ impl<U> Connection<U> {
 ///
 /// - Key is their connection id
 /// - Value is a sender of `axum::extract::ws::Message`
-#[derive(Default)]
+#[derive(Default, new)]
 pub struct Connections<U>(Arc<RwLock<HashMap<String, Connection<U>>>>);
 
 impl<U: Clone> Connections<U> {
@@ -132,5 +132,119 @@ pub struct Provide<U> {
 impl<U: Send + Sync + Any + Default> Provider<Connections<U>> for Provide<U> {
     async fn provide(self: Arc<Self>, _i: Inject) -> provider::Result<Arc<Connections<U>>> {
         Ok(Arc::new(Connections::default()))
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod test {
+    use super::*;
+
+    #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq, new)]
+    struct User {
+        id: String,
+    }
+
+    #[tokio::test]
+    async fn test_connection_send_success() -> Result<()> {
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let conn = Connection::new(tx, Session::<User>::Anonymous);
+
+        conn.send(Message::Text("Hello, World!".to_string()))?;
+
+        let message = rx.recv().await.ok_or(anyhow!("No message received"))?;
+
+        assert_eq!(message, Message::Text("Hello, World!".to_string()));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_connections_get_session_success() -> Result<()> {
+        let connections = Connections::<User>::default();
+
+        let expected = Session::<User>::User {
+            user: User::new(Ulid::new().to_string()),
+        };
+
+        let conn_id = connections
+            .insert(mpsc::unbounded_channel().0, expected.clone())
+            .await;
+
+        let session = connections.get_session(&conn_id).await;
+
+        assert_eq!(expected, session);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_connections_set_session_success() -> Result<()> {
+        let connections = Connections::<User>::default();
+
+        let expected = Session::<User>::User {
+            user: User::new(Ulid::new().to_string()),
+        };
+
+        let conn_id = connections
+            .insert(mpsc::unbounded_channel().0, Session::<User>::Anonymous)
+            .await;
+
+        connections.set_session(&conn_id, expected.clone()).await;
+
+        let session = connections.get_session(&conn_id).await;
+
+        assert_eq!(expected, session);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_connections_send_success() -> Result<()> {
+        let connections = Connections::<User>::default();
+
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let conn_id = connections.insert(tx, Session::<User>::Anonymous).await;
+
+        connections
+            .send(&conn_id, Message::Text("Hello, World!".to_string()))
+            .await?;
+
+        let message = rx.recv().await.ok_or(anyhow!("No message received"))?;
+
+        assert_eq!(message, Message::Text("Hello, World!".to_string()));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_connections_remove_success() -> Result<()> {
+        let connections = Connections::<User>::default();
+
+        let conn_id = connections
+            .insert(
+                mpsc::unbounded_channel().0,
+                Session::<User>::User {
+                    user: User::new(Ulid::new().to_string()),
+                },
+            )
+            .await;
+
+        connections.remove(&conn_id).await;
+
+        let session = connections.get_session(&conn_id).await;
+
+        assert_eq!(Session::<User>::Anonymous, session);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_session_get_user_success() -> Result<()> {
+        let user = User::new(Ulid::new().to_string());
+        let session = Session::<User>::User { user: user.clone() };
+
+        assert_eq!(Some(&user), session.get_user());
+
+        Ok(())
     }
 }
