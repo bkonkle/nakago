@@ -6,7 +6,7 @@ use axum::extract::ws::Message;
 use nakago::{provider, Inject, Provider, Tag};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
-use nakago_ws::{connections::Connections, handler::Handler};
+use nakago_ws::{connections::Connections, Controller};
 
 use crate::{
     domains::users::{self, model::User},
@@ -16,21 +16,21 @@ use crate::{
 /// Connections
 pub const CONNECTIONS: Tag<Connections<User>> = Tag::new("events::Connections");
 
-/// Nakago WS Controller
-pub const CONTROLLER: Tag<Box<dyn nakago_ws::Controller<User>>> = Tag::new("nakago_ws::Controller");
+/// Nakago WebSocket Controller
+pub const CONTROLLER: Tag<Controller<User>> = Tag::new("events::Controller");
+
+/// WebSocket Message Handler
+pub const HANDLER: Tag<Box<dyn nakago_ws::Handler<User>>> = Tag::new("nakago_ws::Handler");
 
 /// Message Handler
-pub const HANDLER: Tag<Handler<User>> = Tag::new("events::Handler");
-
-/// Events Controller
 #[derive(Clone)]
-pub struct Controller {
+pub struct Handler {
     connections: Arc<Connections<User>>,
     users: Arc<Box<dyn users::Service>>,
 }
 
 #[async_trait]
-impl nakago_ws::Controller<User> for Controller {
+impl nakago_ws::Handler<User> for Handler {
     async fn get_user(&self, sub: Subject) -> Option<User> {
         if let Subject(Some(ref username)) = sub {
             self.users
@@ -52,7 +52,7 @@ impl nakago_ws::Controller<User> for Controller {
     }
 }
 
-impl Controller {
+impl Handler {
     /// Handle a Ping message
     async fn handle_ping(&self, conn_id: &str) -> Result<()> {
         self.connections
@@ -63,20 +63,20 @@ impl Controller {
     }
 }
 
-/// Events Provider
+/// Message Handler Provider
 #[derive(Default)]
 pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<Box<dyn nakago_ws::Controller<User>>> for Provide {
+impl Provider<Box<dyn nakago_ws::Handler<User>>> for Provide {
     async fn provide(
         self: Arc<Self>,
         i: Inject,
-    ) -> provider::Result<Arc<Box<dyn nakago_ws::Controller<User>>>> {
+    ) -> provider::Result<Arc<Box<dyn nakago_ws::Handler<User>>>> {
         let connections = i.get(&CONNECTIONS).await?;
         let users = i.get(&users::SERVICE).await?;
 
-        Ok(Arc::new(Box::new(Controller { connections, users })))
+        Ok(Arc::new(Box::new(Handler { connections, users })))
     }
 }
