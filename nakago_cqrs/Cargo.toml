@@ -30,11 +30,22 @@ nakago-axum = "0.19"
 nakago-derive = "0.19"
 mockall = "0.12"
 pretty_env_logger = "0.5"
+postgres-es = "0.4"
+cqrs-es = "0.4"
 rand = "0.8"
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = "1.0"
+sqlx = { version = "0.7", features = [
+    "chrono",
+    "json",
+    "macros",
+    "migrate",
+    "postgres",
+    "runtime-tokio-rustls",
+    "uuid",
+] }
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
