@@ -63,7 +63,7 @@ impl Utils {
         let user = users.create(username).await?;
 
         let mut profile_input: CreateProfileInput = Faker.fake();
-        profile_input.user_id = user.id.clone();
+        profile_input.user_id.clone_from(&user.id);
         profile_input.email = email.to_string();
 
         let profiles = self.app.get(&profiles::SERVICE).await?;

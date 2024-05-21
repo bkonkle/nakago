@@ -58,7 +58,7 @@ pub enum Error {
     },
 }
 
-fn format_avail_lines(available: &Vec<Key>) -> String {
+fn format_avail_lines(available: &[Key]) -> String {
     if !available.is_empty() {
         format!(
             "\n - {}",

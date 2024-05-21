@@ -436,7 +436,7 @@ async fn test_episodes_service_create() -> Result<()> {
 
     let mut episode: Episode = Faker.fake();
     episode.title = "Test Episode".to_string();
-    episode.show_id = show.id.clone();
+    episode.show_id.clone_from(&show.id);
     episode.show = None;
 
     let i = setup(
@@ -491,7 +491,7 @@ async fn test_episodes_service_create_with_related() -> Result<()> {
 
     let mut episode: Episode = Faker.fake();
     episode.title = "Test Episode".to_string();
-    episode.show_id = show.id.clone();
+    episode.show_id.clone_from(&show.id);
     episode.show = Some(show.clone());
 
     let i = setup(

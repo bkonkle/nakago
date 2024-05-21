@@ -17,6 +17,7 @@ pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("role_grants::Service");
 
 /// A Service appliies business logic to a dynamic RoleGrantsRepository implementation.
 #[cfg_attr(test, automock)]
+#[allow(unused)]
 #[async_trait]
 pub trait Service: Sync + Send {
     /// Get an individual `RoleGrant` by id
