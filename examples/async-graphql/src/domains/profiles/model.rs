@@ -62,9 +62,9 @@ impl Profile {
 
         // If not same user, censor the record
         if same_user {
-            profile.email = self.email.clone();
-            profile.user_id = self.user_id.clone();
-            profile.user = self.user.clone();
+            profile.email.clone_from(&self.email);
+            profile.user_id.clone_from(&self.user_id);
+            profile.user.clone_from(&self.user);
         } else {
             profile.email = None;
             profile.user_id = None;

@@ -160,10 +160,6 @@ pub(crate) mod test {
     pub const OTHER_TAG: Tag<OtherService> = Tag::new("in_memory::other::Service");
     pub const DYN_TAG: Tag<Box<dyn HasId>> = Tag::new("dyn::has_id::Service");
 
-    trait DynamicService: Sync + Send {
-        fn test_fn(&self) {}
-    }
-
     #[tokio::test]
     async fn test_inject_tag_success() -> Result<()> {
         let i = Inject::default();
@@ -684,7 +680,7 @@ pub(crate) mod test {
             .await?;
 
         i.modify(&SERVICE_TAG, |mut t| {
-            t.id = expected.clone();
+            t.id.clone_from(&expected);
 
             Ok(t)
         })
@@ -731,7 +727,7 @@ pub(crate) mod test {
 
         let result = i
             .modify(&SERVICE_TAG, |mut t| {
-                t.id = expected.clone();
+                t.id.clone_from(&expected);
 
                 Ok(t)
             })
