@@ -32,7 +32,7 @@ async fn test_role_grants_service_get() -> Result<()> {
 
     let mut grant: RoleGrant = Faker.fake();
     grant.id = format!("{}-{}", user.id, "profile-id");
-    grant.user_id = user.id.clone();
+    grant.user_id.clone_from(&user.id);
     grant.resource_table = "profiles".to_string();
     grant.resource_id = "profile-id".to_string();
 
@@ -74,7 +74,7 @@ async fn test_role_grants_service_create() -> Result<()> {
 
     let mut grant: RoleGrant = Faker.fake();
     grant.id = format!("{}-{}", user.id, "profile-id");
-    grant.user_id = user.id.clone();
+    grant.user_id.clone_from(&user.id);
     grant.resource_table = "profiles".to_string();
     grant.resource_id = "profile-id".to_string();
 

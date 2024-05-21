@@ -21,6 +21,7 @@ pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("users::Service");
 
 /// A Service appliies business logic to a dynamic UsersRepository implementation.
 #[cfg_attr(test, automock)]
+#[allow(unused)]
 #[async_trait]
 pub trait Service: Sync + Send {
     /// Get an individual `User` by id

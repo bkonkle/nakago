@@ -52,7 +52,7 @@ jobs:
         run: cargo make cov-ci
 
       - name: Upload coverage data to codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           files: lcov.info
           fail_ci_if_error: true
@@ -90,7 +90,7 @@ jobs:
         run: docker-compose -f docker-compose.yml up -d
 
       - name: Install SQLx CLI
-        uses: baptiste0928/cargo-install@v2
+        uses: baptiste0928/cargo-install@v3
         with:
           crate: sqlx-cli
           args: --no-default-features --features rustls,postgres
