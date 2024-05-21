@@ -667,7 +667,7 @@ pub(crate) mod test {
             .await?;
 
         i.modify_type::<TestService, _>(|mut t| {
-            t.id = expected.clone();
+            t.id.clone_from(&expected);
 
             Ok(t)
         })
@@ -714,7 +714,7 @@ pub(crate) mod test {
 
         let result = i
             .modify_type::<TestService, _>(|mut t| {
-                t.id = expected.clone();
+                t.id.clone_from(&expected);
 
                 Ok(t)
             })
