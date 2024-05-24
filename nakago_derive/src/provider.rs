@@ -22,7 +22,7 @@ pub fn generate(
         #[allow(clippy::all, clippy::pedantic)]
         #[#crate_name::async_trait::async_trait]
         impl #impl_generics #crate_name::Provider<#crate_name::Dependency> for #self_ty #where_clause {
-            async fn provide(self: Arc<Self>, i: Inject) -> #crate_name::provider::Result<Arc<#crate_name::Dependency>> {
+            async fn provide(self: Arc<Self>, i: #crate_name::Inject) -> #crate_name::provider::Result<Arc<#crate_name::Dependency>> {
                 let provider = self as Arc<dyn #trait_path>;
 
                 Ok(provider.provide(i).await?)

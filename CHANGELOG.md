@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `nakago-examples-async-graphql`: Updated to use the new `nakago-ws` package for Websocket support.
 
+### Fixed
+
+- `nakago-derive`: Properly namespaced the `Inject` usage
+
 ## [0.19.1]
 
 ### Changed
