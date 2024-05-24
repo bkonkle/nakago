@@ -7,6 +7,8 @@ use nakago::{hooks, Hook, Inject};
 use nakago_axum::routes;
 use nakago_ws::{connections, controller};
 
+use crate::domains::users::model::User;
+
 use super::{events, graphql, health};
 
 /// Load dependencies for all handlers
@@ -16,20 +18,14 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        i.provide(&graphql::CONTROLLER, graphql::Provide::default())
+        i.provide_type::<nakago_ws::Connections<User>>(connections::Provide::default())
             .await?;
 
-        i.provide(&events::CONNECTIONS, connections::Provide::default())
+        i.provide_type::<Box<dyn nakago_ws::Handler<User>>>(events::Provide::default())
             .await?;
 
-        i.provide(&events::HANDLER, events::Provide::default())
+        i.provide_type::<nakago_ws::Controller<User>>(controller::Provide::default())
             .await?;
-
-        i.provide(
-            &events::CONTROLLER,
-            controller::Provide::new(Some(&events::CONNECTIONS), Some(&events::HANDLER)),
-        )
-        .await?;
 
         Ok(())
     }
@@ -42,23 +38,14 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let graphql_controller = i.get(&graphql::CONTROLLER).await?;
-        let events_controller = i.get(&events::CONTROLLER).await?;
+        let events_controller = i.get_type::<nakago_ws::Controller<User>>().await?;
 
         i.handle(routes::Init::new(
-            Router::new().route("/health", get(health::health_check)),
+            Router::new()
+                .route("/health", get(health::health_check))
+                .route("/graphql", get(graphql::graphiql))
+                .route("/graphql", post(graphql::resolve)),
         ))
-        .await?;
-
-        i.handle(routes::Init::new(
-            Router::new().route("/graphql", get(graphql::Controller::graphiql)),
-        ))
-        .await?;
-
-        i.handle(routes::Init::new(Router::new().route(
-            "/graphql",
-            post(move |sub, req| async move { graphql_controller.resolve(sub, req).await }),
-        )))
         .await?;
 
         i.handle(routes::Init::new(Router::new().route(
