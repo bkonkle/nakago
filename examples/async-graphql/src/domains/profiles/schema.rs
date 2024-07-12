@@ -32,7 +32,7 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let loader = i.get_type::<Loader>().await?;
+        let loader = i.get_type::<DataLoader<Loader>>().await?;
 
         i.modify_type::<SchemaBuilder, _>(|builder| Ok(builder.data(loader.clone())))
             .await?;
@@ -66,7 +66,7 @@ pub(crate) mod test {
     impl Provider<Schema> for Provide {
         async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Schema>> {
             let service = i.get_type::<Box<dyn Service>>().await?;
-            let user_loader = i.get_type::<users::Loader>().await?;
+            let user_loader = i.get_type::<DataLoader<users::Loader>>().await?;
 
             let schema: Schema = Schema::build(
                 Query::new(service.clone()),

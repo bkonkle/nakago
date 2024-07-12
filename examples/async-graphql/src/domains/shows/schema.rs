@@ -32,7 +32,7 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let loader = i.get_type::<Loader>().await?;
+        let loader = i.get_type::<DataLoader<Loader>>().await?;
 
         i.modify_type::<SchemaBuilder, _>(|builder| Ok(builder.data(loader.clone())))
             .await?;
