@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use nakago::{hooks, Hook, Inject};
 
-use crate::domains::graphql;
+use crate::domains::graphql::{self, SchemaBuilder};
 
 use super::{loaders, mutation, query, service, LOADER, MUTATION, QUERY, SERVICE};
 
@@ -30,7 +30,7 @@ impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
         let loader = i.get(&LOADER).await?;
 
-        i.modify(&graphql::SCHEMA_BUILDER, |builder| Ok(builder.data(loader)))
+        i.modify_type::<SchemaBuilder>(|builder| Ok(builder.data(loader)))
             .await?;
 
         Ok(())

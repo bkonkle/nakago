@@ -1,9 +1,10 @@
 use async_graphql::{self, EmptySubscription, MergedObject};
 use async_trait::async_trait;
-use nakago::{hooks, Hook, Inject, Tag};
+use nakago::{hooks, Hook, Inject};
 use nakago_async_graphql::schema;
+use oso::Oso;
 
-use crate::{authz::OSO, config::CONFIG};
+use crate::Config;
 
 use super::{episodes, profiles, role_grants, shows, users};
 
@@ -25,12 +26,6 @@ pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 
 /// The application's top-level GraphQL schema builder
 pub type SchemaBuilder = async_graphql::SchemaBuilder<Query, Mutation, EmptySubscription>;
-
-/// Tag(graphql::Schema)
-pub const SCHEMA: Tag<Schema> = Tag::new("graphql::Schema");
-
-/// Tag(graphql::SchemaBuilder)
-pub const SCHEMA_BUILDER: Tag<SchemaBuilder> = Tag::new("graphql::SchemaBuilder");
 
 /// Loads the GraphQL schema builder dependencies
 #[derive(Default)]
@@ -56,8 +51,8 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let config = i.get(&CONFIG).await?;
-        let oso = i.get(&OSO).await?;
+        let config = i.get_type::<Config>().await?;
+        let oso = i.get_type::<Oso>().await?;
 
         let users_query = i.consume(&users::QUERY).await?;
         let profiles_query = i.consume(&profiles::QUERY).await?;
@@ -82,7 +77,7 @@ impl Hook for Init {
         .data(config.clone())
         .data((*oso).clone());
 
-        i.inject(&SCHEMA_BUILDER, builder).await?;
+        i.inject_type::<SchemaBuilder>(builder).await?;
 
         i.handle(users::schema::Init::default()).await?;
         i.handle(profiles::schema::Init::default()).await?;
@@ -90,12 +85,7 @@ impl Hook for Init {
         i.handle(shows::schema::Init::default()).await?;
         i.handle(episodes::schema::Init::default()).await?;
 
-        i.handle(
-            schema::Init::default()
-                .with_builder_tag(&SCHEMA_BUILDER)
-                .with_schema_tag(&SCHEMA),
-        )
-        .await?;
+        i.handle(schema::Init::default()).await?;
 
         Ok(())
     }

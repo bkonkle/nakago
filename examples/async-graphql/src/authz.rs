@@ -13,9 +13,6 @@ use crate::domains::{
     users::{self, model::User},
 };
 
-/// The Oso Tag
-pub const OSO: Tag<Oso> = Tag::new("auth::Oso");
-
 /// Provide an Oso authorization instance
 ///
 /// **Provides:** `auth::Oso`
@@ -41,7 +38,7 @@ pub struct Load {}
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
         // Set up authorization
-        let oso = i.get(&OSO).await?;
+        let oso = i.get_type::<Oso>().await?;
         let mut oso = (*oso).clone();
 
         oso.register_class(User::get_polar_class_builder().name("User").build())

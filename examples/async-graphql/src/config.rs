@@ -1,12 +1,8 @@
-use nakago::Tag;
 use nakago_axum::{self, auth};
 use nakago_derive::FromRef;
 use nakago_sea_orm::{self, config::DatabasePool};
 use serde::Serialize;
 use serde_derive::Deserialize;
-
-/// Tag(Config)
-pub const CONFIG: Tag<Config> = Tag::new("app::Config");
 
 /// Server Config
 #[derive(Debug, Serialize, Deserialize, Clone, FromRef)]

@@ -4,14 +4,11 @@ use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use async_trait::async_trait;
 use axum::response::{Html, IntoResponse};
-use nakago::{provider, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
 
 use crate::domains::{graphql, users};
-
-/// GraphQL Controller
-pub const CONTROLLER: Tag<Controller> = Tag::new("graphql::Controller");
 
 /// Events Controller
 #[derive(Clone)]
