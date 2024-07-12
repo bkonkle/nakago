@@ -69,7 +69,7 @@ pub(crate) mod test {
         async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Schema>> {
             let service = i.get_type::<Box<dyn Service>>().await?;
             let shows = i.get_type::<Box<dyn shows::Service>>().await?;
-            let show_loader = i.get_type::<shows::Loader>().await?;
+            let show_loader = i.get_type::<DataLoader<shows::Loader>>().await?;
 
             let schema: Schema = Schema::build(
                 Query::new(service.clone()),

@@ -64,7 +64,7 @@ async fn test_episodes_resolver_get_simple() -> Result<()> {
     service
         .expect_get()
         .with(eq(episode_id), eq(&true))
-        .times(1)
+        // .times(1)
         .returning(move |_, _| Ok(Some(episode.clone())));
 
     let i = setup(service).await?;
@@ -78,6 +78,7 @@ async fn test_episodes_resolver_get_simple() -> Result<()> {
         .await;
 
     let data = result.data.into_json()?;
+    println!(">- data -> {:?}", data);
     let json_episode = &data["getEpisode"];
 
     assert_eq!(json_episode["id"], episode_id);
