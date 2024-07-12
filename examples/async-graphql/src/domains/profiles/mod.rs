@@ -26,7 +26,7 @@ pub const AUTHORIZATION: &str = include_str!("authorization.polar");
 #[cfg(test)]
 mod tests;
 
-pub use loaders::LOADER;
-pub use mutation::{ProfilesMutation as Mutation, MUTATION};
-pub use query::{ProfilesQuery as Query, QUERY};
-pub use service::{Service, SERVICE};
+pub use loaders::Loader;
+pub use mutation::ProfilesMutation as Mutation;
+pub use query::ProfilesQuery as Query;
+pub use service::Service;

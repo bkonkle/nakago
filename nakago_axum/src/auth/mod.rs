@@ -17,6 +17,6 @@ pub mod validator;
 
 pub use config::Config;
 pub use errors::Error;
-pub use jwks::JWKS;
+pub use jwks::{Jwks, JWKS};
 pub use subject::Subject;
 pub use validator::Validator;

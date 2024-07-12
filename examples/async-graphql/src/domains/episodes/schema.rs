@@ -1,9 +1,10 @@
+use async_graphql::dataloader::DataLoader;
 use async_trait::async_trait;
 use nakago::{hooks, Hook, Inject};
 
-use crate::domains::graphql::{self, SchemaBuilder};
+use crate::domains::graphql::SchemaBuilder;
 
-use super::{loaders, mutation, query, service, LOADER, MUTATION, QUERY, SERVICE};
+use super::{loaders, mutation, query, service, Loader, Mutation, Query, Service};
 
 /// Provide dependencies needed for the Episodes domain
 #[derive(Default)]
@@ -12,10 +13,13 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        i.provide(&SERVICE, service::Provide::default()).await?;
-        i.provide(&LOADER, loaders::Provide::default()).await?;
-        i.provide(&QUERY, query::Provide::default()).await?;
-        i.provide(&MUTATION, mutation::Provide::default()).await?;
+        i.provide_type::<Box<dyn Service>>(service::Provide::default())
+            .await?;
+        i.provide_type::<DataLoader<Loader>>(loaders::Provide::default())
+            .await?;
+        i.provide_type::<Query>(query::Provide::default()).await?;
+        i.provide_type::<Mutation>(mutation::Provide::default())
+            .await?;
 
         Ok(())
     }
@@ -28,9 +32,9 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let loader = i.get(&LOADER).await?;
+        let loader = i.get_type::<DataLoader<Loader>>().await?;
 
-        i.modify_type::<SchemaBuilder>(|builder| Ok(builder.data(loader)))
+        i.modify_type::<SchemaBuilder, _>(|builder| Ok(builder.data(loader)))
             .await?;
 
         Ok(())
@@ -42,7 +46,7 @@ pub(crate) mod test {
     use std::sync::Arc;
 
     use async_graphql::{self, dataloader::DataLoader, EmptySubscription};
-    use nakago::{provider, Provider, Tag};
+    use nakago::{provider, Provider};
     use nakago_derive::Provider;
 
     use crate::domains::{
@@ -52,20 +56,10 @@ pub(crate) mod test {
 
     use super::*;
 
-    /// Tag(episodes::Schema)
-    #[allow(dead_code)]
-    pub const SCHEMA: Tag<Schema> = Tag::new("episodes::Schema");
-
     /// The Schema, covering just the Episodes domain. Useful for testing in isolation.
     pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 
     /// Provide the Schema
-    ///
-    /// **Provides:** `Arc<episodes::Schema>`
-    ///
-    /// **Depends on:**
-    ///   - `Tag(episodes::Service)`
-    ///   - `Tag(shows::Loader)`
     #[derive(Default)]
     pub struct Provide {}
 
@@ -73,9 +67,9 @@ pub(crate) mod test {
     #[async_trait]
     impl Provider<Schema> for Provide {
         async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Schema>> {
-            let service = i.get(&SERVICE).await?;
-            let shows = i.get(&shows::SERVICE).await?;
-            let show_loader = i.get(&shows::LOADER).await?;
+            let service = i.get_type::<Box<dyn Service>>().await?;
+            let shows = i.get_type::<Box<dyn shows::Service>>().await?;
+            let show_loader = i.get_type::<shows::Loader>().await?;
 
             let schema: Schema = Schema::build(
                 Query::new(service.clone()),

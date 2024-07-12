@@ -4,17 +4,14 @@ use async_graphql::{Context, InputObject, Object, Result, SimpleObject};
 use async_trait::async_trait;
 use derive_new::new;
 use hyper::StatusCode;
-use nakago::{provider, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider};
 use nakago_async_graphql::utils::{as_graphql_error, graphql_error};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
 
 use crate::domains::profiles::{self, mutation::CreateProfileInput};
 
-use super::{model::User, Service, SERVICE};
-
-/// Tag(users::Mutation)
-pub const MUTATION: Tag<UsersMutation> = Tag::new("users::Mutation");
+use super::{model::User, Service};
 
 /// The `CreateUserProfileInput` input type
 #[derive(Clone, Default, Eq, PartialEq, InputObject)]
@@ -158,8 +155,8 @@ pub struct Provide {}
 #[async_trait]
 impl Provider<UsersMutation> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<UsersMutation>> {
-        let service = i.get(&SERVICE).await?;
-        let profiles = i.get(&profiles::SERVICE).await?;
+        let service = i.get_type::<Box<dyn Service>>().await?;
+        let profiles = i.get_type::<Box<dyn profiles::Service>>().await?;
 
         Ok(Arc::new(UsersMutation::new(service, profiles)))
     }

@@ -8,17 +8,14 @@ use async_trait::async_trait;
 use derive_new::new;
 use fake::{faker::internet::en::FreeEmail, Dummy, Fake, Faker};
 use hyper::StatusCode;
-use nakago::{provider, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider};
 use nakago_async_graphql::utils::{as_graphql_error, dummy_maybe_undef, graphql_error};
 use nakago_derive::Provider;
 use rand::Rng;
 
 use crate::domains::users::{self, model::User};
 
-use super::{model::Profile, Service, SERVICE};
-
-/// Tag(profiles::Mutation)
-pub const MUTATION: Tag<ProfilesMutation> = Tag::new("profiles::Mutation");
+use super::{model::Profile, Service};
 
 /// The `CreateProfileInput` input type
 #[derive(Clone, Default, Dummy, Eq, PartialEq, InputObject)]
@@ -250,7 +247,7 @@ pub struct Provide {}
 #[async_trait]
 impl Provider<ProfilesMutation> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<ProfilesMutation>> {
-        let service = i.get(&SERVICE).await?;
+        let service = i.get_type::<Box<dyn Service>>().await?;
 
         Ok(Arc::new(ProfilesMutation::new(service)))
     }

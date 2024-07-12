@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use nakago::{hooks, provider, to_provider_error, Hook, Inject, Provider, Tag};
+use nakago::{hooks, provider, to_provider_error, Hook, Inject, Provider};
 use nakago_derive::Provider;
 use oso::Oso;
 use oso::PolarClass;
@@ -14,8 +14,6 @@ use crate::domains::{
 };
 
 /// Provide an Oso authorization instance
-///
-/// **Provides:** `auth::Oso`
 #[derive(Default)]
 pub struct ProvideOso {}
 
@@ -28,9 +26,6 @@ impl Provider<Oso> for ProvideOso {
 }
 
 /// Load the authorization system. Must be invoked before the GraphQL Schema is initialized.
-///
-/// **Depends on (and modifies):**
-///   - `Tag(auth::Oso)`
 #[derive(Default)]
 pub struct Load {}
 
@@ -61,7 +56,7 @@ impl Hook for Load {
         )
         .map_err(to_provider_error)?;
 
-        i.replace(&OSO, oso).await?;
+        i.replace_type::<Oso>(oso).await?;
 
         Ok(())
     }

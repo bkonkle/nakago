@@ -66,7 +66,7 @@ impl Provider<Box<dyn nakago_ws::Handler<User>>> for Provide {
         i: Inject,
     ) -> provider::Result<Arc<Box<dyn nakago_ws::Handler<User>>>> {
         let connections = i.get_type::<Connections<User>>().await?;
-        let users = i.get(&users::SERVICE).await?;
+        let users = i.get_type::<Box<dyn users::Service>>().await?;
 
         Ok(Arc::new(Box::new(Handler { connections, users })))
     }

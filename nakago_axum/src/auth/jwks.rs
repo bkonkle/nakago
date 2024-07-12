@@ -11,8 +11,11 @@ use thiserror::Error;
 
 use super::Config;
 
-/// The JWKS Tag
-pub const JWKS: Tag<JWKSet<biscuit::Empty>> = Tag::new("auth::JWKS");
+/// Re-export the `JWKSet` type from biscuit, with an empty payload
+pub type Jwks = JWKSet<biscuit::Empty>;
+
+/// The default empty JWKS Tag
+pub const JWKS: Tag<Jwks> = Tag::new("auth::JWKS");
 
 /// Get the default set of JWKS keys
 pub async fn init(config: Config) -> JWKSet<biscuit::Empty> {

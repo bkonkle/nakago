@@ -4,7 +4,7 @@ use nakago::{hooks, Hook, Inject};
 use nakago_async_graphql::schema;
 use oso::Oso;
 
-use crate::Config;
+use crate::config::Config;
 
 use super::{episodes, profiles, role_grants, shows, users};
 
@@ -54,15 +54,15 @@ impl Hook for Init {
         let config = i.get_type::<Config>().await?;
         let oso = i.get_type::<Oso>().await?;
 
-        let users_query = i.consume(&users::QUERY).await?;
-        let profiles_query = i.consume(&profiles::QUERY).await?;
-        let shows_query = i.consume(&shows::QUERY).await?;
-        let episodes_query = i.consume(&episodes::QUERY).await?;
+        let users_query = i.consume_type::<users::Query>().await?;
+        let profiles_query = i.consume_type::<profiles::Query>().await?;
+        let shows_query = i.consume_type::<shows::Query>().await?;
+        let episodes_query = i.consume_type::<episodes::Query>().await?;
 
-        let users_mutation = i.consume(&users::MUTATION).await?;
-        let profiles_mutation = i.consume(&profiles::MUTATION).await?;
-        let shows_mutation = i.consume(&shows::MUTATION).await?;
-        let episodes_mutation = i.consume(&episodes::MUTATION).await?;
+        let users_mutation = i.consume_type::<users::Mutation>().await?;
+        let profiles_mutation = i.consume_type::<profiles::Mutation>().await?;
+        let shows_mutation = i.consume_type::<shows::Mutation>().await?;
+        let episodes_mutation = i.consume_type::<episodes::Mutation>().await?;
 
         let builder = Schema::build(
             Query(users_query, profiles_query, shows_query, episodes_query),
@@ -85,7 +85,8 @@ impl Hook for Init {
         i.handle(shows::schema::Init::default()).await?;
         i.handle(episodes::schema::Init::default()).await?;
 
-        i.handle(schema::Init::default()).await?;
+        i.handle(schema::Init::<Query, Mutation, EmptySubscription>::default())
+            .await?;
 
         Ok(())
     }
