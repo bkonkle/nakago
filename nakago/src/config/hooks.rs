@@ -25,7 +25,7 @@ pub struct AddLoaders {
 #[async_trait]
 impl Hook for AddLoaders {
     async fn handle(&self, i: Inject) -> Result<()> {
-        let loaders = match i.consume(&LOADERS).await {
+        let loaders = match i.consume_tag(&LOADERS).await {
             Ok(loaders) => {
                 let mut updated = loaders.clone();
 
@@ -39,7 +39,7 @@ impl Hook for AddLoaders {
             Err(_) => self.loaders.clone(),
         };
 
-        i.inject(&LOADERS, loaders).await?;
+        i.inject_tag(&LOADERS, loaders).await?;
 
         Ok(())
     }
@@ -89,7 +89,7 @@ impl<C: Config> Init<C> {
 #[async_trait]
 impl<C: Config> Hook for Init<C> {
     async fn handle(&self, i: Inject) -> Result<()> {
-        let loaders = i.get(&LOADERS).await.unwrap_or_default().to_vec();
+        let loaders = i.get_tag(&LOADERS).await.unwrap_or_default().to_vec();
         let loader = LoadAll::<C>::new(loaders);
 
         let config = loader
@@ -98,7 +98,7 @@ impl<C: Config> Hook for Init<C> {
             .map_err(|e| Error::Any(Arc::new(e.into())))?;
 
         if let Some(tag) = self.tag {
-            i.inject(tag, config).await?;
+            i.inject_tag(tag, config).await?;
         } else {
             i.inject_type(config).await?;
         }
@@ -134,7 +134,7 @@ pub(crate) mod test {
 
         i.handle(hook).await?;
 
-        let results = i.get(&LOADERS).await?;
+        let results = i.get_tag(&LOADERS).await?;
         assert_eq!(results.len(), 1);
 
         Ok(())
@@ -148,13 +148,13 @@ pub(crate) mod test {
 
         let existing: Vec<Arc<dyn Loader>> = vec![Arc::new(TestLoader::default())];
 
-        i.inject(&LOADERS, existing).await?;
+        i.inject_tag(&LOADERS, existing).await?;
 
         let hook = AddLoaders::new(vec![loader]);
 
         i.handle(hook).await?;
 
-        let results = i.get(&LOADERS).await?;
+        let results = i.get_tag(&LOADERS).await?;
         assert_eq!(results.len(), 2);
 
         Ok(())

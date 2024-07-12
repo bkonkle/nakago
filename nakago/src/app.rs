@@ -125,7 +125,7 @@ where
     /// Get the top-level Config by tag or type
     pub async fn get_config(&self) -> inject::Result<Arc<C>> {
         let config = if let Some(tag) = self.config_tag {
-            self.i.get(tag).await?
+            self.i.get_tag(tag).await?
         } else {
             self.i.get_type::<C>().await?
         };
@@ -258,7 +258,7 @@ pub mod test {
         let config = app.get_config().await;
         assert!(config.is_err());
 
-        app.inject(&CONFIG, Config::default()).await?;
+        app.inject_tag(&CONFIG, Config::default()).await?;
 
         let config = app.get_config().await;
         assert!(config.is_ok());

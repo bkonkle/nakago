@@ -126,13 +126,13 @@ where
 {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Controller<U>>> {
         let connections = if let Some(tag) = self.connections_tag {
-            i.get(tag).await?
+            i.get_tag(tag).await?
         } else {
             i.get_type::<Connections<U>>().await?
         };
 
         let handler = if let Some(tag) = self.handler_tag {
-            i.get(tag).await?
+            i.get_tag(tag).await?
         } else {
             i.get_type::<Box<dyn Handler<U>>>().await?
         };

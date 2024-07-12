@@ -51,7 +51,7 @@ where
 {
     async fn handle(&self, inject: Inject) -> hooks::Result<()> {
         let schema_builder = if let Some(tag) = self.builder_tag {
-            inject.consume(tag).await?
+            inject.consume_tag(tag).await?
         } else {
             inject
                 .consume_type::<SchemaBuilder<Query, Mutation, Subscription>>()
@@ -61,7 +61,7 @@ where
         let schema = schema_builder.finish();
 
         if let Some(tag) = self.schema_tag {
-            inject.inject(tag, schema).await?;
+            inject.inject_tag(tag, schema).await?;
         } else {
             inject.inject_type(schema).await?;
         }

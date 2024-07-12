@@ -11,8 +11,11 @@ use thiserror::Error;
 
 use super::Config;
 
-/// The JWKS Tag
-pub const JWKS: Tag<JWKSet<biscuit::Empty>> = Tag::new("auth::JWKS");
+/// Re-export the `JWKSet` type from biscuit, with an empty payload
+pub type Jwks = JWKSet<biscuit::Empty>;
+
+/// The default empty JWKS Tag
+pub const JWKS: Tag<Jwks> = Tag::new("auth::JWKS");
 
 /// Get the default set of JWKS keys
 pub async fn init(config: Config) -> JWKSet<biscuit::Empty> {
@@ -125,7 +128,7 @@ where
 {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<JWKSet<biscuit::Empty>>> {
         let config = if let Some(tag) = self.config_tag {
-            i.get(tag).await?
+            i.get_tag(tag).await?
         } else {
             i.get_type::<C>().await?
         };

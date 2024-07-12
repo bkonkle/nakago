@@ -51,7 +51,7 @@ where
 {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<DatabaseConnection>> {
         let dep = if let Some(tag) = self.config_tag {
-            i.get(tag).await?
+            i.get_tag(tag).await?
         } else {
             i.get_type::<C>().await?
         };
