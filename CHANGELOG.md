@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0]
+
+### Changed
+
+- `nakago-sea-orm` - Removed the argument from `nakago_sea_orm::connection::Provide::new()`, because there is the with_config_tag chained helper to provide that.
+
 ## [0.21.0]
 
 ### Changed
@@ -356,7 +362,8 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
-[unreleased]: https://github.com/bkonkle/nakago/compare/0.21.0...HEAD
+[unreleased]: https://github.com/bkonkle/nakago/compare/0.22.0...HEAD
+[0.22.0]: https://github.com/bkonkle/nakago/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/bkonkle/nakago/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/bkonkle/nakago/compare/0.19.1...0.20.0
 [0.19.1]: https://github.com/bkonkle/nakago/compare/0.19.0...0.19.1

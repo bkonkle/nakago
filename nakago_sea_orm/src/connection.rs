@@ -27,9 +27,9 @@ pub struct Provide<C: nakago::Config> {
 
 impl<C: nakago::Config> Provide<C> {
     /// Create a new instance of Provide
-    pub fn new(config_tag: Option<&'static Tag<C>>) -> Self {
+    pub fn new() -> Self {
         Self {
-            config_tag,
+            config_tag: None,
             ..Default::default()
         }
     }
