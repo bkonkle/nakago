@@ -7,10 +7,10 @@ use crate::domains::{graphql, users};
 
 /// Handle GraphQL Requests
 pub async fn resolve(
+    schema: Inject<graphql::Schema>,
+    users: Inject<Box<dyn users::Service>>,
     sub: Subject,
     req: GraphQLRequest,
-    users: Inject<Box<dyn users::Service>>,
-    schema: Inject<graphql::Schema>,
 ) -> GraphQLResponse {
     // Retrieve the request User, if username is present
     let user = if let Subject(Some(ref username)) = sub {

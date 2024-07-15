@@ -36,9 +36,22 @@ struct Args {
     config_path: Option<PathBuf>,
 }
 
+impl Args {
+    pub fn parse() -> Result<Args, Error> {
+        let mut pargs = Arguments::from_env();
+
+        let args = Args {
+            help: pargs.contains(["-h", "--help"]),
+            config_path: pargs.opt_value_from_str(["-c", "--config"])?,
+        };
+
+        Ok(args)
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let args = parse_args()?;
+    let args = Args::parse()?;
 
     if args.help {
         println!("{}", HELP);
@@ -53,23 +66,4 @@ async fn main() -> anyhow::Result<()> {
     server.await?;
 
     Ok(())
-}
-
-fn parse_args() -> Result<Args, Error> {
-    let mut pargs = Arguments::from_env();
-
-    let args = Args {
-        help: pargs.contains(["-h", "--help"]),
-        config_path: pargs.opt_value_from_os_str("-c", parse_path)?.or_else(|| {
-            pargs
-                .opt_value_from_os_str("--config", parse_path)
-                .unwrap_or_default()
-        }),
-    };
-
-    Ok(args)
-}
-
-fn parse_path(s: &std::ffi::OsStr) -> Result<std::path::PathBuf, &'static str> {
-    Ok(s.into())
 }

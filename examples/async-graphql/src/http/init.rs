@@ -1,8 +1,5 @@
 use async_trait::async_trait;
-use axum::{
-    routing::{get, post},
-    Router,
-};
+use axum::{routing::get, Router};
 use nakago::{hooks, Hook, Inject};
 use nakago_axum::routes;
 use nakago_ws::{connections, controller};
@@ -43,8 +40,7 @@ impl Hook for Init {
         i.handle(routes::Init::new(
             Router::new()
                 .route("/health", get(health::health_check))
-                .route("/graphql", get(graphql::graphiql))
-                .route("/graphql", post(graphql::resolve)),
+                .route("/graphql", get(graphql::graphiql).post(graphql::resolve)),
         ))
         .await?;
 
