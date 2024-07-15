@@ -193,8 +193,8 @@ pub struct Provide {}
 #[async_trait]
 impl Provider<ShowsMutation> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<ShowsMutation>> {
-        let service = i.get_type::<Box<dyn Service>>().await?;
-        let role_grants = i.get_type::<Box<dyn role_grants::Service>>().await?;
+        let service = i.get::<Box<dyn Service>>().await?;
+        let role_grants = i.get::<Box<dyn role_grants::Service>>().await?;
 
         Ok(Arc::new(ShowsMutation::new(service, role_grants)))
     }

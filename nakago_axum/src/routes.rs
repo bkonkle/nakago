@@ -30,10 +30,10 @@ impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
         let router = self.router.lock().await.clone();
 
-        if let Some(routes) = i.get_type_opt::<Routes>().await? {
+        if let Some(routes) = i.get_opt::<Routes>().await? {
             routes.lock().await.push(Mutex::new(router));
         } else {
-            i.inject_type::<Routes>(Mutex::new(vec![Mutex::new(router)]))
+            i.inject::<Routes>(Mutex::new(vec![Mutex::new(router)]))
                 .await?;
         }
 

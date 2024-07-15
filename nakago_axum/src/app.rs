@@ -118,7 +118,7 @@ where
     async fn get_router(&self) -> hooks::Result<Router> {
         let mut router = Router::<State>::new();
 
-        if let Some(routes) = self.app.get_type_opt::<Routes>().await? {
+        if let Some(routes) = self.app.get_opt::<Routes>().await? {
             let routes: Vec<Route> = routes.lock().await.drain(..).collect();
             for route in routes {
                 router = router.nest("/", route.into_inner());

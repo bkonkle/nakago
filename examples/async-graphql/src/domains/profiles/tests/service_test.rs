@@ -20,10 +20,10 @@ use crate::domains::{
 async fn setup(db: MockDatabase) -> inject::Result<Inject> {
     let i = Inject::default();
 
-    i.provide_type::<DatabaseConnection>(connection::ProvideMock::new(db))
+    i.provide::<DatabaseConnection>(connection::ProvideMock::new(db))
         .await?;
 
-    i.provide_type::<Box<dyn Service>>(service::Provide::default())
+    i.provide::<Box<dyn Service>>(service::Provide::default())
         .await?;
 
     Ok(i)
@@ -45,14 +45,14 @@ async fn test_profiles_service_get() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service.get(&profile.id, &false).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, Some(profile.clone().into()));
 
@@ -85,14 +85,14 @@ async fn test_profiles_service_get_with_related() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service.get(&profile.id, &true).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, Some(profile.clone().into_profile_with_user(user)));
 
@@ -133,7 +133,7 @@ async fn test_profiles_service_get_many() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service
         .get_many(
@@ -155,7 +155,7 @@ async fn test_profiles_service_get_many() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(
         result,
@@ -207,7 +207,7 @@ async fn test_profiles_service_get_many_with_related() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service
         .get_many(
@@ -229,7 +229,7 @@ async fn test_profiles_service_get_many_with_related() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(
         result,
@@ -307,7 +307,7 @@ async fn test_profiles_service_get_many_pagination() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service
         .get_many(
@@ -322,7 +322,7 @@ async fn test_profiles_service_get_many_pagination() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     let data: ProfileList = profiles.into();
 
@@ -406,7 +406,7 @@ async fn test_profiles_service_get_many_pagination_with_related() -> Result<()> 
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service
         .get_many(
@@ -421,7 +421,7 @@ async fn test_profiles_service_get_many_pagination_with_related() -> Result<()> 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(
         result,
@@ -473,7 +473,7 @@ async fn test_profiles_service_create() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service
         .create(
@@ -492,7 +492,7 @@ async fn test_profiles_service_create() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, profile.clone().into());
 
@@ -533,7 +533,7 @@ async fn test_profiles_service_create_with_related() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service
         .create(
@@ -552,7 +552,7 @@ async fn test_profiles_service_create_with_related() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, profile.clone().into_profile_with_user(user.clone()));
 
@@ -604,7 +604,7 @@ async fn test_profiles_service_update() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service
         .update(
@@ -624,7 +624,7 @@ async fn test_profiles_service_update() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, updated.clone().into());
 
@@ -670,7 +670,7 @@ async fn test_profiles_service_update_with_related() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service
         .update(
@@ -690,7 +690,7 @@ async fn test_profiles_service_update_with_related() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, updated.clone().into_profile_with_user(user.clone()));
 
@@ -734,14 +734,14 @@ async fn test_profiles_service_delete() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     service.delete(&profile.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     // Check the transaction log
     assert_eq!(

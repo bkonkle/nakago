@@ -14,10 +14,10 @@ use crate::domains::users::{
 async fn setup(db: MockDatabase) -> inject::Result<Inject> {
     let i = Inject::default();
 
-    i.provide_type::<DatabaseConnection>(connection::ProvideMock::new(db))
+    i.provide::<DatabaseConnection>(connection::ProvideMock::new(db))
         .await?;
 
-    i.provide_type::<Box<dyn Service>>(service::Provide::default())
+    i.provide::<Box<dyn Service>>(service::Provide::default())
         .await?;
 
     Ok(i)
@@ -34,14 +34,14 @@ async fn test_users_service_get() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service.get(&user.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, Some(user.clone()));
 
@@ -69,14 +69,14 @@ async fn test_users_service_get_by_username() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service.get_by_username(&user.username, &false).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, Some(user));
 
@@ -106,14 +106,14 @@ async fn test_users_service_create() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service.create(&user.username).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, user);
 
@@ -147,7 +147,7 @@ async fn test_users_service_update() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service
         .update(
@@ -163,7 +163,7 @@ async fn test_users_service_update() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, updated.clone());
 
@@ -204,14 +204,14 @@ async fn test_users_service_delete() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     service.delete(&user.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     // Check the transaction log
     assert_eq!(

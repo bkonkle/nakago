@@ -127,7 +127,7 @@ where
         let config = if let Some(tag) = self.config_tag {
             self.i.get_tag(tag).await?
         } else {
-            self.i.get_type::<C>().await?
+            self.i.get::<C>().await?
         };
 
         Ok(config)
@@ -246,12 +246,12 @@ pub mod test {
         let config = app.get_config().await;
         assert!(config.is_err());
 
-        app.inject_type(Config::default()).await?;
+        app.inject(Config::default()).await?;
 
         let config = app.get_config().await;
         assert!(config.is_ok());
 
-        app.remove_type::<Config>().await?;
+        app.remove::<Config>().await?;
 
         app = app.with_config_tag(&CONFIG);
 

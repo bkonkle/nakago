@@ -18,18 +18,16 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     // Dependencies
 
-    app.provide_type::<Jwks>(jwks::Provide::<Config>::new(None))
+    app.provide::<Jwks>(jwks::Provide::<Config>::new(None))
         .await?;
 
-    app.provide_type::<Validator>(validator::Provide::default())
+    app.provide::<Validator>(validator::Provide::default())
         .await?;
 
-    app.provide_type::<DatabaseConnection>(nakago_sea_orm::connection::Provide::<Config>::new(
-        None,
-    ))
-    .await?;
+    app.provide::<DatabaseConnection>(nakago_sea_orm::connection::Provide::<Config>::new(None))
+        .await?;
 
-    app.provide_type::<Oso>(ProvideOso::default()).await?;
+    app.provide::<Oso>(ProvideOso::default()).await?;
 
     // Loading
 

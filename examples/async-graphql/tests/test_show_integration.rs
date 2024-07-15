@@ -157,7 +157,7 @@ async fn test_show_get_simple() -> Result<()> {
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get_type::<Box<dyn shows::Service>>().await?;
+    let shows = utils.app.get::<Box<dyn shows::Service>>().await?;
     let show = shows.create(&show_input).await?;
 
     let resp = utils
@@ -243,7 +243,7 @@ async fn test_show_get_many() -> Result<()> {
     show_input.title = "Test Show".to_string();
     show_input.summary = Some("test-summary".to_string());
 
-    let shows = utils.app.get_type::<Box<dyn shows::Service>>().await?;
+    let shows = utils.app.get::<Box<dyn shows::Service>>().await?;
     let show = shows.create(&show_input).await?;
 
     let mut other_show_input: CreateShowInput = Faker.fake();
@@ -318,20 +318,17 @@ async fn test_show_update_simple() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a User
-    let users = utils.app.get_type::<Box<dyn users::Service>>().await?;
+    let users = utils.app.get::<Box<dyn users::Service>>().await?;
     let user = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get_type::<Box<dyn shows::Service>>().await?;
+    let shows = utils.app.get::<Box<dyn shows::Service>>().await?;
     let show = shows.create(&show_input).await?;
 
     // Grant the admin role to this User for this Show
-    let role_grants = utils
-        .app
-        .get_type::<Box<dyn role_grants::Service>>()
-        .await?;
+    let role_grants = utils.app.get::<Box<dyn role_grants::Service>>().await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "admin".to_string(),
@@ -410,7 +407,7 @@ async fn test_show_update_requires_authn() -> Result<()> {
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get_type::<Box<dyn shows::Service>>().await?;
+    let shows = utils.app.get::<Box<dyn shows::Service>>().await?;
     let show = shows.create(&show_input).await?;
 
     let resp = utils
@@ -448,13 +445,13 @@ async fn test_show_update_requires_authz() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a User
-    let users = utils.app.get_type::<Box<dyn users::Service>>().await?;
+    let users = utils.app.get::<Box<dyn users::Service>>().await?;
     let _ = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get_type::<Box<dyn shows::Service>>().await?;
+    let shows = utils.app.get::<Box<dyn shows::Service>>().await?;
     let show = shows.create(&show_input).await?;
 
     let resp = utils
@@ -502,20 +499,17 @@ async fn test_show_delete_simple() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a User
-    let users = utils.app.get_type::<Box<dyn users::Service>>().await?;
+    let users = utils.app.get::<Box<dyn users::Service>>().await?;
     let user = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get_type::<Box<dyn shows::Service>>().await?;
+    let shows = utils.app.get::<Box<dyn shows::Service>>().await?;
     let show = shows.create(&show_input).await?;
 
     // Grant the admin role to this User for this Show
-    let role_grants = utils
-        .app
-        .get_type::<Box<dyn role_grants::Service>>()
-        .await?;
+    let role_grants = utils.app.get::<Box<dyn role_grants::Service>>().await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "admin".to_string(),
@@ -571,7 +565,7 @@ async fn test_show_delete_requires_authn() -> Result<()> {
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get_type::<Box<dyn shows::Service>>().await?;
+    let shows = utils.app.get::<Box<dyn shows::Service>>().await?;
     let show = shows.create(&show_input).await?;
 
     let resp = utils
@@ -600,13 +594,13 @@ async fn test_show_delete_requires_authz() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a User
-    let users = utils.app.get_type::<Box<dyn users::Service>>().await?;
+    let users = utils.app.get::<Box<dyn users::Service>>().await?;
     let _ = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get_type::<Box<dyn shows::Service>>().await?;
+    let shows = utils.app.get::<Box<dyn shows::Service>>().await?;
     let show = shows.create(&show_input).await?;
 
     let resp = utils

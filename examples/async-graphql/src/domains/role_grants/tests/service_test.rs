@@ -16,10 +16,10 @@ use crate::domains::{
 async fn setup(db: MockDatabase) -> inject::Result<Inject> {
     let i = Inject::default();
 
-    i.provide_type::<DatabaseConnection>(connection::ProvideMock::new(db))
+    i.provide::<DatabaseConnection>(connection::ProvideMock::new(db))
         .await?;
 
-    i.provide_type::<Box<dyn Service>>(service::Provide::default())
+    i.provide::<Box<dyn Service>>(service::Provide::default())
         .await?;
 
     Ok(i)
@@ -43,14 +43,14 @@ async fn test_role_grants_service_get() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service.get(&grant.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, Some(grant));
 
@@ -85,7 +85,7 @@ async fn test_role_grants_service_create() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service
         .create(&CreateRoleGrantInput {
@@ -99,7 +99,7 @@ async fn test_role_grants_service_create() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, grant);
 
@@ -143,14 +143,14 @@ async fn test_role_grants_service_delete() -> Result<()> {
     )
     .await?;
 
-    let service = i.get_type::<Box<dyn Service>>().await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     service.delete(&grant.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject_type::<DatabaseConnection>().await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     // Check the transaction log
     assert_eq!(

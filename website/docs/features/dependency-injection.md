@@ -95,7 +95,7 @@ pub const REPO: Tag<Box<dyn Repository>> = Tag::new("entity::Repository");
 Instead of requesting the type explicitly like this:
 
 ```rust
-let result = i.get_type::<PostgresRepository>()?;
+let result = i.get::<PostgresRepository>()?;
 ```
 
 Tags are passed in and the type is inferred:
@@ -131,7 +131,7 @@ pub struct PostgresRepositoryProvider {}
 #[async_trait]
 impl Provider<Box<dyn Repository>> for PostgresRepositoryProvider {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Box<dyn Repository>>> {
-        let pool = i.get_type::<Pool<Postgres>>().await?;
+        let pool = i.get::<Pool<Postgres>>().await?;
 
         Ok(Arc::new(Box::new(PostgresRepository::new(pool.clone()))))
     }
@@ -183,7 +183,7 @@ I'll pause to point out here that if you had tried to use the `&POSTGRES_REPO` T
 
 ## Invoking Dependencies
 
-To pull dependencies out of the container, use `i.get(&TAG).await?` or `i.get_type::<T>().await?`. If a dependency isn't available, the container will return an `inject::Error::NotFound` result. This is often performed within a `provide` function from the `Provider` trait, but it is also used often at entry points to bootstrap an application.
+To pull dependencies out of the container, use `i.get(&TAG).await?` or `i.get::<T>().await?`. If a dependency isn't available, the container will return an `inject::Error::NotFound` result. This is often performed within a `provide` function from the `Provider` trait, but it is also used often at entry points to bootstrap an application.
 
 ```rust
 let repo = i.get(&TAG).await?;

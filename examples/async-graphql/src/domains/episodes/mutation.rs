@@ -241,8 +241,8 @@ pub struct Provide {}
 #[async_trait]
 impl Provider<EpisodesMutation> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<EpisodesMutation>> {
-        let service = i.get_type::<Box<dyn Service>>().await?;
-        let shows = i.get_type::<Box<dyn shows::Service>>().await?;
+        let service = i.get::<Box<dyn Service>>().await?;
+        let shows = i.get::<Box<dyn shows::Service>>().await?;
 
         Ok(Arc::new(EpisodesMutation::new(service, shows)))
     }

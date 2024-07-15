@@ -41,7 +41,7 @@ pub struct Provide {}
 #[async_trait]
 impl Provider<DataLoader<Loader>> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<DataLoader<Loader>>> {
-        let service = i.get_type::<Box<dyn Service>>().await?;
+        let service = i.get::<Box<dyn Service>>().await?;
 
         Ok(Arc::new(DataLoader::new(
             Loader::new(service.clone()),

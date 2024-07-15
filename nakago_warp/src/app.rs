@@ -104,7 +104,7 @@ where
     }
 
     async fn get_router(&self) -> hooks::Result<BoxedFilter<(impl Reply,)>> {
-        if let Some(routes) = self.app.get_type_opt::<Routes>().await? {
+        if let Some(routes) = self.app.get_opt::<Routes>().await? {
             let mut routes = routes.lock().await;
 
             if routes.len() > 0 {

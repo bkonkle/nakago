@@ -15,10 +15,10 @@ pub async fn app() -> inject::Result<WarpApplication<Config>> {
 
     // Dependencies
 
-    app.provide_type::<Jwks>(jwks::Provide::default().with_config_tag(&CONFIG))
+    app.provide::<Jwks>(jwks::Provide::default().with_config_tag(&CONFIG))
         .await?;
 
-    app.provide_type::<Validator>(validator::Provide::default())
+    app.provide::<Validator>(validator::Provide::default())
         .await?;
 
     // Loading

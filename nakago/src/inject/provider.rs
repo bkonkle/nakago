@@ -100,7 +100,7 @@ pub(crate) mod test {
     impl Provider<TestService> for TestServiceProvider {
         async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<TestService>> {
             // Attempt to retrieve a dependency inside the Provider to test for deadlocks
-            i.get_type_opt::<String>().await?;
+            i.get_opt::<String>().await?;
 
             Ok(Arc::new(TestService::new(self.id.clone())))
         }
@@ -115,7 +115,7 @@ pub(crate) mod test {
     #[async_trait]
     impl Provider<OtherService> for OtherServiceProvider {
         async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<OtherService>> {
-            i.get_type_opt::<String>().await?;
+            i.get_opt::<String>().await?;
 
             Ok(Arc::new(OtherService::new(self.id.clone())))
         }
@@ -128,7 +128,7 @@ pub(crate) mod test {
     #[async_trait]
     impl Provider<Box<dyn HasId>> for HasIdProvider {
         async fn provide(self: Arc<Self>, i: Inject) -> Result<Arc<Box<dyn HasId>>> {
-            i.get_type_opt::<String>().await?;
+            i.get_opt::<String>().await?;
 
             Ok(Arc::new(Box::new(OtherService::new(
                 "test-service".to_string(),

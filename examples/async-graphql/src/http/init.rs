@@ -18,16 +18,16 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        i.provide_type::<graphql::Controller>(graphql::Provide::default())
+        i.provide::<graphql::Controller>(graphql::Provide::default())
             .await?;
 
-        i.provide_type::<nakago_ws::Connections<User>>(connections::Provide::default())
+        i.provide::<nakago_ws::Connections<User>>(connections::Provide::default())
             .await?;
 
-        i.provide_type::<Box<dyn nakago_ws::Handler<User>>>(events::Provide::default())
+        i.provide::<Box<dyn nakago_ws::Handler<User>>>(events::Provide::default())
             .await?;
 
-        i.provide_type::<nakago_ws::Controller<User>>(controller::Provide::default())
+        i.provide::<nakago_ws::Controller<User>>(controller::Provide::default())
             .await?;
 
         Ok(())
@@ -41,8 +41,8 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let graphql_controller = i.get_type::<graphql::Controller>().await?;
-        let events_controller = i.get_type::<nakago_ws::Controller<User>>().await?;
+        let graphql_controller = i.get::<graphql::Controller>().await?;
+        let events_controller = i.get::<nakago_ws::Controller<User>>().await?;
 
         i.handle(routes::Init::new(
             Router::new().route("/health", get(health::health_check)),

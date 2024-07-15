@@ -123,7 +123,7 @@ impl Inject {
     /// Temporarily remove a dependency from the container and try to unwrap it from the Arc, which
     /// will only succeed if there are no other strong pointers to the value. Then, apply a function
     /// to it, and then injects it back into the container.
-    pub async fn modify<T, F>(&self, tag: &'static Tag<T>, modify: F) -> Result<()>
+    pub async fn modify_tag<T, F>(&self, tag: &'static Tag<T>, modify: F) -> Result<()>
     where
         T: Any + Send + Sync,
         F: FnOnce(T) -> Result<T>,
@@ -133,14 +133,14 @@ impl Inject {
 
     /// Discard a Tagged Dependency from the container. Any Arcs handed out will still be valid, but
     /// the container will no longer hold a reference.
-    pub async fn remove<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<()> {
+    pub async fn remove_tag<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<()> {
         self.remove_key(Key::from_tag(tag)).await
     }
 
     /// Destroy the container and discard all Dependencies except for the given Tag. Any Arcs handed
     /// out will still be valid, but the container will be fully unloaded and all references will be
     /// dropped. Return a NotFound error if the Key isn't present.
-    pub async fn eject<T: Any + Send + Sync>(self, tag: &'static Tag<T>) -> Result<T> {
+    pub async fn eject_tag<T: Any + Send + Sync>(self, tag: &'static Tag<T>) -> Result<T> {
         self.eject_key(Key::from_tag(tag)).await
     }
 
@@ -690,7 +690,7 @@ pub(crate) mod test {
         i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(initial.clone()))
             .await?;
 
-        i.modify(&SERVICE_TAG, |mut t| {
+        i.modify_tag(&SERVICE_TAG, |mut t| {
             t.id.clone_from(&expected);
 
             Ok(t)
@@ -709,7 +709,7 @@ pub(crate) mod test {
         let i = Inject::default();
 
         let result = i
-            .modify(&SERVICE_TAG, |mut t| {
+            .modify_tag(&SERVICE_TAG, |mut t| {
                 t.id = "test".to_string();
 
                 Ok(t)
@@ -737,7 +737,7 @@ pub(crate) mod test {
         let _borrow = i.get_tag(&SERVICE_TAG).await?;
 
         let result = i
-            .modify(&SERVICE_TAG, |mut t| {
+            .modify_tag(&SERVICE_TAG, |mut t| {
                 t.id.clone_from(&expected);
 
                 Ok(t)
@@ -758,7 +758,7 @@ pub(crate) mod test {
         i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        i.remove(&SERVICE_TAG).await?;
+        i.remove_tag(&SERVICE_TAG).await?;
 
         assert!(
             !i.0.read().await.contains_key(&Key::from_tag(&SERVICE_TAG)),
@@ -780,7 +780,7 @@ pub(crate) mod test {
         // Trigger the Provider so that the value is Pending below
         i.get_tag(&SERVICE_TAG).await?;
 
-        i.remove(&SERVICE_TAG).await?;
+        i.remove_tag(&SERVICE_TAG).await?;
 
         assert!(
             !i.0.read().await.contains_key(&Key::from_tag(&SERVICE_TAG)),
@@ -795,7 +795,7 @@ pub(crate) mod test {
         let i = Inject::default();
 
         let result = i
-            .remove(&SERVICE_TAG)
+            .remove_tag(&SERVICE_TAG)
             .await
             .expect_err("Did not error as expected");
 
@@ -815,7 +815,7 @@ pub(crate) mod test {
         i.inject_tag(&SERVICE_TAG, TestService::new(expected.clone()))
             .await?;
 
-        let service = i.eject(&SERVICE_TAG).await?;
+        let service = i.eject_tag(&SERVICE_TAG).await?;
 
         // This is commented out because it demonstrates a case prevented by the compiler - usage
         // of the container after ejection.
@@ -836,7 +836,7 @@ pub(crate) mod test {
         i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        let service = i.eject(&SERVICE_TAG).await?;
+        let service = i.eject_tag(&SERVICE_TAG).await?;
 
         assert_eq!(service.id, expected);
 
@@ -848,7 +848,7 @@ pub(crate) mod test {
         let i = Inject::default();
 
         let result = i
-            .eject(&SERVICE_TAG)
+            .eject_tag(&SERVICE_TAG)
             .await
             .expect_err("Did not error as expected");
 
@@ -870,7 +870,7 @@ pub(crate) mod test {
 
         let _borrow = i.get_tag(&SERVICE_TAG).await?;
 
-        let result = i.eject(&SERVICE_TAG).await;
+        let result = i.eject_tag(&SERVICE_TAG).await;
 
         assert!(result.is_err());
 

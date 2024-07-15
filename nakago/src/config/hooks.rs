@@ -100,7 +100,7 @@ impl<C: Config> Hook for Init<C> {
         if let Some(tag) = self.tag {
             i.inject_tag(tag, config).await?;
         } else {
-            i.inject_type(config).await?;
+            i.inject(config).await?;
         }
 
         Ok(())

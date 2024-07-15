@@ -54,8 +54,8 @@ pub struct Provide {}
 #[async_trait]
 impl Provider<Controller> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Controller>> {
-        let users = i.get_type::<Box<dyn users::Service>>().await?;
-        let schema = i.get_type::<graphql::Schema>().await?;
+        let users = i.get::<Box<dyn users::Service>>().await?;
+        let schema = i.get::<graphql::Schema>().await?;
 
         Ok(Arc::new(Controller { users, schema }))
     }

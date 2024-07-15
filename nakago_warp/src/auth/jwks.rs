@@ -130,7 +130,7 @@ where
         let config = if let Some(tag) = self.config_tag {
             i.get_tag(tag).await?
         } else {
-            i.get_type::<C>().await?
+            i.get::<C>().await?
         };
 
         let auth = Config::from_ref(&*config);

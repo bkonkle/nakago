@@ -18,15 +18,15 @@ use crate::domains::{
 async fn setup(service: MockService) -> Result<Inject> {
     let i = Inject::default();
 
-    i.inject_type::<Box<dyn Service>>(Box::new(service)).await?;
+    i.inject::<Box<dyn Service>>(Box::new(service)).await?;
 
-    i.provide_type::<Box<dyn shows::Service>>(shows::service::test::ProvideMock::default())
+    i.provide::<Box<dyn shows::Service>>(shows::service::test::ProvideMock::default())
         .await?;
 
-    i.provide_type::<DataLoader<shows::Loader>>(shows::loaders::Provide::default())
+    i.provide::<DataLoader<shows::Loader>>(shows::loaders::Provide::default())
         .await?;
 
-    i.provide_type::<test::Schema>(schema::test::Provide::default())
+    i.provide::<test::Schema>(schema::test::Provide::default())
         .await?;
 
     Ok(i)
@@ -69,7 +69,7 @@ async fn test_episodes_resolver_get_simple() -> Result<()> {
 
     let i = setup(service).await?;
 
-    let schema = i.get_type::<test::Schema>().await?;
+    let schema = i.get::<test::Schema>().await?;
 
     let result = schema
         .execute(

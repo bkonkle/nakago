@@ -145,7 +145,7 @@ pub struct Provide {}
 #[async_trait]
 impl Provider<ShowsQuery> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<ShowsQuery>> {
-        let service = i.get_type::<Box<dyn Service>>().await?;
+        let service = i.get::<Box<dyn Service>>().await?;
 
         Ok(Arc::new(ShowsQuery::new(service)))
     }

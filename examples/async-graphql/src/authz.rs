@@ -33,7 +33,7 @@ pub struct Load {}
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
         // Set up authorization
-        let oso = i.get_type::<Oso>().await?;
+        let oso = i.get::<Oso>().await?;
         let mut oso = (*oso).clone();
 
         oso.register_class(User::get_polar_class_builder().name("User").build())
@@ -56,7 +56,7 @@ impl Hook for Load {
         )
         .map_err(to_provider_error)?;
 
-        i.replace_type::<Oso>(oso).await?;
+        i.replace::<Oso>(oso).await?;
 
         Ok(())
     }

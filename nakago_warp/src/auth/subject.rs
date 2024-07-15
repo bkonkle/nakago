@@ -31,7 +31,7 @@ async fn authenticate(
     headers: HeaderMap<HeaderValue>,
 ) -> Result<(Inject, Subject), Rejection> {
     let validator = i
-        .get_type::<Validator>()
+        .get::<Validator>()
         .await
         .map_err(|_err| MissingValidator)?;
 

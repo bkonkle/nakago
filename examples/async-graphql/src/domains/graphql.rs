@@ -51,18 +51,18 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let config = i.get_type::<Config>().await?;
-        let oso = i.get_type::<Oso>().await?;
+        let config = i.get::<Config>().await?;
+        let oso = i.get::<Oso>().await?;
 
-        let users_query = i.consume_type::<users::Query>().await?;
-        let profiles_query = i.consume_type::<profiles::Query>().await?;
-        let shows_query = i.consume_type::<shows::Query>().await?;
-        let episodes_query = i.consume_type::<episodes::Query>().await?;
+        let users_query = i.consume::<users::Query>().await?;
+        let profiles_query = i.consume::<profiles::Query>().await?;
+        let shows_query = i.consume::<shows::Query>().await?;
+        let episodes_query = i.consume::<episodes::Query>().await?;
 
-        let users_mutation = i.consume_type::<users::Mutation>().await?;
-        let profiles_mutation = i.consume_type::<profiles::Mutation>().await?;
-        let shows_mutation = i.consume_type::<shows::Mutation>().await?;
-        let episodes_mutation = i.consume_type::<episodes::Mutation>().await?;
+        let users_mutation = i.consume::<users::Mutation>().await?;
+        let profiles_mutation = i.consume::<profiles::Mutation>().await?;
+        let shows_mutation = i.consume::<shows::Mutation>().await?;
+        let episodes_mutation = i.consume::<episodes::Mutation>().await?;
 
         let builder = Schema::build(
             Query(users_query, profiles_query, shows_query, episodes_query),
@@ -77,7 +77,7 @@ impl Hook for Init {
         .data(config.clone())
         .data((*oso).clone());
 
-        i.inject_type::<SchemaBuilder>(builder).await?;
+        i.inject::<SchemaBuilder>(builder).await?;
 
         i.handle(users::schema::Init::default()).await?;
         i.handle(profiles::schema::Init::default()).await?;

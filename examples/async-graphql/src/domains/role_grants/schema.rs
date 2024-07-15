@@ -13,9 +13,9 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        i.provide_type::<Box<dyn Service>>(service::Provide::default())
+        i.provide::<Box<dyn Service>>(service::Provide::default())
             .await?;
-        i.provide_type::<DataLoader<Loader>>(loaders::Provide::default())
+        i.provide::<DataLoader<Loader>>(loaders::Provide::default())
             .await?;
 
         Ok(())
@@ -29,9 +29,9 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let loader = i.get_type::<DataLoader<Loader>>().await?;
+        let loader = i.get::<DataLoader<Loader>>().await?;
 
-        i.modify_type::<SchemaBuilder, _>(|builder| Ok(builder.data(loader.clone())))
+        i.modify::<SchemaBuilder, _>(|builder| Ok(builder.data(loader.clone())))
             .await?;
 
         Ok(())

@@ -13,13 +13,12 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        i.provide_type::<Box<dyn Service>>(service::Provide::default())
+        i.provide::<Box<dyn Service>>(service::Provide::default())
             .await?;
-        i.provide_type::<DataLoader<Loader>>(loaders::Provide::default())
+        i.provide::<DataLoader<Loader>>(loaders::Provide::default())
             .await?;
-        i.provide_type::<Query>(query::Provide::default()).await?;
-        i.provide_type::<Mutation>(mutation::Provide::default())
-            .await?;
+        i.provide::<Query>(query::Provide::default()).await?;
+        i.provide::<Mutation>(mutation::Provide::default()).await?;
 
         Ok(())
     }
@@ -32,9 +31,9 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let loader = i.get_type::<DataLoader<Loader>>().await?;
+        let loader = i.get::<DataLoader<Loader>>().await?;
 
-        i.modify_type::<SchemaBuilder, _>(|builder| Ok(builder.data(loader)))
+        i.modify::<SchemaBuilder, _>(|builder| Ok(builder.data(loader)))
             .await?;
 
         Ok(())
@@ -67,9 +66,9 @@ pub(crate) mod test {
     #[async_trait]
     impl Provider<Schema> for Provide {
         async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Schema>> {
-            let service = i.get_type::<Box<dyn Service>>().await?;
-            let shows = i.get_type::<Box<dyn shows::Service>>().await?;
-            let show_loader = i.get_type::<DataLoader<shows::Loader>>().await?;
+            let service = i.get::<Box<dyn Service>>().await?;
+            let shows = i.get::<Box<dyn shows::Service>>().await?;
+            let show_loader = i.get::<DataLoader<shows::Loader>>().await?;
 
             let schema: Schema = Schema::build(
                 Query::new(service.clone()),

@@ -54,7 +54,7 @@ where
             inject.consume_tag(tag).await?
         } else {
             inject
-                .consume_type::<SchemaBuilder<Query, Mutation, Subscription>>()
+                .consume::<SchemaBuilder<Query, Mutation, Subscription>>()
                 .await?
         };
 
@@ -63,7 +63,7 @@ where
         if let Some(tag) = self.schema_tag {
             inject.inject_tag(tag, schema).await?;
         } else {
-            inject.inject_type(schema).await?;
+            inject.inject(schema).await?;
         }
 
         Ok(())
