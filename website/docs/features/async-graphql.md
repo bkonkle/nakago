@@ -38,7 +38,7 @@ One strategy to keep things encapsulated is to use a domain-specific Load lifecy
 For example, a Load hook for a Users domain might want to provide a Service and a DataLoader along with a Query and a Mutation that will use them, all focused on Users:
 
 ```rust
-use super::{loaders, mutation, query, service, LOADER, MUTATION, SERVICE, QUERY};
+use super::{loaders, mutation, query, service, Loader, Mutation, Service, Query};
 
 #[derive(Default)]
 pub struct Load {}
@@ -46,10 +46,10 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        i.provide(&SERVICE, service::Provide::default()).await?;
-        i.provide(&LOADER, loaders::Provide::default()).await?;
-        i.provide(&QUERY, query::Provide::default()).await?;
-        i.provide(&MUTATION, mutation::Provide::default()).await?;
+        i.provide::<Box<dyn Service>>(service::Provide::default()).await?;
+        i.provide::<DataLoader<Loader>>(loaders::Provide::default()).await?;
+        i.provide::<Query>(query::Provide::default()).await?;
+        i.provide::<Mutation>(mutation::Provide::default()).await?;
 
         Ok(())
     }
@@ -82,7 +82,7 @@ In your application's top-level `init.rs` file, you could then simply add this t
 
 ```rust
 pub async fn app() -> inject::Result<AxumApplication<Config>> {
-    let mut app = AxumApplication::default().with_config_tag(&CONFIG);
+    let mut app = AxumApplication::<Config>::default();
 
     // ...
 
@@ -119,7 +119,7 @@ pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 pub type SchemaBuilder = async_graphql::SchemaBuilder<Query, Mutation, EmptySubscription>;
 ```
 
-Then, provide tags to represent each type in the Inject container:
+Then, only if you need to manage multiple instances of the same Schema, provide tags to represent each type in the Inject container:
 
 ```rust
 /// Tag(graphql::Schema)
@@ -128,6 +128,8 @@ pub const SCHEMA: Tag<Schema> = Tag::new("graphql::Schema");
 /// Tag(graphql::SchemaBuilder)
 pub const SCHEMA_BUILDER: Tag<SchemaBuilder> = Tag::new("graphql::SchemaBuilder");
 ```
+
+You can omit this step if your application process will only ever operate on one Schema while running.
 
 Finally, define an Init hook that constructs your top-level SchemaBuilder and injects it to the container so that it will be available for any Init hooks that want to add context:
 
@@ -138,11 +140,11 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let users_query = i.consume(&users::QUERY).await?;
-        let profiles_query = i.consume(&profiles::QUERY).await?;
+        let users_query = i.consume::<users::Query>().await?;
+        let profiles_query = i.consume::<profiles::Query>().await?;
 
-        let users_mutation = i.consume(&users::MUTATION).await?;
-        let profiles_mutation = i.consume(&profiles::MUTATION).await?;
+        let users_mutation = i.consume::<users::Mutation>().await?;
+        let profiles_mutation = i.consume::<profiles::Mutation>().await?;
 
         let builder = Schema::build(
             Query(users_query, profiles_query),
@@ -150,15 +152,13 @@ impl Hook for Init {
             EmptySubscription,
         );
 
-        i.inject(&SCHEMA_BUILDER, builder).await?;
+        i.inject::<SchemaBuilder>(builder).await?;
 
         i.handle(users::schema::Init::default()).await?;
         i.handle(profiles::schema::Init::default()).await?;
 
         i.handle(
-            schema::Init::default()
-                .with_builder_tag(&SCHEMA_BUILDER)
-                .with_schema_tag(&SCHEMA),
+            schema::Init::default(),
         )
         .await?;
 
@@ -171,7 +171,7 @@ In your application's top-level `init.rs` file, you can then add this top-level 
 
 ```rust
 pub async fn app() -> inject::Result<AxumApplication<Config>> {
-    let mut app = AxumApplication::default().with_config_tag(&CONFIG);
+    let mut app = AxumApplication::<Config>::default();
 
     // ...
 

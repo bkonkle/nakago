@@ -7,6 +7,8 @@ use nakago::{hooks, Hook, Inject};
 use nakago_axum::routes;
 use nakago_ws::{connections, controller};
 
+use crate::domains::users::model::User;
+
 use super::{events, graphql, health};
 
 /// Load dependencies for all handlers
@@ -16,20 +18,17 @@ pub struct Load {}
 #[async_trait]
 impl Hook for Load {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        i.provide(&graphql::CONTROLLER, graphql::Provide::default())
+        i.provide::<graphql::Controller>(graphql::Provide::default())
             .await?;
 
-        i.provide(&events::CONNECTIONS, connections::Provide::default())
+        i.provide::<nakago_ws::Connections<User>>(connections::Provide::default())
             .await?;
 
-        i.provide(&events::HANDLER, events::Provide::default())
+        i.provide::<Box<dyn nakago_ws::Handler<User>>>(events::Provide::default())
             .await?;
 
-        i.provide(
-            &events::CONTROLLER,
-            controller::Provide::new(Some(&events::CONNECTIONS), Some(&events::HANDLER)),
-        )
-        .await?;
+        i.provide::<nakago_ws::Controller<User>>(controller::Provide::default())
+            .await?;
 
         Ok(())
     }
@@ -42,8 +41,8 @@ pub struct Init {}
 #[async_trait]
 impl Hook for Init {
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let graphql_controller = i.get(&graphql::CONTROLLER).await?;
-        let events_controller = i.get(&events::CONTROLLER).await?;
+        let graphql_controller = i.get::<graphql::Controller>().await?;
+        let events_controller = i.get::<nakago_ws::Controller<User>>().await?;
 
         i.handle(routes::Init::new(
             Router::new().route("/health", get(health::health_check)),

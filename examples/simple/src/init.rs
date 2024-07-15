@@ -1,6 +1,6 @@
 use nakago::{inject, EventType};
 use nakago_axum::{
-    auth::{jwks, validator, Validator, JWKS},
+    auth::{jwks, validator, Jwks, Validator},
     config, AxumApplication,
 };
 
@@ -15,10 +15,10 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
 
     // Dependencies
 
-    app.provide(&JWKS, jwks::Provide::default().with_config_tag(&CONFIG))
+    app.provide::<Jwks>(jwks::Provide::default().with_config_tag(&CONFIG))
         .await?;
 
-    app.provide_type::<Validator>(validator::Provide::default())
+    app.provide::<Validator>(validator::Provide::default())
         .await?;
 
     // Loading

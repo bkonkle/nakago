@@ -1,35 +1,33 @@
 use nakago::{inject, EventType};
 use nakago_axum::{
-    auth::{jwks, validator, Validator, JWKS},
+    auth::{jwks, validator, Jwks, Validator},
     AxumApplication,
 };
+use oso::Oso;
+use sea_orm::DatabaseConnection;
 
 use crate::{
-    authz::{self, ProvideOso, OSO},
-    config::{Config, CONFIG},
+    authz::{self, ProvideOso},
     domains::graphql,
-    http,
+    http, Config,
 };
 
 /// Create a default AxumApplication instance
 pub async fn app() -> inject::Result<AxumApplication<Config>> {
-    let mut app = AxumApplication::default().with_config_tag(&CONFIG);
+    let mut app = AxumApplication::default();
 
     // Dependencies
 
-    app.provide(&JWKS, jwks::Provide::new(Some(&CONFIG)))
+    app.provide::<Jwks>(jwks::Provide::<Config>::new(None))
         .await?;
 
-    app.provide_type::<Validator>(validator::Provide::default())
+    app.provide::<Validator>(validator::Provide::default())
         .await?;
 
-    app.provide(
-        &nakago_sea_orm::CONNECTION,
-        nakago_sea_orm::connection::Provide::new(Some(&CONFIG)),
-    )
-    .await?;
+    app.provide::<DatabaseConnection>(nakago_sea_orm::connection::Provide::<Config>::new(None))
+        .await?;
 
-    app.provide(&OSO, ProvideOso::default()).await?;
+    app.provide::<Oso>(ProvideOso::default()).await?;
 
     // Loading
 

@@ -3,24 +3,15 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::extract::ws::Message;
-use nakago::{provider, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider};
 use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
-use nakago_ws::{connections::Connections, Controller};
+use nakago_ws::connections::Connections;
 
 use crate::{
     domains::users::{self, model::User},
     messages::{IncomingMessage, OutgoingMessage},
 };
-
-/// Connections
-pub const CONNECTIONS: Tag<Connections<User>> = Tag::new("events::Connections");
-
-/// Nakago WebSocket Controller
-pub const CONTROLLER: Tag<Controller<User>> = Tag::new("events::Controller");
-
-/// WebSocket Message Handler
-pub const HANDLER: Tag<Box<dyn nakago_ws::Handler<User>>> = Tag::new("nakago_ws::Handler");
 
 /// Message Handler
 #[derive(Clone)]
@@ -74,8 +65,8 @@ impl Provider<Box<dyn nakago_ws::Handler<User>>> for Provide {
         self: Arc<Self>,
         i: Inject,
     ) -> provider::Result<Arc<Box<dyn nakago_ws::Handler<User>>>> {
-        let connections = i.get(&CONNECTIONS).await?;
-        let users = i.get(&users::SERVICE).await?;
+        let connections = i.get::<Connections<User>>().await?;
+        let users = i.get::<Box<dyn users::Service>>().await?;
 
         Ok(Arc::new(Box::new(Handler { connections, users })))
     }

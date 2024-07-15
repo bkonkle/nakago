@@ -5,9 +5,9 @@ use async_trait::async_trait;
 use derive_new::new;
 #[cfg(test)]
 use mockall::automock;
-use nakago::{provider, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider};
 use nakago_derive::Provider;
-use nakago_sea_orm::{DatabaseConnection, CONNECTION};
+use nakago_sea_orm::DatabaseConnection;
 use sea_orm::{entity::*, query::*, EntityTrait};
 
 use super::{
@@ -15,9 +15,6 @@ use super::{
     mutation::UpdateUserInput,
 };
 use crate::domains::role_grants::model as role_grant_model;
-
-/// Tag(users::Service)
-pub const SERVICE: Tag<Box<dyn Service>> = Tag::new("users::Service");
 
 /// A Service appliies business logic to a dynamic UsersRepository implementation.
 #[cfg_attr(test, automock)]
@@ -162,11 +159,6 @@ impl Service for DefaultService {
 }
 
 /// Provide the Service
-///
-/// **Provides:** `Arc<Box<dyn users::Service>>`
-///
-/// **Depends on:**
-///   - `nakago_sea_orm::DatabaseConnection`
 #[derive(Default)]
 pub struct Provide {}
 
@@ -174,7 +166,7 @@ pub struct Provide {}
 #[async_trait]
 impl Provider<Box<dyn Service>> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Box<dyn Service>>> {
-        let db = i.get(&CONNECTION).await?;
+        let db = i.get::<DatabaseConnection>().await?;
 
         Ok(Arc::new(Box::new(DefaultService::new(db))))
     }
