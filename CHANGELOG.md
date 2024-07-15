@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0]
+
+### Changed
+
+- `nakago-axum` - Changed the `Inject` extractor to be a wrapper around the Nakago dependency injection container, rather than a direct extractor. This makes it much more convenient to use it in an idiomatic way with Axum.
+- `nakago-examples-async-graphql` - Updated the example to use the new `Inject` extractor.
+
 ## [0.20.0]
 
 ### Added
@@ -347,7 +354,8 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
-[unreleased]: https://github.com/bkonkle/nakago/compare/0.20.0...HEAD
+[unreleased]: https://github.com/bkonkle/nakago/compare/0.21.0...HEAD
+[0.21.0]: https://github.com/bkonkle/nakago/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/bkonkle/nakago/compare/0.19.1...0.20.0
 [0.19.1]: https://github.com/bkonkle/nakago/compare/0.19.0...0.19.1
 [0.19.0]: https://github.com/bkonkle/nakago/compare/0.18.0...0.19.0
