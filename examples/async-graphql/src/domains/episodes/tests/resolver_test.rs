@@ -78,7 +78,6 @@ async fn test_episodes_resolver_get_simple() -> Result<()> {
         .await;
 
     let data = result.data.into_json()?;
-    println!(">- data -> {:?}", data);
     let json_episode = &data["getEpisode"];
 
     assert_eq!(json_episode["id"], episode_id);
