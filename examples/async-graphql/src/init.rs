@@ -24,7 +24,7 @@ pub async fn app() -> inject::Result<AxumApplication<Config>> {
     app.provide::<Validator>(validator::Provide::default())
         .await?;
 
-    app.provide::<DatabaseConnection>(nakago_sea_orm::connection::Provide::<Config>::new(None))
+    app.provide::<DatabaseConnection>(nakago_sea_orm::connection::Provide::<Config>::new())
         .await?;
 
     app.provide::<Oso>(ProvideOso::default()).await?;
