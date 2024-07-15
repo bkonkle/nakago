@@ -29,7 +29,7 @@ impl FromRequestParts<State> for Subject {
         state: &State,
     ) -> std::result::Result<Self, Self::Rejection> {
         let validator = state
-            .get_type::<Validator>()
+            .get::<Validator>()
             .await
             .map_err(|_err| MissingValidator)?;
 

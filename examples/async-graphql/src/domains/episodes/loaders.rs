@@ -6,16 +6,10 @@ use async_graphql::{
 };
 use async_trait::async_trait;
 use derive_new::new;
-use nakago::{provider, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider};
 use nakago_derive::Provider;
 
-use super::{
-    model::Episode,
-    service::{Service, SERVICE},
-};
-
-/// Tag(episodes::Loader)
-pub const LOADER: Tag<DataLoader<Loader>> = Tag::new("episodes::Loader");
+use super::{model::Episode, service::Service};
 
 /// A dataloader for `Episode` instances
 #[derive(new)]
@@ -40,11 +34,6 @@ impl dataloader::Loader<String> for Loader {
 }
 
 /// Provide the Loader
-///
-/// **Provides:** `Arc<DataLoader<episodes::Loader>>`
-///
-/// **Depends on:**
-///  - `Tag(episodes::Service)`
 #[derive(Default)]
 pub struct Provide {}
 
@@ -52,7 +41,7 @@ pub struct Provide {}
 #[async_trait]
 impl Provider<DataLoader<Loader>> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<DataLoader<Loader>>> {
-        let episodes_service = i.get(&SERVICE).await?;
+        let episodes_service = i.get::<Box<dyn Service>>().await?;
 
         Ok(Arc::new(DataLoader::new(
             Loader::new(episodes_service.clone()),

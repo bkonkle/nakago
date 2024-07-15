@@ -76,7 +76,7 @@ pub struct Provide {}
 #[async_trait]
 impl Provider<Validator> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Validator>> {
-        let jwks = i.get(&JWKS).await?;
+        let jwks = i.get_tag(&JWKS).await?;
 
         let validator = Validator::KeySet(jwks);
 

@@ -51,7 +51,7 @@ impl<T: Send + Sync + Any> FromRequestParts<State> for Inject<T> {
         _parts: &mut Parts,
         state: &State,
     ) -> Result<Self, Self::Rejection> {
-        let t = state.get_type::<T>().await.unwrap();
+        let t = state.get::<T>().await.unwrap();
 
         Ok(Self::new(t))
     }

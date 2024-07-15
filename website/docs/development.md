@@ -72,6 +72,28 @@ Use `cargo` to run the dev server locally:
 cargo make dev
 ```
 
+## Running Integration Tests
+
+First, create a `.envrc` file by copying `.envrc.example`, and run `direnv allow` to load the environment variables.
+
+Then spin up the supporting Docker Compose processes:
+
+```sh
+cargo make docker up -d
+```
+
+Now you can reset the test DB:
+
+```sh
+cargo make db-reset
+```
+
+And then run the integration tests:
+
+```sh
+cargo make integration
+```
+
 ## Update Dependencies
 
 First, install the `outdated` command for `cargo`:
@@ -108,7 +130,6 @@ If you want to wipe your database and start over:
 ```sh
 cargo make db-reset
 ```
-
 
 ## Examples: Docker Build
 

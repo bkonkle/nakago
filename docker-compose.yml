@@ -1,6 +1,3 @@
-# Docker Compose config for example projects
-version: "3.1"
-
 services:
     postgres:
         image: postgres

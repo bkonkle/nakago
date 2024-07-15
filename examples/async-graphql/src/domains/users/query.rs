@@ -2,13 +2,10 @@ use std::sync::Arc;
 
 use async_graphql::{Context, Object, Result};
 use async_trait::async_trait;
-use nakago::{provider, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider};
 use nakago_derive::Provider;
 
 use super::model::User;
-
-/// Tag(users::Query)
-pub const QUERY: Tag<UsersQuery> = Tag::new("users::Query");
 
 /// The Query segment for Users
 #[derive(Default)]

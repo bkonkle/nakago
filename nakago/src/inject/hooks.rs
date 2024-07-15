@@ -65,7 +65,7 @@ mod tests {
     #[async_trait]
     impl Hook for TestHook {
         async fn handle(&self, i: Inject) -> Result<()> {
-            i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            i.inject_tag(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
                 .await?;
 
             Ok(())

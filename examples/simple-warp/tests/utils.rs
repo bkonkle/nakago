@@ -19,7 +19,7 @@ impl TestUtils {
     pub async fn init() -> Result<Self> {
         let app = init::app().await?;
 
-        app.replace_type_with::<Validator>(validator::ProvideUnverified::default())
+        app.replace_with::<Validator>(validator::ProvideUnverified::default())
             .await?;
 
         let config_path = std::env::var("CONFIG_PATH_SIMPLE_WARP")

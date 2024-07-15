@@ -42,7 +42,7 @@ async fn test_profile_create_simple() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
-    let users = utils.app.get(&users::SERVICE).await?;
+    let users = utils.app.get::<Box<dyn users::Service>>().await?;
     let user = users.create(&username).await?;
 
     let resp = utils
@@ -168,7 +168,7 @@ async fn test_profile_create_authz() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a user and profile with this username
-    let users = utils.app.get(&users::SERVICE).await?;
+    let users = utils.app.get::<Box<dyn users::Service>>().await?;
     let _ = users.create(&username).await?;
 
     let resp = utils
@@ -257,7 +257,7 @@ async fn test_profile_get_empty() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
-    let users = utils.app.get(&users::SERVICE).await?;
+    let users = utils.app.get::<Box<dyn users::Service>>().await?;
     let _ = users.create(&username).await?;
 
     let resp = utils

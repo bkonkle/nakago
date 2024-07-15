@@ -37,10 +37,10 @@ where
     async fn handle(&self, i: Inject) -> hooks::Result<()> {
         let route = with_injection(i.clone()).with(wrap_fn(self.filter.clone()));
 
-        if let Some(routes) = i.get_type_opt::<Routes>().await? {
+        if let Some(routes) = i.get_opt::<Routes>().await? {
             routes.lock().await.push(route);
         } else {
-            i.inject_type::<Routes>(Mutex::new(vec![route])).await?;
+            i.inject::<Routes>(Mutex::new(vec![route])).await?;
         }
 
         Ok(())

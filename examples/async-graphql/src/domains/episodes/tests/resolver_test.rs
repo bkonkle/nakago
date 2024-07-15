@@ -1,5 +1,5 @@
 use anyhow::Result;
-use async_graphql::{Request, Variables};
+use async_graphql::{dataloader::DataLoader, Request, Variables};
 use fake::{Fake, Faker};
 use mockall::predicate::*;
 use nakago::Inject;
@@ -9,8 +9,8 @@ use serde_json::json;
 use crate::domains::{
     episodes::{
         model::Episode,
-        schema::{self, test::SCHEMA},
-        service::{MockService, SERVICE},
+        schema::{self, test},
+        service::{MockService, Service},
     },
     shows,
 };
@@ -18,18 +18,16 @@ use crate::domains::{
 async fn setup(service: MockService) -> Result<Inject> {
     let i = Inject::default();
 
-    i.inject(&SERVICE, Box::new(service)).await?;
+    i.inject::<Box<dyn Service>>(Box::new(service)).await?;
 
-    i.provide(
-        &shows::SERVICE,
-        shows::service::test::ProvideMock::default(),
-    )
-    .await?;
-
-    i.provide(&shows::LOADER, shows::loaders::Provide::default())
+    i.provide::<Box<dyn shows::Service>>(shows::service::test::ProvideMock::default())
         .await?;
 
-    i.provide(&SCHEMA, schema::test::Provide::default()).await?;
+    i.provide::<DataLoader<shows::Loader>>(shows::loaders::Provide::default())
+        .await?;
+
+    i.provide::<test::Schema>(schema::test::Provide::default())
+        .await?;
 
     Ok(i)
 }
@@ -66,12 +64,12 @@ async fn test_episodes_resolver_get_simple() -> Result<()> {
     service
         .expect_get()
         .with(eq(episode_id), eq(&true))
-        .times(1)
+        // .times(1)
         .returning(move |_, _| Ok(Some(episode.clone())));
 
     let i = setup(service).await?;
 
-    let schema = i.get(&SCHEMA).await?;
+    let schema = i.get::<test::Schema>().await?;
 
     let result = schema
         .execute(

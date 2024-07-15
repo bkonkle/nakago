@@ -4,7 +4,7 @@ use async_graphql::{Context, Enum, InputObject, Object, Result, SimpleObject};
 use async_trait::async_trait;
 use derive_new::new;
 use hyper::StatusCode;
-use nakago::{provider, Inject, Provider, Tag};
+use nakago::{provider, Inject, Provider};
 use nakago_async_graphql::utils::as_graphql_error;
 use nakago_axum::utils::{
     ManyResponse,
@@ -16,16 +16,13 @@ use crate::domains::users::model::User;
 
 use super::{
     model::{self, Profile},
-    Service, SERVICE,
+    Service,
 };
 
 use ProfilesOrderBy::{
     CreatedAtAsc, CreatedAtDesc, DisplayNameAsc, DisplayNameDesc, EmailAsc, EmailDesc, IdAsc,
     IdDesc, UpdatedAtAsc, UpdatedAtDesc,
 };
-
-/// Tag(profiles::Query)
-pub const QUERY: Tag<ProfilesQuery> = Tag::new("profiles::Query");
 
 /// The `ProfilesPage` result type
 #[derive(Clone, Eq, PartialEq, SimpleObject)]
@@ -201,7 +198,7 @@ pub struct Provide {}
 #[async_trait]
 impl Provider<ProfilesQuery> for Provide {
     async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<ProfilesQuery>> {
-        let service = i.get(&SERVICE).await?;
+        let service = i.get::<Box<dyn Service>>().await?;
 
         Ok(Arc::new(ProfilesQuery::new(service)))
     }

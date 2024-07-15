@@ -13,6 +13,8 @@ mod http;
 mod init;
 mod messages;
 
+pub use config::Config;
+
 /// Error macros
 #[macro_use]
 extern crate anyhow;

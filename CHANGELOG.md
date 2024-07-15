@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.20.0]
 
 ### Added
 
@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `nakago`: Major change - types are now the primary interface, with tags being used only when needed.
+  - Tags introduced more boilerplate than I liked, and they're really only necessary when you're dealing with multiple instances of the same type. This change makes the API more ergonomic and easier to understand.
+  - Operations like `.get_type()` and `.provide_type()` have been moved to methods like `.get()` and `.provide()`, and the existing tag methods were moved to methods like `.get_tag()` and `.provide_tag()`.
 - `nakago-examples-async-graphql`: Updated to use the new `nakago-ws` package for Websocket support.
 
 ### Fixed
@@ -344,7 +347,8 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
-[unreleased]: https://github.com/bkonkle/nakago/compare/0.19.1...HEAD
+[unreleased]: https://github.com/bkonkle/nakago/compare/0.20.0...HEAD
+[0.20.0]: https://github.com/bkonkle/nakago/compare/0.19.1...0.20.0
 [0.19.1]: https://github.com/bkonkle/nakago/compare/0.19.0...0.19.1
 [0.19.0]: https://github.com/bkonkle/nakago/compare/0.18.0...0.19.0
 [0.18.0]: https://github.com/bkonkle/nakago/compare/0.17.0...0.18.0

@@ -41,12 +41,12 @@ impl<T> Deref for Tag<T> {
 impl Inject {
     /// Retrieve a reference to a Tagged Dependency if it exists. Return a NotFound error if the Tag
     /// isn't present.
-    pub async fn get<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<Arc<T>> {
+    pub async fn get_tag<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<Arc<T>> {
         self.get_key(Key::from_tag(tag)).await
     }
 
     /// Retrieve a reference to a Tagged Dependency if it exists.
-    pub async fn get_opt<T: Any + Send + Sync>(
+    pub async fn get_tag_opt<T: Any + Send + Sync>(
         &self,
         tag: &'static Tag<T>,
     ) -> Result<Option<Arc<T>>> {
@@ -65,18 +65,26 @@ impl Inject {
 
     /// Provide a Tagged Dependency directly, using core::future::ready to wrap it in an immediately
     /// resolving Pending Future.
-    pub async fn inject<T: Any + Sync + Send>(&self, tag: &'static Tag<T>, dep: T) -> Result<()> {
+    pub async fn inject_tag<T: Any + Sync + Send>(
+        &self,
+        tag: &'static Tag<T>,
+        dep: T,
+    ) -> Result<()> {
         self.inject_key(Key::from_tag(tag), dep).await
     }
 
     /// Replace an existing Tagged Dependency directly, using core::future::ready to wrap it in an
     /// immediately resolving Pending Future. Return a NotFound error if the Key isn't present.
-    pub async fn replace<T: Any + Sync + Send>(&self, tag: &'static Tag<T>, dep: T) -> Result<()> {
+    pub async fn replace_tag<T: Any + Sync + Send>(
+        &self,
+        tag: &'static Tag<T>,
+        dep: T,
+    ) -> Result<()> {
         self.replace_key(Key::from_tag(tag), dep).await
     }
 
     /// Inject a Dependency Provider for a Tag
-    pub async fn provide<T: Any + Sync + Send>(
+    pub async fn provide_tag<T: Any + Sync + Send>(
         &self,
         tag: &'static Tag<T>,
         provider: impl Provider<T> + Provider<Dependency> + 'static,
@@ -85,7 +93,7 @@ impl Inject {
     }
 
     /// Inject a replacement Dependency Provider if the Tag is present
-    pub async fn replace_with<T: Any + Sync + Send>(
+    pub async fn replace_tag_with<T: Any + Sync + Send>(
         &self,
         tag: &'static Tag<T>,
         provider: impl Provider<T> + Provider<Dependency> + 'static,
@@ -98,14 +106,14 @@ impl Inject {
     /// only succeed if there are no other strong pointers to the value. Any Arcs handed out will
     /// still be valid, but the container will no longer hold a reference. Return a NotFound error
     /// if the Tag isn't present.
-    pub async fn consume<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<T> {
+    pub async fn consume_tag<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<T> {
         self.consume_key(Key::from_tag(tag)).await
     }
 
     /// Remove a Tagged Dependency from the container and try to unwrap it from the Arc, which will
     /// only succeed if there are no other strong pointers to the value. Any Arcs handed out will
     /// still be valid, but the container will no longer hold a reference.
-    pub async fn consume_opt<T: Any + Send + Sync>(
+    pub async fn consume_tag_opt<T: Any + Send + Sync>(
         &self,
         tag: &'static Tag<T>,
     ) -> Result<Option<T>> {
@@ -115,7 +123,7 @@ impl Inject {
     /// Temporarily remove a dependency from the container and try to unwrap it from the Arc, which
     /// will only succeed if there are no other strong pointers to the value. Then, apply a function
     /// to it, and then injects it back into the container.
-    pub async fn modify<T, F>(&self, tag: &'static Tag<T>, modify: F) -> Result<()>
+    pub async fn modify_tag<T, F>(&self, tag: &'static Tag<T>, modify: F) -> Result<()>
     where
         T: Any + Send + Sync,
         F: FnOnce(T) -> Result<T>,
@@ -125,21 +133,24 @@ impl Inject {
 
     /// Discard a Tagged Dependency from the container. Any Arcs handed out will still be valid, but
     /// the container will no longer hold a reference.
-    pub async fn remove<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<()> {
+    pub async fn remove_tag<T: Any + Send + Sync>(&self, tag: &'static Tag<T>) -> Result<()> {
         self.remove_key(Key::from_tag(tag)).await
     }
 
     /// Destroy the container and discard all Dependencies except for the given Tag. Any Arcs handed
     /// out will still be valid, but the container will be fully unloaded and all references will be
     /// dropped. Return a NotFound error if the Key isn't present.
-    pub async fn eject<T: Any + Send + Sync>(self, tag: &'static Tag<T>) -> Result<T> {
+    pub async fn eject_tag<T: Any + Send + Sync>(self, tag: &'static Tag<T>) -> Result<T> {
         self.eject_key(Key::from_tag(tag)).await
     }
 
     /// Destroy the container and discard all Dependencies except for the given Tag. Any Arcs handed
     /// out will still be valid, but the container will be fully unloaded and all references will be
     /// dropped.
-    pub async fn eject_opt<T: Any + Send + Sync>(self, tag: &'static Tag<T>) -> Result<Option<T>> {
+    pub async fn eject_tag_opt<T: Any + Send + Sync>(
+        self,
+        tag: &'static Tag<T>,
+    ) -> Result<Option<T>> {
         self.eject_key_opt(Key::from_tag(tag)).await
     }
 }
@@ -164,7 +175,7 @@ pub(crate) mod test {
     async fn test_inject_tag_success() -> Result<()> {
         let i = Inject::default();
 
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+        i.inject_tag(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
             .await?;
 
         assert!(
@@ -181,12 +192,12 @@ pub(crate) mod test {
     async fn test_inject_tag_occupied() -> Result<()> {
         let i = Inject::default();
 
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+        i.inject_tag(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
             .await?;
 
         // Inject the same type a second time
         let result = i
-            .inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+            .inject_tag(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
             .await;
 
         if let Err(err) = result {
@@ -207,10 +218,10 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))
+        i.inject_tag(&SERVICE_TAG, TestService::new(expected.clone()))
             .await?;
 
-        let result = i.get_opt(&SERVICE_TAG).await?.unwrap();
+        let result = i.get_tag_opt(&SERVICE_TAG).await?.unwrap();
 
         assert_eq!(expected, result.id);
 
@@ -221,7 +232,7 @@ pub(crate) mod test {
     async fn test_get_tag_opt_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.get_opt(&SERVICE_TAG).await?;
+        let result = i.get_tag_opt(&SERVICE_TAG).await?;
 
         assert!(result.is_none());
 
@@ -234,10 +245,10 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))
+        i.inject_tag(&SERVICE_TAG, TestService::new(expected.clone()))
             .await?;
 
-        let result = i.get(&SERVICE_TAG).await?;
+        let result = i.get_tag(&SERVICE_TAG).await?;
 
         assert_eq!(expected, result.id);
 
@@ -250,10 +261,10 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject::<Box<dyn HasId>>(&DYN_TAG, Box::new(TestService::new(expected.clone())))
+        i.inject_tag(&DYN_TAG, Box::new(TestService::new(expected.clone())))
             .await?;
 
-        let result = i.get(&DYN_TAG).await?;
+        let result = i.get_tag(&DYN_TAG).await?;
 
         assert_eq!(expected, result.get_id());
 
@@ -264,7 +275,7 @@ pub(crate) mod test {
     async fn test_get_tag_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.get(&SERVICE_TAG).await;
+        let result = i.get_tag(&SERVICE_TAG).await;
 
         if let Err(err) = result {
             let expected = format!("{} was not found\n\nAvailable: (empty)", SERVICE_TAG);
@@ -283,14 +294,14 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+        i.inject_tag(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
             .await?;
 
         // Override the instance that was injected the first time
-        i.replace(&SERVICE_TAG, TestService::new(expected.clone()))
+        i.replace_tag(&SERVICE_TAG, TestService::new(expected.clone()))
             .await?;
 
-        let result = i.get(&SERVICE_TAG).await?;
+        let result = i.get_tag(&SERVICE_TAG).await?;
 
         assert_eq!(expected, result.id);
 
@@ -301,12 +312,12 @@ pub(crate) mod test {
     async fn test_replace_not_found() -> Result<()> {
         let i = Inject::default();
 
-        i.inject(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
+        i.inject_tag(&SERVICE_TAG, TestService::new(fake::uuid::UUIDv4.fake()))
             .await?;
 
         // Override a type that doesn't have any instances yet
         let result = i
-            .replace(&OTHER_TAG, OtherService::new(fake::uuid::UUIDv4.fake()))
+            .replace_tag(&OTHER_TAG, OtherService::new(fake::uuid::UUIDv4.fake()))
             .await;
 
         if let Err(err) = result {
@@ -329,7 +340,7 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
         assert!(
@@ -339,7 +350,7 @@ pub(crate) mod test {
             "key does not exist in injection container"
         );
 
-        let result = i.get(&SERVICE_TAG).await?;
+        let result = i.get_tag(&SERVICE_TAG).await?;
 
         assert_eq!(result.id, expected);
 
@@ -353,17 +364,17 @@ pub(crate) mod test {
         let expected: String = fake::uuid::UUIDv4.fake();
         let expected_other: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        i.provide(
+        i.provide_tag(
             &OTHER_TAG,
             OtherServiceProvider::new(expected_other.clone()),
         )
         .await?;
 
-        let result = i.get(&SERVICE_TAG).await?;
-        let other = i.get(&OTHER_TAG).await?;
+        let result = i.get_tag(&SERVICE_TAG).await?;
+        let other = i.get_tag(&OTHER_TAG).await?;
 
         assert_eq!(result.id, expected);
         assert_eq!(other.other_id, expected_other);
@@ -375,7 +386,7 @@ pub(crate) mod test {
     async fn test_provide_dyn_success() -> Result<()> {
         let i = Inject::default();
 
-        i.provide(&DYN_TAG, HasIdProvider::default()).await?;
+        i.provide_tag(&DYN_TAG, HasIdProvider::default()).await?;
 
         assert!(
             i.0.read()
@@ -384,7 +395,7 @@ pub(crate) mod test {
             "key does not exist in injection container"
         );
 
-        let result = i.get(&DYN_TAG).await?;
+        let result = i.get_tag(&DYN_TAG).await?;
 
         assert_eq!(result.get_id(), "test-service");
 
@@ -397,14 +408,14 @@ pub(crate) mod test {
 
         let expected = format!("{} has already been provided", SERVICE_TAG);
 
-        i.provide(
+        i.provide_tag(
             &SERVICE_TAG,
             TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
         )
         .await?;
 
         let result = i
-            .provide(
+            .provide_tag(
                 &SERVICE_TAG,
                 TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
             )
@@ -425,20 +436,20 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(
+        i.provide_tag(
             &SERVICE_TAG,
             TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
         )
         .await?;
 
         // Retrieve the dependency once to trigger the Provider
-        i.get(&SERVICE_TAG).await?;
+        i.get_tag(&SERVICE_TAG).await?;
 
         // Override the instance that was injected the first time
-        i.replace_with(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.replace_tag_with(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        let result = i.get(&SERVICE_TAG).await?;
+        let result = i.get_tag(&SERVICE_TAG).await?;
 
         assert_eq!(expected, result.id);
 
@@ -452,34 +463,34 @@ pub(crate) mod test {
         let expected: String = fake::uuid::UUIDv4.fake();
         let expected_other: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(
+        i.provide_tag(
             &SERVICE_TAG,
             TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
         )
         .await?;
 
-        i.provide(
+        i.provide_tag(
             &OTHER_TAG,
             OtherServiceProvider::new(fake::uuid::UUIDv4.fake()),
         )
         .await?;
 
         // Retrieve the dependencies once to trigger the Providers
-        i.get(&SERVICE_TAG).await?;
-        i.get(&OTHER_TAG).await?;
+        i.get_tag(&SERVICE_TAG).await?;
+        i.get_tag(&OTHER_TAG).await?;
 
         // Override the instances that were injected the first time
-        i.replace_with(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.replace_tag_with(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        i.replace_with(
+        i.replace_tag_with(
             &OTHER_TAG,
             OtherServiceProvider::new(expected_other.clone()),
         )
         .await?;
 
-        let result = i.get(&SERVICE_TAG).await?;
-        let other = i.get(&OTHER_TAG).await?;
+        let result = i.get_tag(&SERVICE_TAG).await?;
+        let other = i.get_tag(&OTHER_TAG).await?;
 
         assert_eq!(result.id, expected);
         assert_eq!(other.other_id, expected_other);
@@ -496,7 +507,7 @@ pub(crate) mod test {
             OTHER_TAG, SERVICE_TAG
         );
 
-        i.provide(
+        i.provide_tag(
             &SERVICE_TAG,
             TestServiceProvider::new(fake::uuid::UUIDv4.fake()),
         )
@@ -504,7 +515,7 @@ pub(crate) mod test {
 
         // Override a type that doesn't have any instances yet
         let result = i
-            .replace_with(
+            .replace_tag_with(
                 &OTHER_TAG,
                 OtherServiceProvider::new(fake::uuid::UUIDv4.fake()),
             )
@@ -525,10 +536,10 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        let result = i.consume(&SERVICE_TAG).await?;
+        let result = i.consume_tag(&SERVICE_TAG).await?;
 
         assert_eq!(result.id, expected);
 
@@ -546,12 +557,12 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        let _borrow = i.get(&SERVICE_TAG).await?;
+        let _borrow = i.get_tag(&SERVICE_TAG).await?;
 
-        let result = i.consume(&SERVICE_TAG).await;
+        let result = i.consume_tag(&SERVICE_TAG).await;
 
         assert!(result.is_err());
 
@@ -565,17 +576,17 @@ pub(crate) mod test {
         let expected: String = fake::uuid::UUIDv4.fake();
         let expected_other: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        i.provide(
+        i.provide_tag(
             &OTHER_TAG,
             OtherServiceProvider::new(expected_other.clone()),
         )
         .await?;
 
-        let result = i.consume(&SERVICE_TAG).await?;
-        let other = i.consume(&OTHER_TAG).await?;
+        let result = i.consume_tag(&SERVICE_TAG).await?;
+        let other = i.consume_tag(&OTHER_TAG).await?;
 
         assert_eq!(result.id, expected);
         assert_eq!(other.other_id, expected_other);
@@ -599,13 +610,13 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
         // Trigger the Provider so that the value is Pending below
-        i.get(&SERVICE_TAG).await?;
+        i.get_tag(&SERVICE_TAG).await?;
 
-        let result = i.consume(&SERVICE_TAG).await?;
+        let result = i.consume_tag(&SERVICE_TAG).await?;
 
         assert_eq!(result.id, expected);
 
@@ -622,7 +633,7 @@ pub(crate) mod test {
         let i = Inject::default();
 
         let result = i
-            .consume(&SERVICE_TAG)
+            .consume_tag(&SERVICE_TAG)
             .await
             .expect_err("Did not error as expected");
 
@@ -639,10 +650,10 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        if let Some(result) = i.consume_opt(&SERVICE_TAG).await? {
+        if let Some(result) = i.consume_tag_opt(&SERVICE_TAG).await? {
             assert_eq!(result.id, expected);
 
             assert!(
@@ -660,7 +671,7 @@ pub(crate) mod test {
     async fn test_consume_opt_not_found() -> Result<()> {
         let i = Inject::default();
 
-        let result = i.consume_opt(&SERVICE_TAG).await?;
+        let result = i.consume_tag_opt(&SERVICE_TAG).await?;
 
         if result.is_some() {
             panic!("did not return a None as expected")
@@ -676,17 +687,17 @@ pub(crate) mod test {
         let initial: String = fake::uuid::UUIDv4.fake();
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(initial.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(initial.clone()))
             .await?;
 
-        i.modify(&SERVICE_TAG, |mut t| {
+        i.modify_tag(&SERVICE_TAG, |mut t| {
             t.id.clone_from(&expected);
 
             Ok(t)
         })
         .await?;
 
-        let result = i.get(&SERVICE_TAG).await?;
+        let result = i.get_tag(&SERVICE_TAG).await?;
 
         assert_eq!(result.id, expected);
 
@@ -698,7 +709,7 @@ pub(crate) mod test {
         let i = Inject::default();
 
         let result = i
-            .modify(&SERVICE_TAG, |mut t| {
+            .modify_tag(&SERVICE_TAG, |mut t| {
                 t.id = "test".to_string();
 
                 Ok(t)
@@ -720,13 +731,13 @@ pub(crate) mod test {
         let initial: String = fake::uuid::UUIDv4.fake();
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(initial.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(initial.clone()))
             .await?;
 
-        let _borrow = i.get(&SERVICE_TAG).await?;
+        let _borrow = i.get_tag(&SERVICE_TAG).await?;
 
         let result = i
-            .modify(&SERVICE_TAG, |mut t| {
+            .modify_tag(&SERVICE_TAG, |mut t| {
                 t.id.clone_from(&expected);
 
                 Ok(t)
@@ -744,10 +755,10 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        i.remove(&SERVICE_TAG).await?;
+        i.remove_tag(&SERVICE_TAG).await?;
 
         assert!(
             !i.0.read().await.contains_key(&Key::from_tag(&SERVICE_TAG)),
@@ -763,13 +774,13 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
         // Trigger the Provider so that the value is Pending below
-        i.get(&SERVICE_TAG).await?;
+        i.get_tag(&SERVICE_TAG).await?;
 
-        i.remove(&SERVICE_TAG).await?;
+        i.remove_tag(&SERVICE_TAG).await?;
 
         assert!(
             !i.0.read().await.contains_key(&Key::from_tag(&SERVICE_TAG)),
@@ -784,7 +795,7 @@ pub(crate) mod test {
         let i = Inject::default();
 
         let result = i
-            .remove(&SERVICE_TAG)
+            .remove_tag(&SERVICE_TAG)
             .await
             .expect_err("Did not error as expected");
 
@@ -801,15 +812,15 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.inject(&SERVICE_TAG, TestService::new(expected.clone()))
+        i.inject_tag(&SERVICE_TAG, TestService::new(expected.clone()))
             .await?;
 
-        let service = i.eject(&SERVICE_TAG).await?;
+        let service = i.eject_tag(&SERVICE_TAG).await?;
 
         // This is commented out because it demonstrates a case prevented by the compiler - usage
         // of the container after ejection.
         //
-        // i.get(&SERVICE_TAG).await?;
+        // i.get_tag(&SERVICE_TAG).await?;
 
         assert_eq!(service.id, expected);
 
@@ -822,10 +833,10 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        let service = i.eject(&SERVICE_TAG).await?;
+        let service = i.eject_tag(&SERVICE_TAG).await?;
 
         assert_eq!(service.id, expected);
 
@@ -837,7 +848,7 @@ pub(crate) mod test {
         let i = Inject::default();
 
         let result = i
-            .eject(&SERVICE_TAG)
+            .eject_tag(&SERVICE_TAG)
             .await
             .expect_err("Did not error as expected");
 
@@ -854,12 +865,12 @@ pub(crate) mod test {
 
         let expected: String = fake::uuid::UUIDv4.fake();
 
-        i.provide(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
+        i.provide_tag(&SERVICE_TAG, TestServiceProvider::new(expected.clone()))
             .await?;
 
-        let _borrow = i.get(&SERVICE_TAG).await?;
+        let _borrow = i.get_tag(&SERVICE_TAG).await?;
 
-        let result = i.eject(&SERVICE_TAG).await;
+        let result = i.eject_tag(&SERVICE_TAG).await;
 
         assert!(result.is_err());
 

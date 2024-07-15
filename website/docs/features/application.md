@@ -6,7 +6,7 @@ sidebar_position: 2
 
 To manage the lifecycle of an application, the top-level `nakago::Application` struct provides a set of lifecycle hooks and an injection container that can be used to initialize and start the application.
 
-Applications carry a reference to the custom `Config` type that your project uses, and an optional Tag to refer to it. This Config borrows [Axum](https://github.com/tokio-rs/axum)'s [FromRef](https://docs.rs/axum/latest/axum/extract/trait.FromRef.html) strategy to allow the framework to find pieces of the config it needs embedded in the custom structure that works best for your program.
+Applications carry a reference to the custom `Config` type that your project uses (and an optional Tag to refer to it if you need multiple Config instances). This Config borrows [Axum](https://github.com/tokio-rs/axum)'s [FromRef](https://docs.rs/axum/latest/axum/extract/trait.FromRef.html) strategy to allow the framework to find pieces of the config it needs embedded in the custom structure that works best for your program.
 
 ```rust
 /// Server Config

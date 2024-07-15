@@ -43,11 +43,11 @@ async fn test_user_get_current_simple() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
-    let users = utils.app.get(&users::SERVICE).await?;
+    let users = utils.app.get::<Box<dyn users::Service>>().await?;
     let user = users.create(&username).await?;
 
     // Create a sample RoleGrant to test the relation
-    let role_grants = utils.app.get(&role_grants::SERVICE).await?;
+    let role_grants = utils.app.get::<Box<dyn role_grants::Service>>().await?;
     let role_grant = role_grants
         .create(&CreateRoleGrantInput {
             user_id: user.id.clone(),
@@ -131,11 +131,11 @@ async fn test_user_get_or_create_current_existing() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a user
-    let users = utils.app.get(&users::SERVICE).await?;
+    let users = utils.app.get::<Box<dyn users::Service>>().await?;
     let user = users.get_or_create(&username).await?;
 
     // Create a sample RoleGrant to test the relation
-    let role_grants = utils.app.get(&role_grants::SERVICE).await?;
+    let role_grants = utils.app.get::<Box<dyn role_grants::Service>>().await?;
     let role_grant = role_grants
         .create(&CreateRoleGrantInput {
             user_id: user.id.clone(),
@@ -204,7 +204,7 @@ async fn test_user_get_or_create_current_create() -> Result<()> {
     let user_id = json_user["id"].as_str().expect("No user id found");
 
     // Ensure that a related Profile was created inline
-    let profiles = utils.app.get(&profiles::SERVICE).await?;
+    let profiles = utils.app.get::<Box<dyn profiles::Service>>().await?;
     profiles
         .get_by_user_id(user_id, &false)
         .await?
@@ -262,11 +262,11 @@ async fn test_user_update_current() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
-    let users = utils.app.get(&users::SERVICE).await?;
+    let users = utils.app.get::<Box<dyn users::Service>>().await?;
     let user = users.get_or_create(&username).await?;
 
     // Create a sample RoleGrant to test the relation
-    let role_grants = utils.app.get(&role_grants::SERVICE).await?;
+    let role_grants = utils.app.get::<Box<dyn role_grants::Service>>().await?;
     let role_grant = role_grants
         .create(&CreateRoleGrantInput {
             user_id: user.id.clone(),

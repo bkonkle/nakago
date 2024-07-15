@@ -23,4 +23,4 @@ pub mod authz;
 #[macro_use]
 extern crate anyhow;
 
-pub use config::{Config, CONFIG};
+pub use config::Config;

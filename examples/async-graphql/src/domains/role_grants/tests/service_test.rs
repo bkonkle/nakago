@@ -1,14 +1,14 @@
 use anyhow::Result;
 use fake::{Fake, Faker};
 use nakago::{inject, Inject};
-use nakago_sea_orm::{connection, CONNECTION};
+use nakago_sea_orm::connection;
 use pretty_assertions::assert_eq;
-use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Transaction};
+use sea_orm::{DatabaseBackend, DatabaseConnection, MockDatabase, MockExecResult, Transaction};
 
 use crate::domains::{
     role_grants::{
         model::{CreateRoleGrantInput, RoleGrant},
-        service::{self, SERVICE},
+        service::{self, Service},
     },
     users::model::User,
 };
@@ -16,10 +16,11 @@ use crate::domains::{
 async fn setup(db: MockDatabase) -> inject::Result<Inject> {
     let i = Inject::default();
 
-    i.provide(&CONNECTION, connection::ProvideMock::new(db))
+    i.provide::<DatabaseConnection>(connection::ProvideMock::new(db))
         .await?;
 
-    i.provide(&SERVICE, service::Provide::default()).await?;
+    i.provide::<Box<dyn Service>>(service::Provide::default())
+        .await?;
 
     Ok(i)
 }
@@ -42,14 +43,14 @@ async fn test_role_grants_service_get() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&SERVICE).await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service.get(&grant.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&CONNECTION).await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, Some(grant));
 
@@ -84,7 +85,7 @@ async fn test_role_grants_service_create() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&SERVICE).await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     let result = service
         .create(&CreateRoleGrantInput {
@@ -98,7 +99,7 @@ async fn test_role_grants_service_create() -> Result<()> {
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&CONNECTION).await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     assert_eq!(result, grant);
 
@@ -142,14 +143,14 @@ async fn test_role_grants_service_delete() -> Result<()> {
     )
     .await?;
 
-    let service = i.get(&SERVICE).await?;
+    let service = i.get::<Box<dyn Service>>().await?;
 
     service.delete(&grant.id).await?;
 
     // Destroy the service to clean up the reference count
     drop(service);
 
-    let db = i.eject(&CONNECTION).await?;
+    let db = i.eject::<DatabaseConnection>().await?;
 
     // Check the transaction log
     assert_eq!(
