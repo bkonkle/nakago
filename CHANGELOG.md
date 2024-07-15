@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `nakago-axum` - Changed the `Inject` extractor to be a wrapper around the Nakago dependency injection container, rather than a direct extractor. This makes it much more convenient to use it in an idiomatic way with Axum.
+- `nakago-async-graphql` - Updated `nakago-axum`
+- `nakago-ws` - Updated `nakago-axum`
 - `nakago-examples-async-graphql` - Updated the example to use the new `Inject` extractor.
 
 ## [0.20.0]
