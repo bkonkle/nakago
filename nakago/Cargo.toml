@@ -1,6 +1,6 @@
 [package]
 name = "nakago"
-version = "0.20.0"
+version = "0.30.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A lightweight Rust framework for sharp services 😎"
@@ -15,7 +15,6 @@ async-trait = "0.1"
 backtrace = "0.3"
 crossterm = "0.27"
 derive-new = "0.6"
-figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 fnv = "1.0.7"
 futures = "0.3.28"
 log = "0.4"

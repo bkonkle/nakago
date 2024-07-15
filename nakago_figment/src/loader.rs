@@ -12,6 +12,9 @@ pub trait Loader: Any + Send + Sync {
     fn load(&self, figment: Figment) -> Figment;
 }
 
+/// Loaders is a convenience type for a collection of Loader instances
+pub type Loaders = Vec<Arc<dyn Loader>>;
+
 /// Config is the final loaded result
 pub trait Config:
     Any + Clone + Debug + Default + Serialize + Send + Sync + for<'a> Deserialize<'a>
@@ -20,13 +23,13 @@ pub trait Config:
 
 /// An extensible Config loader based on Figment
 pub struct LoadAll<C: Config> {
-    loaders: Vec<Arc<dyn Loader>>,
+    loaders: Loaders,
     _phantom: PhantomData<C>,
 }
 
 impl<C: Config> LoadAll<C> {
     /// Create a new Config instance with the given loaders
-    pub fn new(loaders: Vec<Arc<dyn Loader>>) -> Self {
+    pub fn new(loaders: Loaders) -> Self {
         Self {
             loaders,
             _phantom: Default::default(),
@@ -70,17 +73,12 @@ impl<C: Config> LoadAll<C> {
 pub(crate) mod test {
     use anyhow::Result;
 
-    use crate::Tag;
-
     use super::*;
 
     #[derive(Default, Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
     pub struct Config {}
 
     impl crate::Config for Config {}
-
-    /// Tag(app::Config)
-    pub const CONFIG: Tag<Config> = Tag::new("app::Config");
 
     #[tokio::test]
     async fn test_load_all_success() -> Result<()> {

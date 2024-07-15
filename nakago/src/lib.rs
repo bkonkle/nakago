@@ -1,28 +1,35 @@
 //! # Nakago: The lightweight Rust framework for sharp services 😎
 #![forbid(unsafe_code)]
 
-/// Dependency Injection
-pub mod inject;
+/// The dependency injection container
+pub mod container;
 
-/// Configuration utilities based on Figment
-pub mod config;
+/// Errors
+pub mod errors;
 
-/// Application initialization
-pub mod app;
+/// Keys
+pub mod key;
 
-/// Lifecycle hooks
-pub mod lifecycle;
+/// Tagged dependencies
+pub mod tag;
 
-/// Utils
-pub mod utils;
+/// TypeId Dependencies
+pub mod type_id;
 
-pub use app::Application;
-pub use config::Config;
-pub use inject::{
-    hooks, provider, to_hook_error, to_provider_error, Dependency, Error as InjectError, Hook,
-    Inject, Provider, Result as InjectResult, Tag,
-};
-pub use lifecycle::EventType;
+/// Provider
+pub mod provider;
+
+/// Injector
+pub mod injector;
+
+pub use container::Inject;
+pub use errors::{from_provider_error, Error, Result};
+pub use injector::{Dependency, Pending};
+pub use key::{Id, Key};
+pub use provider::{to_provider_error, Provider};
+pub use tag::Tag;
+
+pub(crate) use injector::Injector;
 
 #[doc(hidden)]
 pub use async_trait;

@@ -1,6 +1,6 @@
 [package]
 name = "nakago-examples-async-graphql"
-version = "0.21.0"
+version = "0.3.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A lightweight Rust framework for sharp services 😎"
@@ -33,7 +33,7 @@ figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
 hyper = "1.0"
 log = "0.4"
-nakago = "0.20"
+nakago = "0.30"
 nakago-async-graphql = "0.21"
 nakago-axum = "0.21"
 nakago-derive = "0.20"

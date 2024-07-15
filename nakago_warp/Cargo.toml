@@ -1,6 +1,6 @@
 [package]
 name = "nakago-warp"
-version = "0.20.0"
+version = "0.30.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A Warp HTTP routes integration for Nakago"
@@ -29,7 +29,7 @@ futures-util = { version = "0.3", default-features = false, features = [
 hyper = "1.0"
 jsonwebtoken = "9.0"
 log = "0.4"
-nakago = "0.20"
+nakago = "0.30"
 nakago-derive = "0.20"
 pretty_env_logger = "0.5"
 rand = "0.8"

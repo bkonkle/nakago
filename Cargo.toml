@@ -2,32 +2,35 @@
 resolver = "2"
 members = [
     "nakago",
-    "nakago_derive",
+    "nakago_async_graphql",
     "nakago_axum",
+    "nakago_derive",
+    "nakago_figment",
+    "nakago_sea_orm",
     "nakago_warp",
     "nakago_ws",
-    "nakago_sea_orm",
-    "nakago_async_graphql",
     "examples/*",
 ]
 default-members = [
     "nakago",
-    "nakago_derive",
+    "nakago_async_graphql",
     "nakago_axum",
+    "nakago_derive",
+    "nakago_figment",
+    "nakago_sea_orm",
     "nakago_warp",
     "nakago_ws",
-    "nakago_sea_orm",
-    "nakago_async_graphql",
 ]
 
 [patch.crates-io]
 nakago = { path = "./nakago" }
+nakago-async-graphql = { path = "./nakago_async_graphql" }
 nakago-axum = { path = "./nakago_axum" }
+nakago-derive = { path = "./nakago_derive" }
+nakago-figment = { path = "./nakago_figment" }
+nakago-sea-orm = { path = "./nakago_sea_orm" }
 nakago-warp = { path = "./nakago_warp" }
 nakago-ws = { path = "./nakago_ws" }
-nakago-derive = { path = "./nakago_derive" }
-nakago-sea-orm = { path = "./nakago_sea_orm" }
-nakago-async-graphql = { path = "./nakago_async_graphql" }
 
 [profile.release]
 strip = true      # Automatically strip symbols from the binary.

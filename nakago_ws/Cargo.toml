@@ -1,6 +1,6 @@
 [package]
 name = "nakago-ws"
-version = "0.21.0"
+version = "0.30.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "Websocket utils for Nakago"
@@ -25,7 +25,7 @@ futures = "0.3"
 hyper = "1.0"
 jsonwebtoken = "9.0"
 log = "0.4"
-nakago = "0.20"
+nakago = "0.30"
 nakago-axum = "0.21"
 nakago-derive = "0.20"
 mockall = "0.12"
@@ -40,7 +40,6 @@ tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 tracing = "0.1"
 ulid = "1.0"
-warp = "0.3"
 
 [dev-dependencies]
 mockall = "0.12"
