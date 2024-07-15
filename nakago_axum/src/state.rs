@@ -1,6 +1,8 @@
 use std::{
+    any::Any,
     convert::Infallible,
     ops::{Deref, DerefMut},
+    sync::Arc,
 };
 
 use async_trait::async_trait;
@@ -27,31 +29,30 @@ impl DerefMut for State {
     }
 }
 
-/// An extractor for the injection container
-pub struct Inject(pub nakago::Inject);
+/// An Axum extractor to inject dependencies from Nakago
+#[derive(new)]
+pub struct Inject<T> {
+    inner: Arc<T>,
+}
+
+impl<T> Deref for Inject<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
 
 #[async_trait]
-impl FromRequestParts<State> for Inject {
+impl<T: Send + Sync + Any> FromRequestParts<State> for Inject<T> {
     type Rejection = Infallible;
 
     async fn from_request_parts(
         _parts: &mut Parts,
         state: &State,
     ) -> Result<Self, Self::Rejection> {
-        Ok(Self(state.i.clone()))
-    }
-}
+        let t = state.get::<T>().await.unwrap();
 
-impl Deref for Inject {
-    type Target = nakago::Inject;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Inject {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        Ok(Self::new(t))
     }
 }
