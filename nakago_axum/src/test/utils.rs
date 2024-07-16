@@ -1,45 +1,85 @@
-use std::{default::Default, future::IntoFuture, net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+    default::Default, future::IntoFuture, net::SocketAddr, panic, sync::Arc, time::Duration,
+};
 
+use axum::Router;
 use biscuit::{
     jwa::SignatureAlgorithm,
     jws::{RegisteredHeader, Secret},
     ClaimsSet, Empty, RegisteredClaims, SingleOrMultiple, JWT,
 };
-use nakago::{self, hooks, inject, utils::FromRef};
-use tokio::time::sleep;
+use nakago::{self, Tag};
+use nakago_figment::FromRef;
+use tokio::{net::TcpListener, time::sleep};
+use tracing_subscriber::prelude::*;
 
-use crate::{auth, AxumApplication, Config};
+use crate::{auth, utils::handle_panic, Config};
 
 use super::http::Http;
 
 /// Common test utils
-pub struct Utils<C>
-where
-    C: nakago::Config,
-{
-    /// The Application instance
-    pub app: AxumApplication<C>,
+pub struct Utils<C: nakago_figment::Config> {
+    /// The Nakago Inject container
+    pub i: nakago::Inject,
 
     /// The Address the server is listening on
     pub addr: SocketAddr,
 
     /// The test HTTP Request helper
     pub http: Arc<Http>,
+
+    /// The config tag to use
+    pub config_tag: Option<&'static Tag<C>>,
 }
 
-impl<C> Utils<C>
-where
-    C: nakago::Config,
-    Config: FromRef<C>,
-    auth::Config: FromRef<C>,
-{
+impl<C: nakago_figment::Config> Utils<C> {
     /// Initialize a new set of utils
     pub async fn init(
-        app: AxumApplication<C>,
+        i: nakago::Inject,
         config_path: &str,
+        config_tag: Option<&'static Tag<C>>,
         base_url: &str,
-    ) -> hooks::Result<Self> {
-        let (server, addr) = app.run(Some(config_path.into())).await?;
+        router: Router,
+    ) -> nakago::Result<Self>
+    where
+        Config: FromRef<C>,
+    {
+        nakago_figment::loaders::Init::<C>::default()
+            .with_path(config_path.into())
+            .init(&i)
+            .await?;
+
+        tracing_subscriber::registry()
+            .with(tracing_subscriber::EnvFilter::new(
+                std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()),
+            ))
+            .with(tracing_subscriber::fmt::layer())
+            .init();
+
+        // Process setup
+        panic::set_hook(Box::new(handle_panic));
+
+        let config = if let Some(tag) = config_tag {
+            i.get_tag(tag).await?
+        } else {
+            i.get::<C>().await?
+        };
+
+        let http = Config::from_ref(&*config);
+
+        let addr: SocketAddr = format!("0.0.0.0:{}", http.port)
+            .parse()
+            .expect("Unable to parse bind address");
+
+        let listener = TcpListener::bind(&addr)
+            .await
+            .unwrap_or_else(|_| panic!("Unable to bind to address: {}", addr));
+
+        let actual_addr = listener
+            .local_addr()
+            .map_err(|e| nakago::Error::Any(Arc::new(e.into())))?;
+
+        let server = axum::serve(listener, router);
 
         // Spawn the server in the background
         tokio::spawn(server.into_future());
@@ -53,12 +93,25 @@ where
             base_url = base_url,
         )));
 
-        Ok(Utils { app, addr, http })
+        Ok(Utils {
+            i,
+            addr: actual_addr,
+            http,
+            config_tag,
+        })
     }
 
     /// Create a test JWT token with a dummy secret
-    pub async fn create_jwt(&self, username: &str) -> inject::Result<String> {
-        let config = self.app.get_config().await?;
+    pub async fn create_jwt(&self, username: &str) -> nakago::Result<String>
+    where
+        auth::Config: FromRef<C>,
+    {
+        let config = if let Some(tag) = self.config_tag {
+            self.i.get_tag(tag).await?
+        } else {
+            self.i.get::<C>().await?
+        };
+
         let auth = auth::Config::from_ref(&*config);
 
         let expected_claims = ClaimsSet::<Empty> {

@@ -5,8 +5,9 @@ use biscuit::{
     jwk::{AlgorithmParameters, JWKSet, JWK},
     jws::Secret,
 };
-use nakago::{self, provider, utils::FromRef, Inject, Provider, Tag};
+use nakago::{self, provider, Inject, Provider, Tag};
 use nakago_derive::Provider;
+use nakago_figment::FromRef;
 use thiserror::Error;
 
 use super::Config;
@@ -97,12 +98,12 @@ pub enum ClientError {
 /// **Depends on:**
 ///   - `<Config>` - requires that `C` fulfills the `Config: FromRef<C>` constraint
 #[derive(Default)]
-pub struct Provide<C: nakago::Config> {
+pub struct Provide<C: nakago_figment::Config> {
     config_tag: Option<&'static Tag<C>>,
     _phantom: PhantomData<C>,
 }
 
-impl<C: nakago::Config> Provide<C> {
+impl<C: nakago_figment::Config> Provide<C> {
     /// Create a new instance of Provide
     pub fn new(config_tag: Option<&'static Tag<C>>) -> Self {
         Self {
@@ -122,7 +123,7 @@ impl<C: nakago::Config> Provide<C> {
 
 #[Provider]
 #[async_trait]
-impl<C: nakago::Config> Provider<JWKSet<biscuit::Empty>> for Provide<C>
+impl<C: nakago_figment::Config> Provider<JWKSet<biscuit::Empty>> for Provide<C>
 where
     Config: FromRef<C>,
 {

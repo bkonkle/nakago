@@ -29,8 +29,9 @@ figment = { version = "0.10", features = ["env"] }
 hyper = "1.0"
 log = "0.4"
 nakago = "0.30"
-nakago-axum = "0.21"
+nakago-axum = "0.30"
 nakago-derive = "0.20"
+nakago-figment = "0.30"
 pretty_env_logger = "0.5"
 rand = "0.8"
 reqwest = { version = "0.12", features = ["json"] }

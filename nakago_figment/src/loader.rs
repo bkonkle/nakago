@@ -1,4 +1,4 @@
-use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf, sync::Arc};
+use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf};
 
 use figment::{
     providers::{Format, Json, Serialized, Toml, Yaml},
@@ -6,14 +6,13 @@ use figment::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::loaders::Loaders;
+
 /// A Loader uses hooks to augment the Config loaded for the application
 pub trait Loader: Any + Send + Sync {
     /// Apply transformations to the Figment provider
     fn load(&self, figment: Figment) -> Figment;
 }
-
-/// Loaders is a convenience type for a collection of Loader instances
-pub type Loaders = Vec<Arc<dyn Loader>>;
 
 /// Config is the final loaded result
 pub trait Config:

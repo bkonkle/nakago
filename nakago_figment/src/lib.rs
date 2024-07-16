@@ -4,7 +4,12 @@
 /// The extensible Config Loader
 pub mod loader;
 
-/// Config init routines
-pub mod init;
+/// Config loader init helpers
+pub mod loaders;
 
-pub use loader::{Config, Loader, Loaders};
+/// The FromRef Utility
+pub mod from_ref;
+
+pub use from_ref::FromRef;
+pub use loader::{Config, Loader};
+pub use loaders::Loaders;

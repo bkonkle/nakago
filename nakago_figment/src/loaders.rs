@@ -1,60 +1,55 @@
 use std::{marker::PhantomData, path::PathBuf, sync::Arc};
 
+use derive_new::new;
 use nakago::{Error, Inject, Result, Tag};
 
-use crate::{loader::LoadAll, Config, Loaders};
+use crate::{loader::LoadAll, Config, Loader};
 
-/// Add Loaders
-/// ===========
+/// Loaders is a convenience type for a collection of Loader instances
+pub type Loaders = Vec<Arc<dyn Loader>>;
 
-/// Add the given Config Loaders to the stack currently in the injection container.
-pub async fn add_loaders(i: &Inject, loaders: Loaders) -> Result<()> {
-    add_loaders_impl(i, loaders, None).await
-}
-
-/// Add the given Config Loaders to the stack currently in the injection container for the given
-/// tag.
-pub async fn add_loaders_with_tag(
-    i: &Inject,
-    loaders: Loaders,
-    tag: &'static Tag<Loaders>,
-) -> Result<()> {
-    add_loaders_impl(i, loaders, Some(tag)).await
-}
-
-async fn add_loaders_impl(
-    i: &Inject,
-    loaders: Loaders,
+/// Add the given Config Loaders to the stack currently in the Inject container
+#[derive(Default, new)]
+pub struct Add {
     tag: Option<&'static Tag<Loaders>>,
-) -> Result<()> {
-    let current_result = match tag {
-        Some(tag) => i.consume_tag(tag).await,
-        None => i.consume::<Loaders>().await,
-    };
-
-    let current = match current_result {
-        Ok(current) => {
-            let mut updated = current.clone();
-
-            // Add the given ConfigLoaders to the stack
-            for loader in loaders.iter() {
-                updated.push(loader.clone());
-            }
-
-            updated
-        }
-        Err(_) => loaders.clone(),
-    };
-
-    i.inject::<Loaders>(current).await?;
-
-    Ok(())
 }
 
-/// Init
-/// ====
+impl Add {
+    /// Use a Tag when injecting the Loaders
+    pub fn with_tag(self, tag: &'static Tag<Loaders>) -> Self {
+        Self { tag: Some(tag) }
+    }
 
-#[derive(Default)]
+    /// Add the given Config Loaders to the stack currently in the Inject container
+    pub async fn loaders(&self, i: &Inject, loaders: Loaders) -> Result<()> {
+        let current_result = match self.tag {
+            Some(tag) => i.consume_tag(tag).await,
+            None => i.consume::<Loaders>().await,
+        };
+
+        let current = match current_result {
+            Ok(current) => {
+                let mut updated = current.clone();
+
+                // Add the given ConfigLoaders to the stack
+                for loader in loaders.iter() {
+                    updated.push(loader.clone());
+                }
+
+                updated
+            }
+            Err(_) => loaders.clone(),
+        };
+
+        i.inject::<Loaders>(current).await?;
+
+        Ok(())
+    }
+}
+
+/// Initialize the Config by running the Config Loaders and injecting the Config into the container,
+/// optionally using a custom path.
+#[derive(Default, new)]
 pub struct Init<C: Config> {
     custom_path: Option<PathBuf>,
     loaders_tag: Option<&'static Tag<Loaders>>,
@@ -63,20 +58,6 @@ pub struct Init<C: Config> {
 }
 
 impl<C: Config> Init<C> {
-    /// Create a new Init instance
-    pub fn new(
-        custom_path: Option<PathBuf>,
-        loaders_tag: Option<&'static Tag<Loaders>>,
-        config_tag: Option<&'static Tag<C>>,
-    ) -> Self {
-        Self {
-            custom_path,
-            config_tag,
-            loaders_tag,
-            _phantom: PhantomData,
-        }
-    }
-
     /// Use a custom path when loading the Config
     pub fn with_path(self, custom_path: PathBuf) -> Self {
         Self {
@@ -154,7 +135,7 @@ pub(crate) mod test {
 
         let loader: Arc<dyn Loader> = Arc::new(TestLoader::default());
 
-        add_loaders(&i, vec![loader]).await?;
+        Add::default().loaders(&i, vec![loader]).await?;
 
         let results = i.get::<Loaders>().await?;
         assert_eq!(results.len(), 1);
@@ -168,7 +149,10 @@ pub(crate) mod test {
 
         let loader: Arc<dyn Loader> = Arc::new(TestLoader::default());
 
-        add_loaders_with_tag(&i, vec![loader], &LOADERS).await?;
+        Add::default()
+            .with_tag(&LOADERS)
+            .loaders(&i, vec![loader])
+            .await?;
 
         let results = i.get_tag(&LOADERS).await?;
         assert_eq!(results.len(), 1);
@@ -186,7 +170,7 @@ pub(crate) mod test {
 
         i.inject::<Loaders>(existing).await?;
 
-        add_loaders(&i, vec![loader]).await?;
+        Add::default().loaders(&i, vec![loader]).await?;
 
         let results = i.get::<Loaders>().await?;
         assert_eq!(results.len(), 2);
@@ -204,7 +188,10 @@ pub(crate) mod test {
 
         i.inject_tag(&LOADERS, existing).await?;
 
-        add_loaders_with_tag(&i, vec![loader], &LOADERS).await?;
+        Add::default()
+            .with_tag(&LOADERS)
+            .loaders(&i, vec![loader])
+            .await?;
 
         let results = i.get_tag(&LOADERS).await?;
         assert_eq!(results.len(), 2);

@@ -1,3 +1,7 @@
+use std::{io, panic::PanicInfo};
+
+use backtrace::Backtrace;
+use crossterm::{execute, style::Print};
 use serde::{Deserialize, Serialize};
 
 /// A paginated response for an entity
@@ -56,4 +60,30 @@ impl<Model> ManyResponse<Model> {
 pub enum Ordering<T> {
     Asc(T),
     Desc(T),
+}
+
+/// A generic function to log stacktraces on panic
+pub fn handle_panic(info: &PanicInfo<'_>) {
+    if cfg!(debug_assertions) {
+        let location = info.location().unwrap();
+
+        let msg = match info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => match info.payload().downcast_ref::<String>() {
+                Some(s) => &s[..],
+                None => "Box<Any>",
+            },
+        };
+
+        let stacktrace: String = format!("{:?}", Backtrace::new()).replace('\n', "\n\r");
+
+        execute!(
+            io::stdout(),
+            Print(format!(
+                "thread '<unnamed>' panicked at '{}', {}\n\r{}",
+                msg, location, stacktrace
+            ))
+        )
+        .unwrap();
+    }
 }
