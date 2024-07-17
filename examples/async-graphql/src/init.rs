@@ -1,8 +1,7 @@
-use nakago::{inject, EventType};
-use nakago_axum::{
-    auth::{jwks, validator, Jwks, Validator},
-    AxumApplication,
-};
+use std::path::PathBuf;
+
+use nakago::{self, Inject};
+use nakago_axum::auth::{jwks, validator, Jwks, Validator};
 use oso::Oso;
 use sea_orm::DatabaseConnection;
 
@@ -12,40 +11,38 @@ use crate::{
     http, Config,
 };
 
-/// Create a default AxumApplication instance
-pub async fn app() -> inject::Result<AxumApplication<Config>> {
-    let mut app = AxumApplication::default();
+/// Create a dependency injection container for the top-level application
+pub async fn app(config_path: Option<PathBuf>) -> nakago::Result<Inject> {
+    let i = Inject::default();
 
-    // Dependencies
-
-    app.provide::<Jwks>(jwks::Provide::<Config>::new(None))
+    i.provide::<Jwks>(jwks::Provide::<Config>::default())
         .await?;
 
-    app.provide::<Validator>(validator::Provide::default())
+    i.provide::<Validator>(validator::Provide::default())
         .await?;
 
-    app.provide::<DatabaseConnection>(nakago_sea_orm::connection::Provide::<Config>::new())
+    i.provide::<DatabaseConnection>(nakago_sea_orm::connection::Provide::<Config>::new())
         .await?;
 
-    app.provide::<Oso>(ProvideOso::default()).await?;
+    i.provide::<Oso>(ProvideOso::default()).await?;
 
-    // Loading
+    // Add config loaders before the Config is initialized
+    nakago_axum::config::add_default_loaders(&i).await?;
+    nakago_sea_orm::config::add_default_loaders(&i).await?;
 
-    app.on(&EventType::Load, nakago_axum::config::AddLoaders::default());
+    // Initialize the Config
+    nakago_figment::Init::<Config>::default()
+        .maybe_with_path(config_path)
+        .init(&i)
+        .await?;
 
-    app.on(
-        &EventType::Load,
-        nakago_sea_orm::config::AddLoaders::default(),
-    );
+    // Load phase
+    authz::load(&i).await?;
+    http::router::load(&i).await?;
+    graphql::load(&i).await?;
 
-    app.on(&EventType::Load, authz::Load::default());
-    app.on(&EventType::Load, graphql::Load::default());
-    app.on(&EventType::Load, http::Load::default());
+    // Init phase
+    graphql::init(&i).await?;
 
-    // Initialization
-
-    app.on(&EventType::Init, graphql::Init::default());
-    app.on(&EventType::Init, http::Init::default());
-
-    Ok(app)
+    Ok(i)
 }

@@ -1,5 +1,4 @@
 use figment::{providers::Env, Figment};
-use nakago::config;
 use serde::{Deserialize, Serialize};
 
 /// Auth config
@@ -39,7 +38,7 @@ impl Default for Config {
 #[derive(Default)]
 pub struct Loader {}
 
-impl config::Loader for Loader {
+impl nakago_figment::Loader for Loader {
     fn load(&self, figment: Figment) -> Figment {
         // Split the Auth variables
         figment.merge(

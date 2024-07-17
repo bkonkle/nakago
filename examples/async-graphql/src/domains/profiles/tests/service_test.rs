@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_graphql::MaybeUndefined::Undefined;
 use fake::{Fake, Faker};
-use nakago::{inject, Inject};
+use nakago::Inject;
 use nakago_axum::utils::ManyResponse;
 use nakago_sea_orm::connection;
 use pretty_assertions::assert_eq;
@@ -17,7 +17,7 @@ use crate::domains::{
     users::model::User,
 };
 
-async fn setup(db: MockDatabase) -> inject::Result<Inject> {
+async fn setup(db: MockDatabase) -> nakago::Result<Inject> {
     let i = Inject::default();
 
     i.provide::<DatabaseConnection>(connection::ProvideMock::new(db))

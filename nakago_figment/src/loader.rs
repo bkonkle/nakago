@@ -1,23 +1,16 @@
-use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf};
+use std::{any::Any, marker::PhantomData, path::PathBuf};
 
 use figment::{
     providers::{Format, Json, Serialized, Toml, Yaml},
     Figment,
 };
-use serde::{Deserialize, Serialize};
 
-use crate::loaders::Loaders;
+use crate::{loaders::Loaders, Config};
 
 /// A Loader uses hooks to augment the Config loaded for the application
 pub trait Loader: Any + Send + Sync {
     /// Apply transformations to the Figment provider
     fn load(&self, figment: Figment) -> Figment;
-}
-
-/// Config is the final loaded result
-pub trait Config:
-    Any + Clone + Debug + Default + Serialize + Send + Sync + for<'a> Deserialize<'a>
-{
 }
 
 /// An extensible Config loader based on Figment
@@ -71,6 +64,7 @@ impl<C: Config> LoadAll<C> {
 #[cfg(test)]
 pub(crate) mod test {
     use anyhow::Result;
+    use serde::{Deserialize, Serialize};
 
     use super::*;
 

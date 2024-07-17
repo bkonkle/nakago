@@ -10,6 +10,10 @@ pub mod loaders;
 /// The FromRef Utility
 pub mod from_ref;
 
+/// The Config trait
+pub mod config;
+
+pub use config::Config;
 pub use from_ref::FromRef;
-pub use loader::{Config, Loader};
-pub use loaders::Loaders;
+pub use loader::Loader;
+pub use loaders::{Init, Loaders};

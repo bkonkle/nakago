@@ -1,43 +1,30 @@
 use async_graphql::dataloader::DataLoader;
-use async_trait::async_trait;
-use nakago::{hooks, Hook, Inject};
+use nakago::Inject;
 
 use crate::domains::graphql::SchemaBuilder;
 
 use super::{loaders, mutation, query, service, Loader, Mutation, Query, Service};
 
 /// Provide dependencies needed for the Episodes domain
-#[derive(Default)]
-pub struct Load {}
+pub async fn load(i: &Inject) -> nakago::Result<()> {
+    i.provide::<Box<dyn Service>>(service::Provide::default())
+        .await?;
+    i.provide::<DataLoader<Loader>>(loaders::Provide::default())
+        .await?;
+    i.provide::<Query>(query::Provide::default()).await?;
+    i.provide::<Mutation>(mutation::Provide::default()).await?;
 
-#[async_trait]
-impl Hook for Load {
-    async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        i.provide::<Box<dyn Service>>(service::Provide::default())
-            .await?;
-        i.provide::<DataLoader<Loader>>(loaders::Provide::default())
-            .await?;
-        i.provide::<Query>(query::Provide::default()).await?;
-        i.provide::<Mutation>(mutation::Provide::default()).await?;
-
-        Ok(())
-    }
+    Ok(())
 }
 
 /// The Hook for initializing GraphQL User dependencies
-#[derive(Default)]
-pub struct Init {}
+pub async fn init(i: &Inject) -> nakago::Result<()> {
+    let loader = i.get::<DataLoader<Loader>>().await?;
 
-#[async_trait]
-impl Hook for Init {
-    async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let loader = i.get::<DataLoader<Loader>>().await?;
+    i.modify::<SchemaBuilder, _>(|builder| Ok(builder.data(loader)))
+        .await?;
 
-        i.modify::<SchemaBuilder, _>(|builder| Ok(builder.data(loader)))
-            .await?;
-
-        Ok(())
-    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -45,6 +32,7 @@ pub(crate) mod test {
     use std::sync::Arc;
 
     use async_graphql::{self, dataloader::DataLoader, EmptySubscription};
+    use async_trait::async_trait;
     use nakago::{provider, Provider};
     use nakago_derive::Provider;
 

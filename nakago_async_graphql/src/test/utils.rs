@@ -1,8 +1,9 @@
-use std::ops::Deref;
+use std::{ops::Deref, path::PathBuf};
 
 use axum::Router;
-use nakago_axum::{self, auth};
-use nakago_figment::{Config, FromRef};
+use nakago::Tag;
+use nakago_axum;
+use nakago_figment::{Config, FromRef, Loaders};
 
 use super::http::GraphQL;
 
@@ -26,18 +27,46 @@ impl<C: Config> Utils<C> {
     /// Initialize the GraphQL test utils
     pub async fn init(
         i: nakago::Inject,
-        config_path: &str,
         base_url: &str,
         graphql_url: &str,
         router: Router,
+        config_path: &str,
     ) -> nakago::Result<Self>
     where
         C: Config,
         nakago_axum::Config: FromRef<C>,
-        auth::Config: FromRef<C>,
     {
         let utils =
-            nakago_axum::test::Utils::init(i.clone(), config_path, None, base_url, router).await?;
+            nakago_axum::test::Utils::init(i.clone(), base_url, router, config_path).await?;
+
+        let graphql = GraphQL::new(utils.http.clone(), graphql_url.to_string());
+
+        Ok(Self { utils, graphql })
+    }
+
+    /// Initialize a new set of utils
+    pub async fn new(
+        i: nakago::Inject,
+        base_url: &str,
+        graphql_url: &str,
+        router: Router,
+        config_path: Option<PathBuf>,
+        config_tag: Option<&'static Tag<C>>,
+        loaders_tag: Option<&'static Tag<Loaders>>,
+    ) -> nakago::Result<Self>
+    where
+        C: Config,
+        nakago_axum::Config: FromRef<C>,
+    {
+        let utils = nakago_axum::test::Utils::new(
+            i.clone(),
+            base_url,
+            router,
+            config_path,
+            config_tag,
+            loaders_tag,
+        )
+        .await?;
 
         let graphql = GraphQL::new(utils.http.clone(), graphql_url.to_string());
 

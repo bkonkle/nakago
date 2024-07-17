@@ -43,7 +43,7 @@ impl<Query: Any, Mutation: Any, Subscription: Any> Init<Query, Mutation, Subscri
     }
 
     /// Initialize the schema and inject it
-    pub async fn init(&self, inject: Inject) -> nakago::Result<()>
+    pub async fn init(&self, inject: &Inject) -> nakago::Result<()>
     where
         Query: ObjectType + 'static,
         Mutation: ObjectType + 'static,

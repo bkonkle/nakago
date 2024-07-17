@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use derive_new::new;
 use nakago::{Error, Inject, Result, Tag};
@@ -54,7 +54,6 @@ pub struct Init<C: Config> {
     custom_path: Option<PathBuf>,
     loaders_tag: Option<&'static Tag<Loaders>>,
     config_tag: Option<&'static Tag<C>>,
-    _phantom: PhantomData<C>,
 }
 
 impl<C: Config> Init<C> {
@@ -62,6 +61,14 @@ impl<C: Config> Init<C> {
     pub fn with_path(self, custom_path: PathBuf) -> Self {
         Self {
             custom_path: Some(custom_path),
+            ..self
+        }
+    }
+
+    /// Maybe use a custom path when loading the Config
+    pub fn maybe_with_path(self, custom_path: Option<PathBuf>) -> Self {
+        Self {
+            custom_path,
             ..self
         }
     }

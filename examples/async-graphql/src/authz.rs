@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use nakago::{hooks, provider, to_provider_error, Hook, Inject, Provider};
+use nakago::{provider, to_provider_error, Inject, Provider};
 use nakago_derive::Provider;
 use oso::Oso;
 use oso::PolarClass;
@@ -26,38 +26,32 @@ impl Provider<Oso> for ProvideOso {
 }
 
 /// Load the authorization system. Must be invoked before the GraphQL Schema is initialized.
-#[derive(Default)]
-pub struct Load {}
+pub async fn load(i: &Inject) -> nakago::Result<()> {
+    // Set up authorization
+    let oso = i.get::<Oso>().await?;
+    let mut oso = (*oso).clone();
 
-#[async_trait]
-impl Hook for Load {
-    async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        // Set up authorization
-        let oso = i.get::<Oso>().await?;
-        let mut oso = (*oso).clone();
-
-        oso.register_class(User::get_polar_class_builder().name("User").build())
-            .map_err(to_provider_error)?;
-        oso.register_class(Profile::get_polar_class_builder().name("Profile").build())
-            .map_err(to_provider_error)?;
-        oso.register_class(Show::get_polar_class_builder().name("Show").build())
-            .map_err(to_provider_error)?;
-        oso.register_class(Episode::get_polar_class_builder().name("Episode").build())
-            .map_err(to_provider_error)?;
-
-        oso.load_str(
-            &[
-                users::AUTHORIZATION,
-                profiles::AUTHORIZATION,
-                shows::AUTHORIZATION,
-                episodes::AUTHORIZATION,
-            ]
-            .join("\n"),
-        )
+    oso.register_class(User::get_polar_class_builder().name("User").build())
+        .map_err(to_provider_error)?;
+    oso.register_class(Profile::get_polar_class_builder().name("Profile").build())
+        .map_err(to_provider_error)?;
+    oso.register_class(Show::get_polar_class_builder().name("Show").build())
+        .map_err(to_provider_error)?;
+    oso.register_class(Episode::get_polar_class_builder().name("Episode").build())
         .map_err(to_provider_error)?;
 
-        i.replace::<Oso>(oso).await?;
+    oso.load_str(
+        &[
+            users::AUTHORIZATION,
+            profiles::AUTHORIZATION,
+            shows::AUTHORIZATION,
+            episodes::AUTHORIZATION,
+        ]
+        .join("\n"),
+    )
+    .map_err(to_provider_error)?;
 
-        Ok(())
-    }
+    i.replace::<Oso>(oso).await?;
+
+    Ok(())
 }

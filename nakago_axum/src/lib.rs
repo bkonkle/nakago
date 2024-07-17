@@ -10,6 +10,9 @@ pub mod auth;
 /// Axum State
 pub mod state;
 
+/// Service Initialization Helpers
+pub mod init;
+
 /// Testing
 pub mod test;
 

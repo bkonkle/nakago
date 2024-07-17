@@ -1,5 +1,6 @@
 use std::{
-    default::Default, future::IntoFuture, net::SocketAddr, panic, sync::Arc, time::Duration,
+    default::Default, future::IntoFuture, net::SocketAddr, panic, path::PathBuf, sync::Arc,
+    time::Duration,
 };
 
 use axum::Router;
@@ -9,11 +10,14 @@ use biscuit::{
     ClaimsSet, Empty, RegisteredClaims, SingleOrMultiple, JWT,
 };
 use nakago::{self, Tag};
-use nakago_figment::FromRef;
-use tokio::{net::TcpListener, time::sleep};
-use tracing_subscriber::prelude::*;
+use nakago_figment::{FromRef, Loaders};
+use tokio::time::sleep;
 
-use crate::{auth, utils::handle_panic, Config};
+use crate::{
+    auth,
+    init::{handle_panic, rust_log_subscriber, Listener},
+    Config,
+};
 
 use super::http::Http;
 
@@ -33,49 +37,41 @@ pub struct Utils<C: nakago_figment::Config> {
 }
 
 impl<C: nakago_figment::Config> Utils<C> {
-    /// Initialize a new set of utils
+    /// Initialize a new set of utils with no tags
     pub async fn init(
         i: nakago::Inject,
-        config_path: &str,
-        config_tag: Option<&'static Tag<C>>,
         base_url: &str,
         router: Router,
+        config_path: &str,
     ) -> nakago::Result<Self>
     where
         Config: FromRef<C>,
     {
-        nakago_figment::loaders::Init::<C>::default()
-            .with_path(config_path.into())
+        Utils::<C>::new(i, base_url, router, Some(config_path.into()), None, None).await
+    }
+
+    /// Initialize a new set of utils
+    pub async fn new(
+        i: nakago::Inject,
+        base_url: &str,
+        router: Router,
+        config_path: Option<PathBuf>,
+        config_tag: Option<&'static Tag<C>>,
+        loaders_tag: Option<&'static Tag<Loaders>>,
+    ) -> nakago::Result<Self>
+    where
+        Config: FromRef<C>,
+    {
+        panic::set_hook(Box::new(handle_panic));
+        rust_log_subscriber();
+
+        nakago_figment::Init::<C>::new(config_path, loaders_tag, config_tag)
             .init(&i)
             .await?;
 
-        tracing_subscriber::registry()
-            .with(tracing_subscriber::EnvFilter::new(
-                std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()),
-            ))
-            .with(tracing_subscriber::fmt::layer())
-            .init();
+        let listener = Listener::default().init(&i).await?;
 
-        // Process setup
-        panic::set_hook(Box::new(handle_panic));
-
-        let config = if let Some(tag) = config_tag {
-            i.get_tag(tag).await?
-        } else {
-            i.get::<C>().await?
-        };
-
-        let http = Config::from_ref(&*config);
-
-        let addr: SocketAddr = format!("0.0.0.0:{}", http.port)
-            .parse()
-            .expect("Unable to parse bind address");
-
-        let listener = TcpListener::bind(&addr)
-            .await
-            .unwrap_or_else(|_| panic!("Unable to bind to address: {}", addr));
-
-        let actual_addr = listener
+        let addr = listener
             .local_addr()
             .map_err(|e| nakago::Error::Any(Arc::new(e.into())))?;
 
@@ -95,7 +91,7 @@ impl<C: nakago_figment::Config> Utils<C> {
 
         Ok(Utils {
             i,
-            addr: actual_addr,
+            addr,
             http,
             config_tag,
         })

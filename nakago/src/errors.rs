@@ -82,7 +82,16 @@ fn format_backtrace(backtrace: &Arc<Backtrace>) -> String {
     }
 }
 
-/// Convert a Provider error into an Inject error
-pub fn from_provider_error(e: provider::Error) -> Error {
-    Error::Provider(Box::new(e))
+impl From<provider::Error> for Error {
+    fn from(e: provider::Error) -> Self {
+        Error::Provider(Box::new(e))
+    }
+}
+
+/// Wrap an error that can be converted into an Anyhow error with a Nakago error
+pub fn to_nakago_error<E>(e: E) -> Error
+where
+    anyhow::Error: From<E>,
+{
+    Error::Any(Arc::new(e.into()))
 }
