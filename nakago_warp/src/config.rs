@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use figment::{providers::Env, Figment};
-use nakago::{config, hooks, Hook, Inject};
+use nakago::{Inject, Tag};
+use nakago_figment::{loaders, Loaders};
 use serde::{Deserialize, Serialize};
 
 /// The default Warp HTTP Config Loaders
-pub fn default_loaders() -> Vec<Arc<dyn config::Loader>> {
+pub fn default_loaders() -> Vec<Arc<dyn nakago_figment::Loader>> {
     vec![Arc::<Loader>::default()]
 }
 
@@ -33,7 +33,7 @@ impl Default for Config {
 #[derive(Default)]
 pub struct Loader {}
 
-impl config::Loader for Loader {
+impl nakago_figment::Loader for Loader {
     fn load(&self, figment: Figment) -> Figment {
         // Split the HTTP variables
         figment
@@ -42,17 +42,17 @@ impl config::Loader for Loader {
 }
 
 /// Add the default HTTP Config Loaders to the stack.
-pub struct AddLoaders(config::AddLoaders);
-
-impl Default for AddLoaders {
-    fn default() -> Self {
-        Self(config::AddLoaders::new(default_loaders()))
-    }
+pub async fn add_default_loaders(i: &Inject) -> nakago::Result<()> {
+    loaders::Add::default().loaders(i, default_loaders()).await
 }
 
-#[async_trait]
-impl Hook for AddLoaders {
-    async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        self.0.handle(i).await
-    }
+/// Add the default HTTP Config Loaders to the stack.
+pub async fn add_default_loaders_with_tag(
+    i: &Inject,
+    tag: &'static Tag<Loaders>,
+) -> nakago::Result<()> {
+    loaders::Add::default()
+        .with_tag(tag)
+        .loaders(i, default_loaders())
+        .await
 }

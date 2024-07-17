@@ -44,17 +44,17 @@ async fn test_episode_create_simple() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a user and a show
-    let users = utils.app.get::<Box<dyn users::Service>>().await?;
+    let users = utils.i.get::<Box<dyn users::Service>>().await?;
     let user = users.create(&username).await?;
 
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get::<Box<dyn shows::Service>>().await?;
+    let shows = utils.i.get::<Box<dyn shows::Service>>().await?;
     let show = shows.create(&show_input).await?;
 
     // Grant the manager role to this user for this episode's show
-    let role_grants = utils.app.get::<Box<dyn role_grants::Service>>().await?;
+    let role_grants = utils.i.get::<Box<dyn role_grants::Service>>().await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "manager".to_string(),
@@ -153,7 +153,7 @@ async fn test_episode_create_authn() -> Result<()> {
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get::<Box<dyn shows::Service>>().await?;
+    let shows = utils.i.get::<Box<dyn shows::Service>>().await?;
     let show = shows.create(&show_input).await?;
 
     let resp = utils
@@ -193,11 +193,11 @@ async fn test_episode_create_authz() -> Result<()> {
     let mut show_input: CreateShowInput = Faker.fake();
     show_input.title = "Test Show".to_string();
 
-    let shows = utils.app.get::<Box<dyn shows::Service>>().await?;
+    let shows = utils.i.get::<Box<dyn shows::Service>>().await?;
     let show = shows.create(&show_input).await?;
 
     // Create a user with this username
-    let users = utils.app.get::<Box<dyn users::Service>>().await?;
+    let users = utils.i.get::<Box<dyn users::Service>>().await?;
     let _ = users.create(&username).await?;
 
     let resp = utils
@@ -419,7 +419,7 @@ async fn test_episode_update() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
-    let users = utils.app.get::<Box<dyn users::Service>>().await?;
+    let users = utils.i.get::<Box<dyn users::Service>>().await?;
     let user = users.create(&username).await?;
 
     let (show, episode) = utils
@@ -427,7 +427,7 @@ async fn test_episode_update() -> Result<()> {
         .await?;
 
     // Grant the manager role to this user for this episode's show
-    let role_grants = utils.app.get::<Box<dyn role_grants::Service>>().await?;
+    let role_grants = utils.i.get::<Box<dyn role_grants::Service>>().await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "manager".to_string(),
@@ -547,7 +547,7 @@ async fn test_episode_update_authz() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
-    let users = utils.app.get::<Box<dyn users::Service>>().await?;
+    let users = utils.i.get::<Box<dyn users::Service>>().await?;
     let _ = users.create(&username).await?;
 
     let (_, episode) = utils
@@ -598,7 +598,7 @@ async fn test_episode_delete() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
-    let users = utils.app.get::<Box<dyn users::Service>>().await?;
+    let users = utils.i.get::<Box<dyn users::Service>>().await?;
     let user = users.create(&username).await?;
 
     let (show, episode) = utils
@@ -606,7 +606,7 @@ async fn test_episode_delete() -> Result<()> {
         .await?;
 
     // Grant the manager role to this user for this episode's show
-    let role_grants = utils.app.get::<Box<dyn role_grants::Service>>().await?;
+    let role_grants = utils.i.get::<Box<dyn role_grants::Service>>().await?;
     role_grants
         .create(&CreateRoleGrantInput {
             role_key: "manager".to_string(),
@@ -692,7 +692,7 @@ async fn test_episode_delete_authz() -> Result<()> {
     let token = utils.create_jwt(&username).await?;
 
     // Create a user with this username
-    let users = utils.app.get::<Box<dyn users::Service>>().await?;
+    let users = utils.i.get::<Box<dyn users::Service>>().await?;
     let _ = users.create(&username).await?;
 
     let (_, episode) = utils

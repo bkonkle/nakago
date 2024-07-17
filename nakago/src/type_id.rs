@@ -104,7 +104,7 @@ pub(crate) mod test {
     use fake::Fake;
     use std::any::type_name;
 
-    use crate::inject::{
+    use crate::{
         container::test::{HasId, OtherService, TestService},
         provider::test::{HasIdProvider, OtherServiceProvider, TestServiceProvider},
     };

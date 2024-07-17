@@ -1,12 +1,13 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use biscuit::{
     jwk::{AlgorithmParameters, JWKSet, JWK},
     jws::Secret,
 };
-use nakago::{self, provider, utils::FromRef, Inject, Provider, Tag};
+use nakago::{self, provider, Inject, Provider, Tag};
 use nakago_derive::Provider;
+use nakago_figment::FromRef;
 use thiserror::Error;
 
 use super::Config;
@@ -18,7 +19,7 @@ pub type Jwks = JWKSet<biscuit::Empty>;
 pub const JWKS: Tag<Jwks> = Tag::new("auth::JWKS");
 
 /// Get the default set of JWKS keys
-pub async fn init(config: Config) -> JWKSet<biscuit::Empty> {
+pub async fn init(config: Config) -> Jwks {
     let jwks_client = Client::new(config);
 
     jwks_client
@@ -39,19 +40,16 @@ impl Client {
     }
 
     /// Get a `JWKSet` from the configured Auth url
-    pub async fn get_key_set(&self) -> anyhow::Result<JWKSet<biscuit::Empty>> {
+    pub async fn get_key_set(&self) -> anyhow::Result<Jwks> {
         let response = reqwest::get(format!("{}/.well-known/jwks.json", &self.config.url)).await?;
-        let jwks = response.json::<JWKSet<biscuit::Empty>>().await?;
+        let jwks = response.json::<Jwks>().await?;
 
         Ok(jwks)
     }
 }
 
 /// A convenience function to get a particular key from a key set, and convert it into a secret
-pub fn get_secret_from_key_set(
-    jwks: &JWKSet<biscuit::Empty>,
-    key_id: &str,
-) -> Result<Secret, ClientError> {
+pub fn get_secret_from_key_set(jwks: &Jwks, key_id: &str) -> Result<Secret, ClientError> {
     let jwk = get_key(jwks, key_id)?;
     let secret = get_secret(jwk)?;
 
@@ -59,10 +57,7 @@ pub fn get_secret_from_key_set(
 }
 
 /// Get a particular key from a key set by id
-pub fn get_key(
-    jwks: &JWKSet<biscuit::Empty>,
-    key_id: &str,
-) -> Result<JWK<biscuit::Empty>, ClientError> {
+pub fn get_key(jwks: &Jwks, key_id: &str) -> Result<JWK<biscuit::Empty>, ClientError> {
     let key = jwks.find(key_id).ok_or(ClientError::MissingKeyId)?.clone();
 
     Ok(key)
@@ -91,42 +86,32 @@ pub enum ClientError {
 }
 
 /// Provide the Json Web Key Set
-///
-/// **Provides:** `Arc<JWKSet<biscuit::Empty>>`
-///
-/// **Depends on:**
-///   - `<Config>` - requires that `C` fulfills the `Config: FromRef<C>` constraint
 #[derive(Default)]
-pub struct Provide<C: nakago::Config> {
+pub struct Provide<C: nakago_figment::Config> {
     config_tag: Option<&'static Tag<C>>,
-    _phantom: PhantomData<C>,
 }
 
-impl<C: nakago::Config> Provide<C> {
+impl<C: nakago_figment::Config> Provide<C> {
     /// Create a new instance of Provide
     pub fn new(config_tag: Option<&'static Tag<C>>) -> Self {
-        Self {
-            config_tag,
-            ..Default::default()
-        }
+        Self { config_tag }
     }
 
     /// Set the config Tag for this instance
     pub fn with_config_tag(self, config_tag: &'static Tag<C>) -> Self {
         Self {
             config_tag: Some(config_tag),
-            ..self
         }
     }
 }
 
 #[Provider]
 #[async_trait]
-impl<C: nakago::Config> Provider<JWKSet<biscuit::Empty>> for Provide<C>
+impl<C: nakago_figment::Config> Provider<Jwks> for Provide<C>
 where
     Config: FromRef<C>,
 {
-    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<JWKSet<biscuit::Empty>>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Jwks>> {
         let config = if let Some(tag) = self.config_tag {
             i.get_tag(tag).await?
         } else {

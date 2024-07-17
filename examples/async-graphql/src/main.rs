@@ -1,14 +1,17 @@
 //! The main entry point for the async-graphql example.
 #![forbid(unsafe_code)]
 
-use std::path::PathBuf;
+use std::{panic, path::PathBuf, sync::Arc};
 
+use http::router;
 use log::info;
+use nakago_axum::init::{handle_panic, rust_log_subscriber, Listener};
 use pico_args::{Arguments, Error};
 
 mod authz;
 mod config;
 mod domains;
+mod events;
 mod http;
 mod init;
 mod messages;
@@ -58,8 +61,20 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let app = init::app().await?;
-    let (server, addr) = app.run(args.config_path).await?;
+    panic::set_hook(Box::new(handle_panic));
+    rust_log_subscriber();
+
+    let i = init::app(args.config_path).await?;
+
+    let listener = Listener::<Config>::default().init(&i).await?;
+
+    let addr = listener
+        .local_addr()
+        .map_err(|e| nakago::Error::Any(Arc::new(e.into())))?;
+
+    let router = router::init(&i);
+
+    let server = axum::serve(listener, router);
 
     info!("Started on port: {port}", port = addr.port());
 

@@ -39,4 +39,4 @@ impl Default for Config {
     }
 }
 
-impl nakago::Config for Config {}
+impl nakago_figment::Config for Config {}

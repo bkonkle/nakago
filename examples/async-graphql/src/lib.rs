@@ -16,6 +16,9 @@ pub mod messages;
 /// Application domains
 pub mod domains;
 
+/// WebSocket events
+pub mod events;
+
 /// Authorization
 pub mod authz;
 

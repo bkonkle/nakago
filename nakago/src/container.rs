@@ -10,7 +10,7 @@ use backtrace::Backtrace;
 use futures::{Future, FutureExt};
 use tokio::sync::RwLock;
 
-use super::{errors, provider, Dependency, Error, Injector, Key, Result};
+use super::{provider, Dependency, Error, Injector, Key, Result};
 
 /// A Dependency Injection container based on the concept of Shared Futures, which multiple
 /// independent threads can await. The container holds a map of Keys to Injectors, and provides
@@ -43,7 +43,7 @@ impl Inject {
     pub async fn get_key_opt<T: Any + Send + Sync>(&self, key: Key) -> Result<Option<Arc<T>>> {
         if let Some(injector) = self.0.read().await.get(&key) {
             let pending = injector.request(self.clone()).await;
-            let value = pending.await.map_err(errors::from_provider_error)?;
+            let value = pending.await?;
 
             return value
                 .downcast::<T>()

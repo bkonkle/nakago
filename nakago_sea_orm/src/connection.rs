@@ -1,11 +1,9 @@
-use std::{
-    marker::PhantomData,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use nakago::{self, provider, to_provider_error, utils::FromRef, Inject, Provider, Tag};
+use nakago::{self, provider, to_provider_error, Inject, Provider, Tag};
 use nakago_derive::Provider;
+use nakago_figment::FromRef;
 use sea_orm::{DatabaseBackend, DatabaseConnection, MockDatabase, MockDatabaseTrait};
 
 use crate::Config;
@@ -14,38 +12,28 @@ use crate::Config;
 pub const CONNECTION: Tag<DatabaseConnection> = Tag::new("nakago_sea_orm::DatabaseConnection");
 
 /// Provide a SeaOrm Database connection
-///
-/// **Provides:** `Arc<nakago_sea_orm::DatabaseConnection>`
-///
-/// **Depends on:**
-///   - `<Config>` - requires that `C` fulfills the `Config: FromRef<C>` constraint
 #[derive(Default)]
-pub struct Provide<C: nakago::Config> {
+pub struct Provide<C: nakago_figment::Config> {
     config_tag: Option<&'static Tag<C>>,
-    _phantom: PhantomData<C>,
 }
 
-impl<C: nakago::Config> Provide<C> {
+impl<C: nakago_figment::Config> Provide<C> {
     /// Create a new instance of Provide
     pub fn new() -> Self {
-        Self {
-            config_tag: None,
-            ..Default::default()
-        }
+        Self { config_tag: None }
     }
 
     /// Set the config Tag for this instance
     pub fn with_config_tag(self, config_tag: &'static Tag<C>) -> Self {
         Self {
             config_tag: Some(config_tag),
-            ..self
         }
     }
 }
 
 #[Provider]
 #[async_trait]
-impl<C: nakago::Config> Provider<DatabaseConnection> for Provide<C>
+impl<C: nakago_figment::Config> Provider<DatabaseConnection> for Provide<C>
 where
     Config: FromRef<C>,
 {
@@ -67,8 +55,6 @@ where
 }
 
 /// Provide a Mock Database Connection for use in unit testing
-///
-/// **Provides:** `Arc<nakago_sea_orm::DatabaseConnection>`
 pub struct ProvideMock {
     db: Mutex<MockDatabase>,
 }

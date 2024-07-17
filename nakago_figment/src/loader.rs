@@ -1,10 +1,11 @@
-use std::{any::Any, fmt::Debug, marker::PhantomData, path::PathBuf, sync::Arc};
+use std::{any::Any, marker::PhantomData, path::PathBuf};
 
 use figment::{
     providers::{Format, Json, Serialized, Toml, Yaml},
     Figment,
 };
-use serde::{Deserialize, Serialize};
+
+use crate::{loaders::Loaders, Config};
 
 /// A Loader uses hooks to augment the Config loaded for the application
 pub trait Loader: Any + Send + Sync {
@@ -12,21 +13,15 @@ pub trait Loader: Any + Send + Sync {
     fn load(&self, figment: Figment) -> Figment;
 }
 
-/// Config is the final loaded result
-pub trait Config:
-    Any + Clone + Debug + Default + Serialize + Send + Sync + for<'a> Deserialize<'a>
-{
-}
-
 /// An extensible Config loader based on Figment
 pub struct LoadAll<C: Config> {
-    loaders: Vec<Arc<dyn Loader>>,
+    loaders: Loaders,
     _phantom: PhantomData<C>,
 }
 
 impl<C: Config> LoadAll<C> {
     /// Create a new Config instance with the given loaders
-    pub fn new(loaders: Vec<Arc<dyn Loader>>) -> Self {
+    pub fn new(loaders: Loaders) -> Self {
         Self {
             loaders,
             _phantom: Default::default(),
@@ -69,8 +64,7 @@ impl<C: Config> LoadAll<C> {
 #[cfg(test)]
 pub(crate) mod test {
     use anyhow::Result;
-
-    use crate::Tag;
+    use serde::{Deserialize, Serialize};
 
     use super::*;
 
@@ -78,9 +72,6 @@ pub(crate) mod test {
     pub struct Config {}
 
     impl crate::Config for Config {}
-
-    /// Tag(app::Config)
-    pub const CONFIG: Tag<Config> = Tag::new("app::Config");
 
     #[tokio::test]
     async fn test_load_all_success() -> Result<()> {

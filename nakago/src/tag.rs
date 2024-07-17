@@ -159,7 +159,7 @@ impl Inject {
 pub(crate) mod test {
     use fake::Fake;
 
-    use crate::inject::{
+    use crate::{
         container::test::{HasId, OtherService, TestService},
         provider::test::{HasIdProvider, OtherServiceProvider, TestServiceProvider},
         Result,
