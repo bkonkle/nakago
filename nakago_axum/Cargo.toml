@@ -45,5 +45,5 @@ tracing = "0.1"
 
 [dev-dependencies]
 criterion = "0.5"
-mockall = "0.12"
+mockall = "0.13"
 pretty_assertions = "1.2"

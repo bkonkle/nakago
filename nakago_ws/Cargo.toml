@@ -28,7 +28,7 @@ log = "0.4"
 nakago = "0.20"
 nakago-axum = "0.21"
 nakago-derive = "0.20"
-mockall = "0.12"
+mockall = "0.13"
 pretty_env_logger = "0.5"
 rand = "0.8"
 reqwest = { version = "0.12", features = ["json"] }
@@ -43,5 +43,5 @@ ulid = "1.0"
 warp = "0.3"
 
 [dev-dependencies]
-mockall = "0.12"
+mockall = "0.13"
 pretty_assertions = "1.2"
