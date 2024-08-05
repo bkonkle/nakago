@@ -13,7 +13,7 @@ license = "MIT"
 anyhow = "1.0"
 async-trait = "0.1"
 backtrace = "0.3"
-crossterm = "0.27"
+crossterm = "0.28"
 derive-new = "0.6"
 figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 fnv = "1.0.7"
