@@ -101,11 +101,14 @@ impl Inject {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use fake::Fake;
     use std::any::type_name;
+
+    use fake::Fake;
+    use googletest::{assert_that, prelude::starts_with};
 
     use crate::{
         container::test::{HasId, OtherService, TestService},
+        errors::Result,
         provider::test::{HasIdProvider, OtherServiceProvider, TestServiceProvider},
     };
 
@@ -529,7 +532,7 @@ pub(crate) mod test {
 
         assert!(result
             .to_string()
-            .starts_with("nakago::inject::container::test::TestService"));
+            .starts_with("nakago::container::test::TestService"));
 
         Ok(())
     }
@@ -648,7 +651,7 @@ pub(crate) mod test {
 
         assert!(result
             .to_string()
-            .starts_with("nakago::inject::container::test::TestService"));
+            .starts_with("nakago::container::test::TestService"));
 
         Ok(())
     }
@@ -690,9 +693,10 @@ pub(crate) mod test {
             .await
             .expect_err("Did not error as expected");
 
-        assert!(result
-            .to_string()
-            .starts_with("nakago::inject::container::test::TestService"));
+        assert_that!(
+            result.to_string(),
+            starts_with("nakago::container::test::TestService")
+        );
 
         Ok(())
     }
@@ -770,7 +774,7 @@ pub(crate) mod test {
 
         assert!(result
             .to_string()
-            .starts_with("nakago::inject::container::test::TestService"));
+            .starts_with("nakago::container::test::TestService"));
 
         Ok(())
     }

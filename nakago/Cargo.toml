@@ -39,3 +39,4 @@ fake = { version = "2.9", features = [
 ], git = "https://github.com/cksac/fake-rs.git" }
 mockall = "0.12"
 pretty_assertions = "1.2"
+googletest = "0.12"
