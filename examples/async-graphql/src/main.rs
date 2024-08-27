@@ -14,7 +14,6 @@ mod domains;
 mod events;
 mod http;
 mod init;
-mod messages;
 
 pub use config::Config;
 

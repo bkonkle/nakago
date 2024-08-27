@@ -34,6 +34,12 @@ In Ubuntu, the package to install is `pre-commit`:
 sudo apt install pre-commit
 ```
 
+In Arch Linux, sync `pre-commit`:
+
+```sh
+pacman -S pre-commit
+```
+
 On Mac with Homebrew, the package is also `pre-commit`:
 
 ```sh

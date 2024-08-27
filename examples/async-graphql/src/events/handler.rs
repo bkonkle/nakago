@@ -7,10 +7,9 @@ use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
 use nakago_ws::connections::Connections;
 
-use crate::{
-    domains::users::{self, model::User},
-    messages::{IncomingMessage, OutgoingMessage},
-};
+use crate::domains::users::{self, model::User};
+
+use super::messages::{IncomingMessage, OutgoingMessage};
 
 /// Message Handler
 #[derive(Clone)]
