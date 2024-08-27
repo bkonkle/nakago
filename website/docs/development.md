@@ -56,6 +56,12 @@ In Ubuntu, the package to install is `libclang-dev`:
 sudo apt install libclang-dev
 ```
 
+In Arch Linux, sync `clang`:
+
+```sh
+pacman -S clang
+```
+
 ## Cargo Make
 
 To use build scripts from the _Makefile.toml_, install Cargo Make:
