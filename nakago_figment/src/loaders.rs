@@ -41,7 +41,10 @@ impl Add {
             Err(_) => loaders.clone(),
         };
 
-        i.inject::<Loaders>(current).await?;
+        match self.tag {
+            Some(tag) => i.inject_tag(tag, current).await?,
+            None => i.inject::<Loaders>(current).await?,
+        }
 
         Ok(())
     }
@@ -208,6 +211,7 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_init_success() -> Result<()> {
+        // First test with no varations
         let i = Inject::default();
 
         let hook = Init::<Config>::default();
@@ -217,8 +221,16 @@ pub(crate) mod test {
 
         hook.init(&i).await?;
 
+        // Now test with custom path
+        let i = Inject::default();
+
         let hook = Init::<Config>::default().with_path("TEST_PATH".into());
         assert!(hook.custom_path.is_some());
+
+        hook.init(&i).await?;
+
+        // Finally, test with a loader tag
+        let i = Inject::default();
 
         let hook = Init::<Config>::default().with_loaders_tag(&LOADERS);
         assert!(hook.config_tag.is_none());
