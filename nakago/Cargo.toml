@@ -13,7 +13,6 @@ license = "MIT"
 anyhow = "1.0"
 async-trait = "0.1"
 backtrace = "0.3"
-crossterm = "0.27"
 derive-new = "0.6"
 fnv = "1.0.7"
 futures = "0.3.28"
@@ -37,6 +36,6 @@ fake = { version = "2.9", features = [
     'http',
     'uuid',
 ], git = "https://github.com/cksac/fake-rs.git" }
-mockall = "0.12"
+mockall = "0.13"
 pretty_assertions = "1.2"
 googletest = "0.12"

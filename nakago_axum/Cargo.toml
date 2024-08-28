@@ -16,7 +16,7 @@ axum = { version = "0.7", features = ["ws", "macros"] }
 backtrace = "0.3"
 biscuit = "0.7.0"
 bytes = "1"
-crossterm = "0.27"
+crossterm = "0.28"
 derive-new = "0.6"
 fake = { version = "2.9", features = [
     'derive',
@@ -49,5 +49,5 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 
 [dev-dependencies]
 criterion = "0.5"
-mockall = "0.12"
+mockall = "0.13"
 pretty_assertions = "1.2"
