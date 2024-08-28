@@ -16,6 +16,9 @@ pub mod init;
 /// Testing
 pub mod test;
 
+/// Utils
+pub mod utils;
+
 #[macro_use]
 extern crate log;
 
