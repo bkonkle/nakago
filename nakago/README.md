@@ -5,7 +5,7 @@
   <h1>Nakago (中子)</h1>
 
   <p>
-    <strong>A lightweight Rust framework for sharp services</strong>
+    <strong>A lightweight async dependency injection toolkit for Rust</strong>
   </p>
 
 [![Crates.io](https://img.shields.io/crates/v/nakago.svg)](https://crates.io/crates/nakago)
