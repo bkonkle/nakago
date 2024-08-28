@@ -72,15 +72,21 @@ args = ["llvm-cov", "nextest", "${@}"]
 command = "cargo"
 args = ["llvm-cov", "nextest", "--lcov", "--output-path", "lcov.info"]
 
+[tasks.integration-ci]
+env = { "RUN_MODE" = "ci", "RUST_LOG" = "info,sqlx::query=warn" }
+command = "cargo"
+args = ["nextest", "run", "--features=integration", "--workspace"]
+
 [tasks.integration]
 env = { "RUN_MODE" = "test", "RUST_LOG" = "info,sqlx::query=warn", "RUST_BACKTRACE" = 1 }
 command = "cargo"
 args = ["nextest", "run", "--features=integration", "--workspace", "${@}"]
 
-[tasks.integration-ci]
-env = { "RUN_MODE" = "ci", "RUST_LOG" = "info,sqlx::query=warn" }
+# Run an individual integration test. Requires an argument like --package or --bin.
+[tasks.int]
+env = { "RUN_MODE" = "test", "RUST_LOG" = "info,sqlx::query=warn", "RUST_BACKTRACE" = 1 }
 command = "cargo"
-args = ["nextest", "run", "--features=integration", "--workspace"]
+args = ["nextest", "run", "--features=integration", "${@}"]
 
 [tasks.audit]
 command = "cargo"
@@ -155,13 +161,14 @@ args = ["db", "reset"]
 
 [tasks.docker]
 cwd = "./"
-command = "docker-compose"
-args = ["-f", "docker-compose.yml", "${@}"]
+command = "docker"
+args = ["compose", "-f", "docker-compose.yml", "${@}"]
 
 [tasks.docker-simple]
 cwd = "./examples/simple"
-command = "docker-compose"
+command = "docker"
 args = [
+    "compose",
     "-f",
     "../../docker-compose.yml",
     "-f",
@@ -173,8 +180,9 @@ args = [
 
 [tasks.docker-simple-warp]
 cwd = "./examples/simple-warp"
-command = "docker-compose"
+command = "docker"
 args = [
+    "compose",
     "-f",
     "../../docker-compose.yml",
     "-f",
@@ -186,8 +194,9 @@ args = [
 
 [tasks.docker-async-graphql]
 cwd = "./examples/async-graphql"
-command = "docker-compose"
+command = "docker"
 args = [
+    "compose",
     "-f",
     "../../docker-compose.yml",
     "-f",

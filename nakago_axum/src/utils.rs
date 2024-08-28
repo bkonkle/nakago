@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+// Many Response
+// -------------
+
 /// A paginated response for an entity
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct ManyResponse<Model> {
@@ -50,6 +53,9 @@ impl<Model> ManyResponse<Model> {
         }
     }
 }
+
+// Ordering
+// --------
 
 /// A convenience wrapper for ordering
 #[allow(missing_docs)]

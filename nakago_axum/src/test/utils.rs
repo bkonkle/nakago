@@ -1,45 +1,63 @@
-use std::{default::Default, future::IntoFuture, net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+    default::Default, future::IntoFuture, net::SocketAddr, panic, sync::Arc, time::Duration,
+};
 
+use axum::Router;
 use biscuit::{
     jwa::SignatureAlgorithm,
     jws::{RegisteredHeader, Secret},
     ClaimsSet, Empty, RegisteredClaims, SingleOrMultiple, JWT,
 };
-use nakago::{self, hooks, inject, utils::FromRef};
+use nakago::{self, Tag};
+use nakago_figment::FromRef;
 use tokio::time::sleep;
 
-use crate::{auth, AxumApplication, Config};
+use crate::{
+    auth,
+    init::{handle_panic, rust_log_subscriber, Listener},
+    Config,
+};
 
 use super::http::Http;
 
 /// Common test utils
-pub struct Utils<C>
-where
-    C: nakago::Config,
-{
-    /// The Application instance
-    pub app: AxumApplication<C>,
+pub struct Utils<C: nakago_figment::Config> {
+    /// The Nakago Inject container
+    pub i: nakago::Inject,
 
     /// The Address the server is listening on
     pub addr: SocketAddr,
 
     /// The test HTTP Request helper
     pub http: Arc<Http>,
+
+    /// The config tag to use
+    pub config_tag: Option<&'static Tag<C>>,
 }
 
-impl<C> Utils<C>
-where
-    C: nakago::Config,
-    Config: FromRef<C>,
-    auth::Config: FromRef<C>,
-{
+impl<C: nakago_figment::Config> Utils<C> {
+    /// Initialize a new set of utils with no tags
+    pub async fn init(i: nakago::Inject, base_url: &str, router: Router) -> nakago::Result<Self>
+    where
+        Config: FromRef<C>,
+    {
+        Utils::<C>::new(i, base_url, router, None).await
+    }
+
     /// Initialize a new set of utils
-    pub async fn init(
-        app: AxumApplication<C>,
-        config_path: &str,
+    pub async fn new(
+        i: nakago::Inject,
         base_url: &str,
-    ) -> hooks::Result<Self> {
-        let (server, addr) = app.run(Some(config_path.into())).await?;
+        router: Router,
+        config_tag: Option<&'static Tag<C>>,
+    ) -> nakago::Result<Self>
+    where
+        Config: FromRef<C>,
+    {
+        panic::set_hook(Box::new(handle_panic));
+        rust_log_subscriber();
+
+        let (server, addr) = Listener::default().init(&i, router).await?;
 
         // Spawn the server in the background
         tokio::spawn(server.into_future());
@@ -53,12 +71,25 @@ where
             base_url = base_url,
         )));
 
-        Ok(Utils { app, addr, http })
+        Ok(Utils {
+            i,
+            addr,
+            http,
+            config_tag,
+        })
     }
 
     /// Create a test JWT token with a dummy secret
-    pub async fn create_jwt(&self, username: &str) -> inject::Result<String> {
-        let config = self.app.get_config().await?;
+    pub async fn create_jwt(&self, username: &str) -> nakago::Result<String>
+    where
+        auth::Config: FromRef<C>,
+    {
+        let config = if let Some(tag) = self.config_tag {
+            self.i.get_tag(tag).await?
+        } else {
+            self.i.get::<C>().await?
+        };
+
         let auth = auth::Config::from_ref(&*config);
 
         let expected_claims = ClaimsSet::<Empty> {

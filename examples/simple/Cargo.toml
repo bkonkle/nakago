@@ -1,6 +1,6 @@
 [package]
 name = "nakago-examples-simple"
-version = "0.20.0"
+version = "0.23.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A lightweight Rust framework for sharp services 😎"
@@ -27,21 +27,14 @@ figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
 hyper = "1.0"
 log = "0.4"
-nakago = "0.20"
-nakago-axum = "0.21"
-nakago-derive = "0.20"
+nakago = "0.23"
+nakago-axum = "0.23"
+nakago-derive = "0.23"
+nakago-figment = "0.23"
 pico-args = "0.5.0"
 pretty_env_logger = "0.5"
 rand = "0.8"
 reqwest = { version = "0.12", features = ["json"] }
-sea-orm = { version = "0.12", features = [
-    "macros",
-    "mock",
-    "runtime-tokio-rustls",
-    "sqlx-postgres",
-    "with-chrono",
-    "with-json",
-], default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = "1.0"
@@ -58,6 +51,6 @@ futures-util = { version = "0.3", default-features = false, features = [
 ] }
 hyper-tls = "0.6"
 maplit = { version = "1" }
-mockall = "0.12"
+mockall = "0.13"
 pretty_assertions = "1.2"
 url = "2.0.0"

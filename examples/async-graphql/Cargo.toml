@@ -1,6 +1,6 @@
 [package]
 name = "nakago-examples-async-graphql"
-version = "0.22.0"
+version = "0.23.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A lightweight Rust framework for sharp services 😎"
@@ -33,17 +33,18 @@ figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
 hyper = "1.0"
 log = "0.4"
-nakago = "0.20"
-nakago-async-graphql = "0.21"
-nakago-axum = "0.21"
-nakago-derive = "0.20"
-nakago-sea-orm = "0.22"
-nakago-ws = "0.21"
+nakago-async-graphql = "0.23"
+nakago-axum = "0.23"
+nakago-derive = "0.23"
+nakago-figment = "0.23"
+nakago-sea-orm = "0.23"
+nakago-ws = "0.23"
+nakago = "0.23"
 oso = "0.27"
 pico-args = "0.5.0"
 pretty_env_logger = "0.5"
 rand = "0.8"
-sea-orm = { version = "0.12", features = [
+sea-orm = { version = "1.0", features = [
     "macros",
     "mock",
     "runtime-tokio-rustls",
@@ -67,7 +68,7 @@ futures-util = { version = "0.3", default-features = false, features = [
 ] }
 hyper-tls = "0.6"
 maplit = { version = "1" }
-mockall = "0.12"
+mockall = "0.13"
 pretty_assertions = "1.2"
 tokio-tungstenite = { version = "0.23", features = ["url"] }
 url = "2.0.0"

@@ -1,33 +1,33 @@
-use nakago::{inject, EventType};
+use std::path::PathBuf;
+
+use nakago::{Inject, Result};
 use nakago_warp::{
     auth::{jwks, validator, Jwks, Validator},
-    config, WarpApplication,
+    config,
 };
 
-use crate::{
-    config::{Config, CONFIG},
-    http,
-};
+use crate::config::Config;
 
-/// Create a default AxumApplication instance
-pub async fn app() -> inject::Result<WarpApplication<Config>> {
-    let mut app = WarpApplication::default().with_config_tag(&CONFIG);
+/// Create a dependency injection container for the top-level application
+pub async fn app(config_path: Option<PathBuf>) -> Result<Inject> {
+    let i = Inject::default();
 
     // Dependencies
 
-    app.provide::<Jwks>(jwks::Provide::default().with_config_tag(&CONFIG))
+    i.provide::<Jwks>(jwks::Provide::<Config>::default())
         .await?;
 
-    app.provide::<Validator>(validator::Provide::default())
+    i.provide::<Validator>(validator::Provide::default())
         .await?;
 
-    // Loading
+    // Add config loaders before the Config is initialized
+    config::add_default_loaders(&i).await?;
 
-    app.on(&EventType::Load, config::AddLoaders::default());
+    // Initialize the Config
+    nakago_figment::Init::<Config>::default()
+        .maybe_with_path(config_path)
+        .init(&i)
+        .await?;
 
-    // Initialization
-
-    app.on(&EventType::Init, http::Init::default());
-
-    Ok(app)
+    Ok(i)
 }

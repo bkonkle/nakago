@@ -22,6 +22,7 @@ use nakago_examples_async_graphql::{
         shows::{self, model::Show, mutation::CreateShowInput},
         users::{self, model::User},
     },
+    http::router,
     init, Config,
 };
 
@@ -38,16 +39,17 @@ impl Deref for Utils {
 
 impl Utils {
     pub async fn init() -> Result<Self> {
-        let app = init::app().await?;
-
-        app.replace_with::<Validator>(validator::ProvideUnverified::default())
-            .await?;
-
         let config_path = std::env::var("CONFIG_PATH_ASYNC_GRAPHQL")
             .unwrap_or_else(|_| "examples/async-graphql/config.test.toml".to_string());
 
-        let utils =
-            nakago_async_graphql::test::Utils::init(app, &config_path, "/", "/graphql").await?;
+        let i = init::app(Some(config_path.clone().into())).await?;
+
+        i.replace_with::<Validator>(validator::ProvideUnverified::default())
+            .await?;
+
+        let router = router::init(&i);
+
+        let utils = nakago_async_graphql::test::Utils::init(i, "/", "/graphql", router).await?;
 
         Ok(Self(utils))
     }
@@ -59,14 +61,14 @@ impl Utils {
         username: &str,
         email: &str,
     ) -> Result<(User, Profile)> {
-        let users = self.app.get::<Box<dyn users::Service>>().await?;
+        let users = self.i.get::<Box<dyn users::Service>>().await?;
         let user = users.create(username).await?;
 
         let mut profile_input: CreateProfileInput = Faker.fake();
         profile_input.user_id.clone_from(&user.id);
         profile_input.email = email.to_string();
 
-        let profiles = self.app.get::<Box<dyn profiles::Service>>().await?;
+        let profiles = self.i.get::<Box<dyn profiles::Service>>().await?;
         let profile = profiles.create(&profile_input, &false).await?;
 
         Ok((user, profile))
@@ -84,7 +86,7 @@ impl Utils {
             ..Default::default()
         };
 
-        let shows = self.app.get::<Box<dyn shows::Service>>().await?;
+        let shows = self.i.get::<Box<dyn shows::Service>>().await?;
         let show = shows.create(&show_input).await?;
 
         let episode_input = CreateEpisodeInput {
@@ -93,7 +95,7 @@ impl Utils {
             ..Default::default()
         };
 
-        let episodes = self.app.get::<Box<dyn episodes::Service>>().await?;
+        let episodes = self.i.get::<Box<dyn episodes::Service>>().await?;
         let episode = episodes.create(&episode_input, &false).await?;
 
         Ok((show, episode))

@@ -5,41 +5,54 @@ use biscuit::{
     jws::{RegisteredHeader, Secret},
     ClaimsSet, Empty, RegisteredClaims, SingleOrMultiple, JWT,
 };
-use nakago::{self, hooks, inject, utils::FromRef};
+use nakago::{self, Tag};
+use nakago_figment::FromRef;
 use tokio::time::sleep;
+use warp::{filters::BoxedFilter, reply::Reply};
 
-use crate::{auth, Config, WarpApplication};
+use crate::{auth, init::Listener, Config};
 
 use super::http::Http;
 
 /// Common test utils
-pub struct Utils<C>
-where
-    C: nakago::Config,
-{
-    /// The Application instance
-    pub app: WarpApplication<C>,
+pub struct Utils<C: nakago_figment::Config> {
+    /// The Nakago Inject container
+    pub i: nakago::Inject,
 
     /// The Address the server is listening on
     pub addr: SocketAddr,
 
     /// The test HTTP Request helper
     pub http: Arc<Http>,
+
+    /// The config tag to use
+    pub config_tag: Option<&'static Tag<C>>,
 }
 
-impl<C> Utils<C>
-where
-    C: nakago::Config,
-    Config: FromRef<C>,
-    auth::Config: FromRef<C>,
-{
-    /// Initialize a new set of utils
+impl<C: nakago_figment::Config> Utils<C> {
+    /// Initialize a new set of utils with no tags
     pub async fn init(
-        app: WarpApplication<C>,
-        config_path: &str,
+        i: nakago::Inject,
         base_url: &str,
-    ) -> hooks::Result<Self> {
-        let (server, addr) = app.run(Some(config_path.into())).await?;
+        filter: BoxedFilter<(impl Reply + 'static,)>,
+    ) -> nakago::Result<Self>
+    where
+        Config: FromRef<C>,
+    {
+        Utils::<C>::new(i, base_url, filter, None).await
+    }
+
+    /// Initialize a new set of utils
+    pub async fn new(
+        i: nakago::Inject,
+        base_url: &str,
+        filter: BoxedFilter<(impl Reply + 'static,)>,
+        config_tag: Option<&'static Tag<C>>,
+    ) -> nakago::Result<Self>
+    where
+        Config: FromRef<C>,
+    {
+        let (server, addr) = Listener::default().init(&i, filter).await?;
 
         // Spawn the server in the background
         tokio::spawn(server.into_future());
@@ -53,12 +66,25 @@ where
             base_url = base_url,
         )));
 
-        Ok(Utils { app, addr, http })
+        Ok(Utils {
+            i,
+            addr,
+            http,
+            config_tag,
+        })
     }
 
     /// Create a test JWT token with a dummy secret
-    pub async fn create_jwt(&self, username: &str) -> inject::Result<String> {
-        let config = self.app.get_config().await?;
+    pub async fn create_jwt(&self, username: &str) -> nakago::Result<String>
+    where
+        auth::Config: FromRef<C>,
+    {
+        let config = if let Some(tag) = self.config_tag {
+            self.i.get_tag(tag).await?
+        } else {
+            self.i.get::<C>().await?
+        };
+
         let auth = auth::Config::from_ref(&*config);
 
         let expected_claims = ClaimsSet::<Empty> {

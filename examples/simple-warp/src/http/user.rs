@@ -1,12 +1,9 @@
 use std::convert::Infallible;
 
 use nakago::Inject;
-use nakago_warp::{
-    auth::{subject::with_auth, Subject},
-    Route,
-};
+use nakago_warp::auth::Subject;
 use serde_derive::{Deserialize, Serialize};
-use warp::{filters::BoxedFilter, Filter, Reply};
+use warp::reply::Reply;
 
 /// A Username Response
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,18 +22,8 @@ impl Reply for UsernameResponse {
     }
 }
 
-/// Create a Get Username Route
-pub fn get_username(filter: BoxedFilter<(Inject,)>) -> Route {
-    warp::path("username")
-        .and(warp::get())
-        .and(with_auth(filter))
-        .and_then(handle_get_username)
-        .map(|a| Box::new(a) as Box<dyn Reply>)
-        .boxed()
-}
-
 /// Handle Get Username requests
-async fn handle_get_username(_: Inject, sub: Subject) -> Result<UsernameResponse, Infallible> {
+pub async fn handle_get_username(_: Inject, sub: Subject) -> Result<UsernameResponse, Infallible> {
     let username = if let Subject(Some(username)) = sub {
         username.clone()
     } else {

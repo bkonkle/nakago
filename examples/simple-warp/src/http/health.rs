@@ -1,9 +1,8 @@
 use std::convert::Infallible;
 
 use nakago::Inject;
-use nakago_warp::Route;
 use serde::{Deserialize, Serialize};
-use warp::{filters::BoxedFilter, reply::Reply, Filter};
+use warp::reply::Reply;
 
 /// A Health Check Response
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,16 +19,6 @@ impl Reply for HealthResponse {
         warp::reply::with_status(warp::reply::json(&self), warp::http::StatusCode::OK)
             .into_response()
     }
-}
-
-/// Create a Health Check Route
-pub fn health_check(filter: BoxedFilter<(Inject,)>) -> Route {
-    warp::path("health")
-        .and(warp::get())
-        .and(filter)
-        .and_then(health_handler)
-        .map(|a| Box::new(a) as Box<dyn Reply>)
-        .boxed()
 }
 
 /// Handle Health Check requests

@@ -64,11 +64,6 @@ impl Validator {
 }
 
 /// Provide the State needed in order to use the `Subject` extractor in an Axum handler
-///
-/// **Provides:** `Validator`
-///
-/// **Depends on:**
-///   - `Tag(auth::JWKS)`
 #[derive(Default)]
 pub struct Provide {}
 
@@ -87,8 +82,6 @@ impl Provider<Validator> for Provide {
 /// Provide the test ***unverified*** AuthState used in testing, which trusts any token given to it
 ///
 /// **WARNING: This is insecure and should only be used in testing**
-///
-/// **Provides:** `Validator`
 #[derive(Default)]
 pub struct ProvideUnverified {}
 

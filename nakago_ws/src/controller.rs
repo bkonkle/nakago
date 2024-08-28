@@ -97,7 +97,6 @@ impl<U: Send + Sync + Clone + Any> Controller<U> {
 pub struct Provide<U: Any> {
     connections_tag: Option<&'static Tag<Connections<U>>>,
     handler_tag: Option<&'static Tag<Box<dyn Handler<U>>>>,
-    _phantom: std::marker::PhantomData<U>,
 }
 
 impl<U: Any> Provide<U> {

@@ -1,6 +1,6 @@
 [package]
 name = "nakago"
-version = "0.20.0"
+version = "0.23.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A lightweight Rust framework for sharp services 😎"
@@ -13,13 +13,11 @@ license = "MIT"
 anyhow = "1.0"
 async-trait = "0.1"
 backtrace = "0.3"
-crossterm = "0.27"
 derive-new = "0.6"
-figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 fnv = "1.0.7"
 futures = "0.3.28"
 log = "0.4"
-nakago-derive = "0.20"
+nakago-derive = "0.23"
 pretty_env_logger = "0.5"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
@@ -38,5 +36,6 @@ fake = { version = "2.9", features = [
     'http',
     'uuid',
 ], git = "https://github.com/cksac/fake-rs.git" }
-mockall = "0.12"
+mockall = "0.13"
 pretty_assertions = "1.2"
+googletest = "0.12"

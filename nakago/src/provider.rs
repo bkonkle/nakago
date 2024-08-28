@@ -83,7 +83,7 @@ pub(crate) mod test {
     use derive_new::new;
     use nakago_derive::Provider;
 
-    use crate::inject::container::test::{HasId, OtherService, TestService};
+    use crate::container::test::{HasId, OtherService, TestService};
 
     use super::*;
 

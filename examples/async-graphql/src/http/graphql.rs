@@ -7,8 +7,8 @@ use crate::domains::{graphql, users};
 
 /// Handle GraphQL Requests
 pub async fn resolve(
-    schema: Inject<graphql::Schema>,
-    users: Inject<Box<dyn users::Service>>,
+    Inject(schema): Inject<graphql::Schema>,
+    Inject(users): Inject<Box<dyn users::Service>>,
     sub: Subject,
     req: GraphQLRequest,
 ) -> GraphQLResponse {

@@ -25,6 +25,10 @@ Nakago is a lightweight framework for building Rust applications with a modular 
 
 NOTE: This library is in early development, and the API may shift rapidly as it evolves. Be advised that this is not yet recommended for Production use.
 
+## ⚠️ Documentation Disclaimer
+
+Release v0.23.0 includes a significant refactor of the core Nakago library to streamline it into a dependency injection toolkit, removing applications lifecycles and hooks. The documentation has not yet been updated to reflect these changes. Please refer to the [CHANGELOG](CHANGELOG.md) for more information.
+
 ## Features
 
 - [Dependency Injection](https://nakago.dev/docs/features/dependency-injection)

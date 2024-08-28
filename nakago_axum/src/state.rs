@@ -31,15 +31,13 @@ impl DerefMut for State {
 
 /// An Axum extractor to inject dependencies from Nakago
 #[derive(new)]
-pub struct Inject<T> {
-    inner: Arc<T>,
-}
+pub struct Inject<T>(pub Arc<T>);
 
 impl<T> Deref for Inject<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        &self.0
     }
 }
 
