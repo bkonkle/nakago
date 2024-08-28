@@ -7,10 +7,9 @@ members = [
     "nakago_derive",
     "nakago_figment",
     "nakago_sea_orm",
-    # "nakago_warp",
+    "nakago_warp",
     "nakago_ws",
-    "examples/async-graphql",
-    "examples/simple",
+    "examples/*",
 ]
 default-members = [
     "nakago",
@@ -19,7 +18,7 @@ default-members = [
     "nakago_derive",
     "nakago_figment",
     "nakago_sea_orm",
-    # "nakago_warp",
+    "nakago_warp",
     "nakago_ws",
 ]
 
@@ -30,7 +29,7 @@ nakago-axum = { path = "./nakago_axum" }
 nakago-derive = { path = "./nakago_derive" }
 nakago-figment = { path = "./nakago_figment" }
 nakago-sea-orm = { path = "./nakago_sea_orm" }
-# nakago-warp = { path = "./nakago_warp" }
+nakago-warp = { path = "./nakago_warp" }
 nakago-ws = { path = "./nakago_ws" }
 
 [profile.release]

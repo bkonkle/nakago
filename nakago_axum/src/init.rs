@@ -1,5 +1,6 @@
-use std::{io, net::SocketAddr, panic::PanicInfo};
+use std::{io, net::SocketAddr, panic::PanicInfo, sync::Arc};
 
+use axum::{serve::Serve, Router};
 use backtrace::Backtrace;
 use crossterm::{execute, style::Print};
 use derive_new::new;
@@ -25,7 +26,11 @@ pub struct Listener<C: nakago_figment::Config> {
 
 impl<C: nakago_figment::Config> Listener<C> {
     /// Initialize the TCP Listener
-    pub async fn init(&self, i: &Inject) -> nakago::Result<TcpListener>
+    pub async fn init(
+        &self,
+        i: &Inject,
+        router: Router,
+    ) -> nakago::Result<(Serve<Router, Router>, SocketAddr)>
     where
         Config: FromRef<C>,
     {
@@ -41,9 +46,17 @@ impl<C: nakago_figment::Config> Listener<C> {
             .parse()
             .expect("Unable to parse bind address");
 
-        Ok(TcpListener::bind(&addr)
+        let listener = TcpListener::bind(&addr)
             .await
-            .unwrap_or_else(|_| panic!("Unable to bind to address: {}", addr)))
+            .unwrap_or_else(|_| panic!("Unable to bind to address: {}", addr));
+
+        let actual_addr = listener
+            .local_addr()
+            .map_err(|e| nakago::Error::Any(Arc::new(e.into())))?;
+
+        let server = axum::serve(listener, router);
+
+        Ok((server, actual_addr))
     }
 }
 

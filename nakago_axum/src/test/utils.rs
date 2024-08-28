@@ -57,13 +57,7 @@ impl<C: nakago_figment::Config> Utils<C> {
         panic::set_hook(Box::new(handle_panic));
         rust_log_subscriber();
 
-        let listener = Listener::default().init(&i).await?;
-
-        let addr = listener
-            .local_addr()
-            .map_err(|e| nakago::Error::Any(Arc::new(e.into())))?;
-
-        let server = axum::serve(listener, router);
+        let (server, addr) = Listener::default().init(&i, router).await?;
 
         // Spawn the server in the background
         tokio::spawn(server.into_future());

@@ -1,7 +1,7 @@
 //! The main entry point for the simple example.
 #![forbid(unsafe_code)]
 
-use std::{panic, path::PathBuf, sync::Arc};
+use std::{panic, path::PathBuf};
 
 use config::Config;
 use http::router;
@@ -57,15 +57,9 @@ async fn main() -> anyhow::Result<()> {
 
     let i = init::app(args.config_path).await?;
 
-    let listener = Listener::<Config>::default().init(&i).await?;
-
-    let addr = listener
-        .local_addr()
-        .map_err(|e| nakago::Error::Any(Arc::new(e.into())))?;
-
     let router = router::init(&i);
 
-    let server = axum::serve(listener, router);
+    let (server, addr) = Listener::<Config>::default().init(&i, router).await?;
 
     info!("Started on port: {port}", port = addr.port());
 

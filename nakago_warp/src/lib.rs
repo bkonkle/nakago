@@ -10,6 +10,9 @@ pub mod auth;
 /// Errors
 pub mod errors;
 
+/// Service Initialization Helpers
+pub mod init;
+
 /// Testing
 pub mod test;
 
