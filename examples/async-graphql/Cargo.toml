@@ -1,6 +1,6 @@
 [package]
 name = "nakago-examples-async-graphql"
-version = "0.21.0"
+version = "0.22.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "A lightweight Rust framework for sharp services 😎"
@@ -37,7 +37,7 @@ nakago = "0.20"
 nakago-async-graphql = "0.21"
 nakago-axum = "0.21"
 nakago-derive = "0.20"
-nakago-sea-orm = "0.20"
+nakago-sea-orm = "0.22"
 nakago-ws = "0.21"
 oso = "0.27"
 pico-args = "0.5.0"
