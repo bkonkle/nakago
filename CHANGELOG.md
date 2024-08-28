@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0]
+
+Major pivot! Until now, Nakago has been aimed at growing into a full-scale API server framework. However, I've realized that the core value of Nakago is the Dependency Injection system, and that it can be used in a wide variety of contexts. This release is a pivot to focus on the DI system itself, and to make it more flexible and easier to use in a variety of contexts.
+
+### Removed
+
+- `nakago` - Removed `Application`, `Hooks`, the `lifecycle::EventType` and `lifecycle::Events` enums. The `config` utilities were moved to `nakago-figment`.
+- `nakago-axum` - Removed `AxumApplication`, `Route`, and `Routes` in favor of a more generic approach. Use the new `Inject` extractor to access dependencies in your Axum handlers.
+- `nakago-warp` - Removed `WarpApplication`, `Route`, and `Routes` in favor of a more generic approach. Use the `with_injection()` Filter to access dependencies in your Warp handlers.
+
+### Changed
+
+- `nakago` - The tag-based container operations were previously the default mode of working with `Inject`. This proved to be more verbose and than necessary in most cases, however. The new default mode is to use the type-based operations, which are more ergonomic and easier to use. The tag-based operations are still available, but they are now suffixed with `_tag` to make it clear that they are a different mode of operation. The type-based operations are no longer suffixed with `_type`, because they are now the default.
+- `nakago` - The `inject` namespace has been promoted to the top level. Where `nakago::inject` was used before, `nakago` should now be the equivalent.
+- `nakago` - The `config` utilities were moved to `nakago-figment`.
+- `nakago-examples-simple`, `nakago-examples-async-graphql`, `nakago-examples-simple-warp` - Updated with the new approach. See these examples for more information about how to use the tools mentioned above.
+
+### Added
+
+- `nakago-axum` - Added a new `Inject` extractor to access dependencies in your Axum handlers. This is a much more idiomatic way to use Nakago with Axum, and it's more flexible than the previous approach. Use the provided Axum `State` to make the `Inject` container available to your handlers.
+- `nakago-figment` - Generic config utilities extracted from the core `nakago` package.
+
 ## [0.22.0]
 
 ### Changed
@@ -362,7 +384,8 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
-[unreleased]: https://github.com/bkonkle/nakago/compare/0.22.0...HEAD
+[unreleased]: https://github.com/bkonkle/nakago/compare/0.23.0...HEAD
+[0.23.0]: https://github.com/bkonkle/nakago/compare/0.22.0...0.23.0
 [0.22.0]: https://github.com/bkonkle/nakago/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/bkonkle/nakago/compare/0.20.0...0.21.0
 [0.20.0]: https://github.com/bkonkle/nakago/compare/0.19.1...0.20.0

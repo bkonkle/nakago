@@ -1,6 +1,6 @@
 [package]
 name = "nakago-derive"
-version = "0.30.0"
+version = "0.23.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
 description = "Macros for nakago"
