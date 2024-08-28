@@ -5,7 +5,7 @@
   <h1>Nakago (中子)</h1>
 
   <p>
-    <strong>A lightweight Rust framework for sharp services</strong>
+    <strong>A lightweight async dependency injection toolkit for Rust</strong>
   </p>
 
 [![Crates.io](https://img.shields.io/crates/v/nakago.svg)](https://crates.io/crates/nakago)
@@ -19,7 +19,7 @@
 
 </div>
 
-Nakago is a lightweight framework for building Rust applications with a modular structure, taking advantage of dependency injection and lifecycle events to bring organization and testability to Rust projects large and small.
+Nakago is a toolkit for building Rust applications with a modular structure, taking advantage of dependency injection to bring organization and testability to Rust projects large and small.
 
 ## ⚠️ Alpha Disclaimer
 
@@ -32,12 +32,12 @@ Release v0.23.0 includes a significant refactor of the core Nakago library to st
 ## Features
 
 - [Dependency Injection](https://nakago.dev/docs/features/dependency-injection)
-- [HTTP Adapter](https://nakago.dev/docs/features/axum-http) using [Axum](https://github.com/tokio-rs/axum)
-- [SQL Adapter](https://nakago.dev/docs/features/sea-orm) using [SeaORM](https://github.com/SeaQL/sea-orm)
-- [GraphQL Adapter](https://nakago.dev/docs/features/async-graphql) using [Async-GraphQL](https://github.com/async-graphql/async-graphql)
+- [HTTP Adapter](https://nakago.dev/docs/features/axum-http) for [Axum](https://github.com/tokio-rs/axum) and [Warp](https://github.com/seanmonstar/warp)
+- [SQL Adapter](https://nakago.dev/docs/features/sea-orm) for [SeaORM](https://github.com/SeaQL/sea-orm)
+- [GraphQL Adapter](https://nakago.dev/docs/features/async-graphql) for [Async-GraphQL](https://github.com/async-graphql/async-graphql)
 - CQRS Adapter using [CQRS-ES](https://crates.io/crates/cqrs-es) (upcoming)
 
-As development progresses, major features will be split up into separate crates, so that developers can install only what they need.
+As development progresses, components will be split up into separate crates, so that developers can install only what they need.
 
 ## Installation
 
