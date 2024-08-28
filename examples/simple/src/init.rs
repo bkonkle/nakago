@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use nakago::{Inject, Result};
 use nakago_axum::{
     auth::{jwks, validator, Jwks, Validator},
-    config::add_default_loaders,
+    config,
 };
 
 use crate::config::Config;
@@ -19,7 +19,7 @@ pub async fn app(config_path: Option<PathBuf>) -> Result<Inject> {
         .await?;
 
     // Add config loaders before the Config is initialized
-    add_default_loaders(&i).await?;
+    config::add_default_loaders(&i).await?;
 
     // Initialize the Config
     nakago_figment::Init::<Config>::default()

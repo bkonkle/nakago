@@ -27,7 +27,7 @@ impl TestUtils {
 
         let router = router::init(&i);
 
-        let utils = nakago_axum::test::Utils::init(i, "/", router, &config_path).await?;
+        let utils = nakago_axum::test::Utils::init(i, "/", router).await?;
 
         Ok(Self(utils))
     }

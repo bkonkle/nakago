@@ -1,6 +1,5 @@
 use std::{
-    default::Default, future::IntoFuture, net::SocketAddr, panic, path::PathBuf, sync::Arc,
-    time::Duration,
+    default::Default, future::IntoFuture, net::SocketAddr, panic, sync::Arc, time::Duration,
 };
 
 use axum::Router;
@@ -10,7 +9,7 @@ use biscuit::{
     ClaimsSet, Empty, RegisteredClaims, SingleOrMultiple, JWT,
 };
 use nakago::{self, Tag};
-use nakago_figment::{FromRef, Loaders};
+use nakago_figment::FromRef;
 use tokio::time::sleep;
 
 use crate::{
@@ -38,16 +37,11 @@ pub struct Utils<C: nakago_figment::Config> {
 
 impl<C: nakago_figment::Config> Utils<C> {
     /// Initialize a new set of utils with no tags
-    pub async fn init(
-        i: nakago::Inject,
-        base_url: &str,
-        router: Router,
-        config_path: &str,
-    ) -> nakago::Result<Self>
+    pub async fn init(i: nakago::Inject, base_url: &str, router: Router) -> nakago::Result<Self>
     where
         Config: FromRef<C>,
     {
-        Utils::<C>::new(i, base_url, router, Some(config_path.into()), None, None).await
+        Utils::<C>::new(i, base_url, router, None).await
     }
 
     /// Initialize a new set of utils
@@ -55,19 +49,13 @@ impl<C: nakago_figment::Config> Utils<C> {
         i: nakago::Inject,
         base_url: &str,
         router: Router,
-        config_path: Option<PathBuf>,
         config_tag: Option<&'static Tag<C>>,
-        loaders_tag: Option<&'static Tag<Loaders>>,
     ) -> nakago::Result<Self>
     where
         Config: FromRef<C>,
     {
         panic::set_hook(Box::new(handle_panic));
         rust_log_subscriber();
-
-        nakago_figment::Init::<C>::new(config_path, loaders_tag, config_tag)
-            .init(&i)
-            .await?;
 
         let listener = Listener::default().init(&i).await?;
 

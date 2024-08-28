@@ -49,9 +49,7 @@ impl Utils {
 
         let router = router::init(&i);
 
-        let utils =
-            nakago_async_graphql::test::Utils::init(i, "/", "/graphql", router, &config_path)
-                .await?;
+        let utils = nakago_async_graphql::test::Utils::init(i, "/", "/graphql", router).await?;
 
         Ok(Self(utils))
     }

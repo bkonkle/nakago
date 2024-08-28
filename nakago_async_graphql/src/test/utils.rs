@@ -1,9 +1,9 @@
-use std::{ops::Deref, path::PathBuf};
+use std::ops::Deref;
 
 use axum::Router;
 use nakago::Tag;
 use nakago_axum;
-use nakago_figment::{Config, FromRef, Loaders};
+use nakago_figment::{Config, FromRef};
 
 use super::http::GraphQL;
 
@@ -30,14 +30,12 @@ impl<C: Config> Utils<C> {
         base_url: &str,
         graphql_url: &str,
         router: Router,
-        config_path: &str,
     ) -> nakago::Result<Self>
     where
         C: Config,
         nakago_axum::Config: FromRef<C>,
     {
-        let utils =
-            nakago_axum::test::Utils::init(i.clone(), base_url, router, config_path).await?;
+        let utils = nakago_axum::test::Utils::init(i.clone(), base_url, router).await?;
 
         let graphql = GraphQL::new(utils.http.clone(), graphql_url.to_string());
 
@@ -50,23 +48,13 @@ impl<C: Config> Utils<C> {
         base_url: &str,
         graphql_url: &str,
         router: Router,
-        config_path: Option<PathBuf>,
         config_tag: Option<&'static Tag<C>>,
-        loaders_tag: Option<&'static Tag<Loaders>>,
     ) -> nakago::Result<Self>
     where
         C: Config,
         nakago_axum::Config: FromRef<C>,
     {
-        let utils = nakago_axum::test::Utils::new(
-            i.clone(),
-            base_url,
-            router,
-            config_path,
-            config_tag,
-            loaders_tag,
-        )
-        .await?;
+        let utils = nakago_axum::test::Utils::new(i.clone(), base_url, router, config_tag).await?;
 
         let graphql = GraphQL::new(utils.http.clone(), graphql_url.to_string());
 
