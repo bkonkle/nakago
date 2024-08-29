@@ -3,7 +3,7 @@ name = "nakago-examples-simple-warp"
 version = "0.23.0"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
 edition = "2021"
-description = "A lightweight Rust framework for sharp services 😎"
+description = "A lightweight Rust toolkit for sharp dependency injection 😎"
 repository = "https://github.com/bkonkle/nakago"
 license = "MIT"
 

@@ -23,18 +23,18 @@ export default function Intro(): JSX.Element {
                         <h3>A Flexible Foundation</h3>
                         <p>
                             Nakago provides a flexible foundation for building
-                            sharp and performant services in Rust. It wraps
-                            existing tools in the{" "}
-                            <a href="https://tokio.rs/">Tokio</a> ecosystem and
-                            beyond, making it easy to bring powerful libraries
-                            like{" "}
+                            precise and performant services in Rust. It uses
+                            dependency injectoin to complement existing tools in
+                            the <a href="https://tokio.rs/">Tokio</a> ecosystem
+                            and beyond, making it easy to bring powerful
+                            libraries like{" "}
                             <a href="https://github.com/tokio-rs/axum">Axum</a>,{" "}
                             <a href="https://www.sea-ql.org/SeaORM/">SeaORM</a>,
                             and{" "}
                             <a href="https://async-graphql.github.io/async-graphql/en/index.html">
                                 Async-GraphQL
                             </a>{" "}
-                            together in a configurable and easily testable way.
+                            together in an easily testable and configurable way.
                         </p>
                     </div>
                     <div className="col col--2"></div>
