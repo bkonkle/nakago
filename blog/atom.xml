@@ -8,30 +8,30 @@
     <subtitle>Nakago (中子) Blog</subtitle>
     <icon>https://nakago.dev/img/favicon.ico</icon>
     <entry>
-        <title type="html"><![CDATA[Welcome]]></title>
-        <id>https://nakago.dev/blog/welcome</id>
-        <link href="https://nakago.dev/blog/welcome"/>
+        <title type="html"><![CDATA[Pivot to a Dependency Injection Toolkit]]></title>
+        <id>https://nakago.dev/blog/pivot-di-toolkit</id>
+        <link href="https://nakago.dev/blog/pivot-di-toolkit"/>
         <updated>2024-08-28T00:00:00.000Z</updated>
         <summary type="html"><![CDATA[Nakago Pivots to a Dependency Injection Toolkit]]></summary>
-        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="nakago-pivots-to-a-dependency-injection-toolkit">Nakago Pivots to a Dependency Injection Toolkit<a href="https://nakago.dev/blog/welcome#nakago-pivots-to-a-dependency-injection-toolkit" class="hash-link" aria-label="Direct link to Nakago Pivots to a Dependency Injection Toolkit" title="Direct link to Nakago Pivots to a Dependency Injection Toolkit">​</a></h2>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="nakago-pivots-to-a-dependency-injection-toolkit">Nakago Pivots to a Dependency Injection Toolkit<a href="https://nakago.dev/blog/pivot-di-toolkit#nakago-pivots-to-a-dependency-injection-toolkit" class="hash-link" aria-label="Direct link to Nakago Pivots to a Dependency Injection Toolkit" title="Direct link to Nakago Pivots to a Dependency Injection Toolkit">​</a></h2>
 <p>With the release of Nakago v0.23, the project is pivoting away from the ambitious goal of a full-featured API framework, and towards a more streamlined dependency injection toolkit instead. The async Rust ecosystem is growing rapidly, and I haven't been able to devote enough time to Nakago to grow the application lifecycle and convenience features that I had originally envisioned. There are other projects that are doing a great job of providing these features - like <a href="https://loco.rs/" target="_blank" rel="noopener noreferrer">Loco</a>, <a href="https://github.com/http-rs/tide" target="_blank" rel="noopener noreferrer">Tide</a>, <a href="https://github.com/SeaQL/seaography" target="_blank" rel="noopener noreferrer">Seaography</a>, or <a href="https://salvo.rs/" target="_blank" rel="noopener noreferrer">Salvo</a>.</p>
 <p>What I haven't seen yet, however, is an async-first dependency injection container that is as lightweight and easy to work with as Nakago is, and doesn't require a lot of opaque macros or code generation. Nakago uses macros sparingly and takes advantage of Rust's <code>Any</code> dynamic typing tools to support a thread-safe, async-first dependency injection container that would work well with a variety of different Rust frameworks and team sizes.</p>
 <p>I'll continue refining Nakago and adding features and integrations as I have need of them on side projects, and I'd love to collaborate with others who are interested in building a lightweight, async-first dependency injection toolkit for Rust.</p>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="the-v023-changelog">The v0.23 Changelog<a href="https://nakago.dev/blog/welcome#the-v023-changelog" class="hash-link" aria-label="Direct link to The v0.23 Changelog" title="Direct link to The v0.23 Changelog">​</a></h3>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="removed">Removed<a href="https://nakago.dev/blog/welcome#removed" class="hash-link" aria-label="Direct link to Removed" title="Direct link to Removed">​</a></h3>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="the-v023-changelog">The v0.23 Changelog<a href="https://nakago.dev/blog/pivot-di-toolkit#the-v023-changelog" class="hash-link" aria-label="Direct link to The v0.23 Changelog" title="Direct link to The v0.23 Changelog">​</a></h3>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="removed">Removed<a href="https://nakago.dev/blog/pivot-di-toolkit#removed" class="hash-link" aria-label="Direct link to Removed" title="Direct link to Removed">​</a></h3>
 <ul>
 <li><code>nakago</code> - Removed <code>Application</code>, <code>Hooks</code>, the <code>lifecycle::EventType</code> and <code>lifecycle::Events</code> enums. The <code>config</code> utilities were moved to <code>nakago-figment</code>.</li>
 <li><code>nakago-axum</code> - Removed <code>AxumApplication</code>, <code>Route</code>, and <code>Routes</code> in favor of a more generic approach. Use the new <code>Inject</code> extractor to access dependencies in your Axum handlers.</li>
 <li><code>nakago-warp</code> - Removed <code>WarpApplication</code>, <code>Route</code>, and <code>Routes</code> in favor of a more generic approach. Use the <code>with_injection()</code> Filter to access dependencies in your Warp handlers.</li>
 </ul>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="changed">Changed<a href="https://nakago.dev/blog/welcome#changed" class="hash-link" aria-label="Direct link to Changed" title="Direct link to Changed">​</a></h3>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="changed">Changed<a href="https://nakago.dev/blog/pivot-di-toolkit#changed" class="hash-link" aria-label="Direct link to Changed" title="Direct link to Changed">​</a></h3>
 <ul>
 <li><code>nakago</code> - The tag-based container operations were previously the default mode of working with <code>Inject</code>. This proved to be more verbose and than necessary in most cases, however. The new default mode is to use the type-based operations, which are more ergonomic and easier to use. The tag-based operations are still available, but they are now suffixed with <code>_tag</code> to make it clear that they are a different mode of operation. The type-based operations are no longer suffixed with <code>_type</code>, because they are now the default.</li>
 <li><code>nakago</code> - The <code>inject</code> namespace has been promoted to the top level. Where <code>nakago::inject</code> was used before, <code>nakago</code> should now be the equivalent.</li>
 <li><code>nakago</code> - The <code>config</code> utilities were moved to <code>nakago-figment</code>.</li>
 <li><code>nakago-examples-simple</code>, <code>nakago-examples-async-graphql</code>, <code>nakago-examples-simple-warp</code> - Updated with the new approach. See these examples for more information about how to use the tools mentioned above.</li>
 </ul>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="added">Added<a href="https://nakago.dev/blog/welcome#added" class="hash-link" aria-label="Direct link to Added" title="Direct link to Added">​</a></h3>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="added">Added<a href="https://nakago.dev/blog/pivot-di-toolkit#added" class="hash-link" aria-label="Direct link to Added" title="Direct link to Added">​</a></h3>
 <ul>
 <li><code>nakago-axum</code> - Added a new <code>Inject</code> extractor to access dependencies in your Axum handlers. This is a much more idiomatic way to use Nakago with Axum, and it's more flexible than the previous approach. Use the provided Axum <code>State</code> to make the <code>Inject</code> container available to your handlers.</li>
 <li><code>nakago-figment</code> - Generic config utilities extracted from the core <code>nakago</code> package.</li>
@@ -47,29 +47,12 @@
         <link href="https://nakago.dev/blog/welcome"/>
         <updated>2023-08-30T00:00:00.000Z</updated>
         <summary type="html"><![CDATA[Welcome to Nakago]]></summary>
-        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="nakago-pivots-to-a-dependency-injection-toolkit">Nakago Pivots to a Dependency Injection Toolkit<a href="https://nakago.dev/blog/welcome#nakago-pivots-to-a-dependency-injection-toolkit" class="hash-link" aria-label="Direct link to Nakago Pivots to a Dependency Injection Toolkit" title="Direct link to Nakago Pivots to a Dependency Injection Toolkit">​</a></h2>
-<p>With the release of Nakago v0.23, the project is pivoting away from the ambitious goal of a full-featured API framework, and towards a more streamlined dependency injection toolkit instead. The async Rust ecosystem is growing rapidly, and I haven't been able to devote enough time to Nakago to grow the application lifecycle and convenience features that I had originally envisioned. There are other projects that are doing a great job of providing these features - like <a href="https://loco.rs/" target="_blank" rel="noopener noreferrer">Loco</a>, <a href="https://github.com/http-rs/tide" target="_blank" rel="noopener noreferrer">Tide</a>, <a href="https://github.com/SeaQL/seaography" target="_blank" rel="noopener noreferrer">Seaography</a>, or <a href="https://salvo.rs/" target="_blank" rel="noopener noreferrer">Salvo</a>.</p>
-<p>What I haven't seen yet, however, is an async-first dependency injection container that is as lightweight and easy to work with as Nakago is, and doesn't require a lot of opaque macros or code generation. Nakago uses macros sparingly and takes advantage of Rust's <code>Any</code> dynamic typing tools to support a thread-safe, async-first dependency injection container that would work well with a variety of different Rust frameworks and team sizes.</p>
-<p>I'll continue refining Nakago and adding features and integrations as I have need of them on side projects, and I'd love to collaborate with others who are interested in building a lightweight, async-first dependency injection toolkit for Rust.</p>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="the-v023-changelog">The v0.23 Changelog<a href="https://nakago.dev/blog/welcome#the-v023-changelog" class="hash-link" aria-label="Direct link to The v0.23 Changelog" title="Direct link to The v0.23 Changelog">​</a></h3>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="removed">Removed<a href="https://nakago.dev/blog/welcome#removed" class="hash-link" aria-label="Direct link to Removed" title="Direct link to Removed">​</a></h3>
-<ul>
-<li><code>nakago</code> - Removed <code>Application</code>, <code>Hooks</code>, the <code>lifecycle::EventType</code> and <code>lifecycle::Events</code> enums. The <code>config</code> utilities were moved to <code>nakago-figment</code>.</li>
-<li><code>nakago-axum</code> - Removed <code>AxumApplication</code>, <code>Route</code>, and <code>Routes</code> in favor of a more generic approach. Use the new <code>Inject</code> extractor to access dependencies in your Axum handlers.</li>
-<li><code>nakago-warp</code> - Removed <code>WarpApplication</code>, <code>Route</code>, and <code>Routes</code> in favor of a more generic approach. Use the <code>with_injection()</code> Filter to access dependencies in your Warp handlers.</li>
-</ul>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="changed">Changed<a href="https://nakago.dev/blog/welcome#changed" class="hash-link" aria-label="Direct link to Changed" title="Direct link to Changed">​</a></h3>
-<ul>
-<li><code>nakago</code> - The tag-based container operations were previously the default mode of working with <code>Inject</code>. This proved to be more verbose and than necessary in most cases, however. The new default mode is to use the type-based operations, which are more ergonomic and easier to use. The tag-based operations are still available, but they are now suffixed with <code>_tag</code> to make it clear that they are a different mode of operation. The type-based operations are no longer suffixed with <code>_type</code>, because they are now the default.</li>
-<li><code>nakago</code> - The <code>inject</code> namespace has been promoted to the top level. Where <code>nakago::inject</code> was used before, <code>nakago</code> should now be the equivalent.</li>
-<li><code>nakago</code> - The <code>config</code> utilities were moved to <code>nakago-figment</code>.</li>
-<li><code>nakago-examples-simple</code>, <code>nakago-examples-async-graphql</code>, <code>nakago-examples-simple-warp</code> - Updated with the new approach. See these examples for more information about how to use the tools mentioned above.</li>
-</ul>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="added">Added<a href="https://nakago.dev/blog/welcome#added" class="hash-link" aria-label="Direct link to Added" title="Direct link to Added">​</a></h3>
-<ul>
-<li><code>nakago-axum</code> - Added a new <code>Inject</code> extractor to access dependencies in your Axum handlers. This is a much more idiomatic way to use Nakago with Axum, and it's more flexible than the previous approach. Use the provided Axum <code>State</code> to make the <code>Inject</code> container available to your handlers.</li>
-<li><code>nakago-figment</code> - Generic config utilities extracted from the core <code>nakago</code> package.</li>
-</ul>]]></content>
+        <content type="html"><![CDATA[<h2 class="anchor anchorWithStickyNavbar_LWe7" id="welcome-to-nakago">Welcome to Nakago<a href="https://nakago.dev/blog/welcome#welcome-to-nakago" class="hash-link" aria-label="Direct link to Welcome to Nakago" title="Direct link to Welcome to Nakago">​</a></h2>
+<p>I created Nakago to help organize my Rust projects and cut down on boilerplate code as my applications grew larger. I wanted a framework that would allow me to focus on the business logic of my applications, while providing a solid foundation for the rest of the code.</p>
+<p>I've had great experiences in other language ecosystems with frameworks like Django in Python and Nest.js in TypeScript. I wanted to bring some of the same ideas to Rust, while taking advantage of the unique features of the language.</p>
+<p>Nakago is a lightweight framework for building Rust applications with a modular structure, taking advantage of dependency injection and lifecycle events to bring organization and testability to Rust projects large and small.</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="documentation--examples">Documentation &amp; Examples<a href="https://nakago.dev/blog/welcome#documentation--examples" class="hash-link" aria-label="Direct link to Documentation &amp; Examples" title="Direct link to Documentation &amp; Examples">​</a></h3>
+<p>Check out the <a href="https://nakago.dev/docs/intro">Documentation</a> and <a href="https://nakago.dev/docs/examples">Examples</a> to learn more about how to use Nakago. A 10-minute tutorial is coming soon, and stay tuned for videos on YouTube and Twitch as I begin to share my experiences with Nakago.</p>]]></content>
         <author>
             <name>Brandon Konkle</name>
             <uri>https://github.com/bkonkle</uri>
