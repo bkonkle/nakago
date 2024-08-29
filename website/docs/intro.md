@@ -30,8 +30,8 @@ See [docs/development.md](https://nakago.dev/docs/development).
 
 ## License
 
-Licensed under the MIT license ([LICENSE](LICENSE) or <http://opensource.org/licenses/MIT>).
+Licensed under the MIT license ([LICENSE](https://github.com/bkonkle/nakago/blob/main/LICENSE) or [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT)).
 
 ## Contribution
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/bkonkle/nakago/blob/main/CONTRIBUTING.md).

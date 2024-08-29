@@ -14,8 +14,7 @@ const FeatureList: FeatureItem[] = [
         Svg: require("@site/static/img/undraw_logistics_x-4-dc.svg").default,
         description: (
             <>
-                Nakago is built around a fully async dependency injection system
-                based on{" "}
+                Nakago is a fully async dependency injection system based on{" "}
                 <a href="https://doc.rust-lang.org/std/any/index.html">Any</a>{" "}
                 from the Rust standard library, and{" "}
                 <a href="https://docs.rs/futures/latest/futures/future/struct.Shared.html">
@@ -27,14 +26,14 @@ const FeatureList: FeatureItem[] = [
         ),
     },
     {
-        title: "Application Lifecycle",
+        title: "Framework Agnostic",
         Svg: require("@site/static/img/undraw_my_answer_re_k4dv.svg").default,
         description: (
             <>
-                Nakago provides a simple and flexible application lifecycle that
-                defines events that you can react to with Hooks. Load
-                dependencies and config, initialize services, and start your
-                application with the context you need for each entry point.
+                Nakago already plays nicely with Axum and Warp, and can be
+                smoothly integrated with other libraries or in-house frameworks.
+                It focuses on making dependency injection useful and flexible,
+                so that you can focus on scaling your application.
             </>
         ),
     },
