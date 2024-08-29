@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Async-GraphQL
 
-The GraphQL integration is built around a flexible Schema Builder approach that allows you to modify the in-progress schema to incrementally add things like DataLoaders and other context for your Resolvers. It uses the Init lifecycle hook as a trigger to build the final schema, making it available to the rest of your application through type ID or Tag.
+The GraphQL integration is built around a flexible Schema Builder approach that allows you to modify the in-progress schema to incrementally add things like DataLoaders and other context for your Resolvers. It uses an init function as a trigger to build the final schema, making it available to the rest of your application through type ID or Tag.
 
 ## Dependencies vs. Context
 
@@ -31,74 +31,62 @@ impl UsersQuery {
 }
 ```
 
-## Loading
+## Loading the Schema
 
-One strategy to keep things encapsulated is to use a domain-specific Load lifecycle hook to inject all of the Providers that are specific to a particular entity or area of concern - like Users or Profiles or other application-specific focuses.
+Organization is up to you and it can depend on the needs of the project, but it can help to separate your application's startup into multiple phases - like a "load" and an "init" phase. In the load phase you can use helpers to register all of the necessary Providers with your Inject container, including ones that are built up incrementally in a "plugin-style" architecture. Your GraphQL schema may depend on the domains that you have enabled for a particular entry point, just as your config may differ depending on the services you have enabled for that entry point. You can use whatever convention you like, passing the Inject container around as needed.
 
-For example, a Load hook for a Users domain might want to provide a Service and a DataLoader along with a Query and a Mutation that will use them, all focused on Users:
+For example, in a Users domain you might want to provide a Service and a DataLoader along with a Query and a Mutation that will use them, all focused on Users. You call the function "load" because it will be invoked during the load phase where all Providers are in the process of being registered. You separate this from an "init" function that you will use later on, once all of the dependencies are loaded. That load function might look like this:
 
 ```rust
-use super::{loaders, mutation, query, service, Loader, Mutation, Service, Query};
+use super::{loaders, mutation, query, service, Loader, Mutation, Query, Service};
 
-#[derive(Default)]
-pub struct Load {}
+pub async fn load(i: &Inject) -> nakago::Result<()> {
+    i.provide::<Box<dyn Service>>(service::Provide::default()).await?;
+    i.provide::<DataLoader<Loader>>(loaders::Provide::default()).await?;
+    i.provide::<Query>(query::Provide::default()).await?;
+    i.provide::<Mutation>(mutation::Provide::default()).await?;
 
-#[async_trait]
-impl Hook for Load {
-    async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        i.provide::<Box<dyn Service>>(service::Provide::default()).await?;
-        i.provide::<DataLoader<Loader>>(loaders::Provide::default()).await?;
-        i.provide::<Query>(query::Provide::default()).await?;
-        i.provide::<Mutation>(mutation::Provide::default()).await?;
-
-        Ok(())
-    }
+    Ok(())
 }
 ```
 
-To collect all of the dependencies needed for a particular application, you might have a top-level `graphql.rs` module that contains an Init hook that simply composes together the smaller individual Init hooks for each domain:
+To collect all of the dependencies needed for a particular application, you might have a top-level `graphql.rs` module that contains higher-level load function that simply composes together the smaller individual loaders for each domain:
 
 ```rust
 use super::{episodes, profiles, role_grants, shows, users};
 
-#[derive(Default)]
-pub struct Load {}
+pub async fn load(i: &Inject) -> nakago::Result<()> {
+    users::schema::load(&i).await?;
+    profiles::schema::load(&i).await?;
+    role_grants::schema::load(&i).await?;
+    shows::schema::load(&i).await?;
+    episodes::schema::load(&i).await?;
 
-#[async_trait]
-impl Hook for Load {
-    async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        i.handle(users::schema::Load::default()).await?;
-        i.handle(profiles::schema::Load::default()).await?;
-        i.handle(role_grants::schema::Load::default()).await?;
-        i.handle(shows::schema::Load::default()).await?;
-        i.handle(episodes::schema::Load::default()).await?;
-
-        Ok(())
-    }
+    Ok(())
 }
 ```
 
-In your application's top-level `init.rs` file, you could then simply add this top-level GraphQL Load hook to the list of hooks that are run in response to the Load lifecycle event:
+In your application's top-level `init.rs` file, you could then simply add use this top-level loader if you wanted to load all available domain Providers at the same time:
 
 ```rust
-pub async fn app() -> inject::Result<AxumApplication<Config>> {
-    let mut app = AxumApplication::<Config>::default();
+pub async fn app(config_path: Option<PathBuf>) -> nakago::Result<Inject> {
+    let i = Inject::default();
 
     // ...
 
-    app.on(&EventType::Load, graphql::Load::default());
+    graphql::load(&i).await?;
 
     // ...
 
-    Ok(app)
+    Ok(i)
 }
 ```
 
 ## Initialization
 
-In the Init phase, you can provide a top-level SchemaBuilder that other modules can optionally extend, culminating in a fully operation schema ready to execute GraphQL operations.
+Following the convention established in the previous example - for the init phase, you could provide a top-level SchemaBuilder that consumes the those dependencies so that they can be combined together in a Schema.
 
-First, build your schema using the standard `async_graphql` approach, building MergedObjects for your top-level Query and Mutation types:
+To do this, you would first build your schema's `MergedObject` approach that is standard in `async_graphql`, generating your top-level Query and Mutation types:
 
 ```rust
 /// The GraphQL top-level Query type
@@ -119,66 +107,51 @@ pub type Schema = async_graphql::Schema<Query, Mutation, EmptySubscription>;
 pub type SchemaBuilder = async_graphql::SchemaBuilder<Query, Mutation, EmptySubscription>;
 ```
 
-Then, only if you need to manage multiple instances of the same Schema, provide tags to represent each type in the Inject container:
+Finally, define an init function that constructs your top-level SchemaBuilder and injects it to the container so that it will be available for your application:
 
 ```rust
-/// Tag(graphql::Schema)
-pub const SCHEMA: Tag<Schema> = Tag::new("graphql::Schema");
+pub async fn init(i: &Inject) -> nakago::Result<()> {
+    let config = i.get::<Config>().await?;
 
-/// Tag(graphql::SchemaBuilder)
-pub const SCHEMA_BUILDER: Tag<SchemaBuilder> = Tag::new("graphql::SchemaBuilder");
-```
+    let users_query = i.consume::<users::Query>().await?;
+    let profiles_query = i.consume::<profiles::Query>().await?;
 
-You can omit this step if your application process will only ever operate on one Schema while running.
+    let users_mutation = i.consume::<users::Mutation>().await?;
+    let profiles_mutation = i.consume::<profiles::Mutation>().await?;
 
-Finally, define an Init hook that constructs your top-level SchemaBuilder and injects it to the container so that it will be available for any Init hooks that want to add context:
+    let builder = Schema::build(
+        Query(users_query, profiles_query),
+        Mutation(users_mutation, profiles_mutation),
+        EmptySubscription,
+    )
+    .data(config.clone());
 
-```rust
-#[derive(Default)]
-pub struct Init {}
+    i.inject::<SchemaBuilder>(builder).await?;
 
-#[async_trait]
-impl Hook for Init {
-    async fn handle(&self, i: Inject) -> hooks::Result<()> {
-        let users_query = i.consume::<users::Query>().await?;
-        let profiles_query = i.consume::<profiles::Query>().await?;
+    users::schema::init(&i).await?;
+    profiles::schema::init(&i).await?;
+    role_grants::schema::init(&i).await?;
 
-        let users_mutation = i.consume::<users::Mutation>().await?;
-        let profiles_mutation = i.consume::<profiles::Mutation>().await?;
-
-        let builder = Schema::build(
-            Query(users_query, profiles_query),
-            Mutation(users_mutation, profiles_mutation),
-            EmptySubscription,
-        );
-
-        i.inject::<SchemaBuilder>(builder).await?;
-
-        i.handle(users::schema::Init::default()).await?;
-        i.handle(profiles::schema::Init::default()).await?;
-
-        i.handle(
-            schema::Init::default(),
-        )
+    schema::Init::<Query, Mutation, EmptySubscription>::default()
+        .init(&i)
         .await?;
 
-        Ok(())
-    }
+    Ok(())
 }
 ```
 
-In your application's top-level `init.rs` file, you can then add this top-level GraphQL Init hook to the list of hooks that are run in response to the Init lifecycle event:
+In your application's top-level `init.rs` file, you can then add this GraphQL Schema initializer:
 
 ```rust
-pub async fn app() -> inject::Result<AxumApplication<Config>> {
-    let mut app = AxumApplication::<Config>::default();
+pub async fn app(config_path: Option<PathBuf>) -> nakago::Result<Inject> {
+    let i = Inject::default();
 
     // ...
 
-    app.on(&EventType::Init, graphql::Init::default());
+    graphql::init(&i).await?;
 
     // ...
 
-    Ok(app)
+    Ok(i)
 }
 ```
