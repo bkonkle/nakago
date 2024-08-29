@@ -2,13 +2,13 @@
 
   <img src="https://raw.githubusercontent.com/bkonkle/nakago/main/website/static/img/katana.png" width="400" alt="A katana leaning on a stand"/>
 
-  <h1>Nakago (中子) Axum</h1>
+  <h1>Nakago (中子) Derive</h1>
 
   <p>
-    <strong>An Axum integration for the Nakago DI toolkit</strong>
+    <strong>Proc macro support for the Nakago DI toolkit</strong>
   </p>
 
-  [![Crates.io](https://img.shields.io/crates/v/nakago-axum.svg)](https://crates.io/crates/nakago-axum)
+  [![Crates.io](https://img.shields.io/crates/v/nakago-derive.svg)](https://crates.io/crates/nakago-derive)
   [![Docs.rs](https://docs.rs/nakago/badge.svg)](https://docs.rs/nakago)
   [![CI](https://github.com/bkonkle/nakago/workflows/CI/badge.svg)](https://github.com/bkonkle/nakago/actions)
   [![Coverage Status](https://codecov.io/gh/bkonkle/nakago/branch/main/graph/badge.svg?token=BXEZAMHVLP)](https://codecov.io/gh/bkonkle/nakago)

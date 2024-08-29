@@ -5,7 +5,7 @@
   <h1>Nakago (中子) Async-GraphQL</h1>
 
   <p>
-    <strong>An Async-GraphQL integration for the Nakago Rust framework</strong>
+    <strong>An Async-GraphQL integration for the Nakago DI toolkit</strong>
   </p>
 
   [![Crates.io](https://img.shields.io/crates/v/nakago-axum.svg)](https://crates.io/crates/nakago-axum)
