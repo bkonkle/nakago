@@ -17,7 +17,7 @@ backtrace = "0.3"
 biscuit = "0.7.0"
 bytes = "1"
 crossterm = "0.28"
-derive-new = "0.6"
+derive-new = "0.7"
 fake = { version = "2.9", features = [
     'derive',
     'chrono',
