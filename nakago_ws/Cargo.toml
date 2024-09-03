@@ -14,7 +14,7 @@ anyhow = "1.0"
 async-trait = "0.1"
 axum = { version = "0.7", features = ["ws", "macros"] }
 biscuit = "0.7.0"
-derive-new = "0.6"
+derive-new = "0.7"
 fake = { version = "2.9", features = [
     'derive',
     'chrono',

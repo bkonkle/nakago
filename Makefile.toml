@@ -90,8 +90,14 @@ args = ["nextest", "run", "--features=integration", "${@}"]
 
 [tasks.audit]
 command = "cargo"
-# Ignore RUSTSEC-2023-0071 until SeaORM can be updated with an rsa fix
-args = ["audit", "--ignore", "RUSTSEC-2023-0071"]
+# Ignore RUSTSEC-2023-0071 and RUSTSEC-2024-0363 until SeaORM can be updated with an rsa & sqlx fix
+args = [
+    "audit",
+    "--ignore",
+    "RUSTSEC-2023-0071",
+    "--ignore",
+    "RUSTSEC-2024-0363",
+]
 
 [tasks.timings]
 script = '''

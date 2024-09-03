@@ -13,7 +13,7 @@ license = "MIT"
 anyhow = "1.0"
 async-trait = "0.1"
 axum = { version = "0.7", features = ["macros"] }
-derive-new = "0.6"
+derive-new = "0.7"
 figment = { version = "0.10", features = ["env"] }
 log = "0.4"
 nakago = "0.23"
