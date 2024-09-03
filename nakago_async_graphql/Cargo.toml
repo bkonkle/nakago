@@ -18,7 +18,7 @@ async-graphql = { version = "6.0", git = "https://github.com/bkonkle/async-graph
 async-graphql-axum = { version = "6.0", git = "https://github.com/bkonkle/async-graphql.git", branch = "update-http-axum" }
 async-trait = "0.1"
 axum = { version = "0.7", features = ["macros"] }
-derive-new = "0.6"
+derive-new = "0.7"
 fake = { version = "2.9", features = [
     'derive',
     'chrono',
