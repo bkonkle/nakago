@@ -1,13 +1,13 @@
 [package]
 name = "nakago-async-graphql"
 version = "0.23.0"
-authors = ["Brandon Konkle <brandon@konkle.us>"]
-edition = "2021"
 description = "An Async-GraphQL integration for Nakago"
-documentation = "https://docs.rs/nakago/"
-homepage = "https://github.com/bkonkle/nakago"
-repository = "https://github.com/bkonkle/nakago"
-license = "MIT"
+documentation = "https://docs.rs/nakago-async-graphql/"
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 anyhow = "1.0"

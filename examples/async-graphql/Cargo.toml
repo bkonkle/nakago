@@ -1,11 +1,12 @@
 [package]
 name = "nakago-examples-async-graphql"
-version = "0.23.0"
-authors = ["Brandon Konkle <brandon@konkle.us>"]
-edition = "2021"
+version = "0.24.0"
 description = "A lightweight Rust toolkit for sharp dependency injection 😎"
-repository = "https://github.com/bkonkle/nakago"
-license = "MIT"
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 publish = false
 
@@ -38,7 +39,7 @@ nakago-axum = "0.23"
 nakago-derive = "0.23"
 nakago-figment = "0.23"
 nakago-sea-orm = "0.23"
-nakago-ws = "0.23"
+nakago-ws = "0.24"
 nakago = "0.23"
 oso = "0.27"
 pico-args = "0.5.0"

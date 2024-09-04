@@ -6,7 +6,6 @@ use axum::extract::ws::Message;
 use derive_new::new;
 use nakago::{provider, Inject, Provider};
 use nakago_derive::Provider;
-use serde::{Deserialize, Serialize};
 use tokio::sync::{
     mpsc::{self, UnboundedSender},
     RwLock,
@@ -15,11 +14,11 @@ use ulid::Ulid;
 
 /// User Connection for WebSocket connections
 #[derive(Debug, Clone, new)]
-pub struct Connection<U> {
+pub struct Connection<Session> {
     tx: mpsc::UnboundedSender<Message>,
 
     #[allow(dead_code)]
-    session: Session<U>,
+    session: Session,
 }
 
 impl<U> Connection<U> {
@@ -38,12 +37,12 @@ impl<U> Connection<U> {
 /// - Key is their connection id
 /// - Value is a sender of `axum::extract::ws::Message`
 #[derive(Default, new)]
-pub struct Connections<U>(Arc<RwLock<HashMap<String, Connection<U>>>>);
+pub struct Connections<Session>(Arc<RwLock<HashMap<String, Connection<Session>>>>);
 
-impl<U: Clone> Connections<U> {
+impl<Session: Clone + Default> Connections<Session> {
     /// Get a copy of the Session associated with the given connection ID
     #[allow(dead_code)]
-    pub async fn get_session(&self, conn_id: &str) -> Session<U> {
+    pub async fn get_session(&self, conn_id: &str) -> Session {
         self.0
             .write()
             .await
@@ -54,7 +53,7 @@ impl<U: Clone> Connections<U> {
 
     /// Set the Session associated with the given connection ID, if it exists
     #[allow(dead_code)]
-    pub async fn set_session(&self, conn_id: &str, session: Session<U>) {
+    pub async fn set_session(&self, conn_id: &str, session: Session) {
         if let Some(connection) = self.0.write().await.get_mut(conn_id) {
             connection.session = session;
         }
@@ -70,7 +69,7 @@ impl<U: Clone> Connections<U> {
     }
 
     ///. Inserts a connection into the hash map, and returns the id
-    pub async fn insert(&self, tx: UnboundedSender<Message>, session: Session<U>) -> String {
+    pub async fn insert(&self, tx: UnboundedSender<Message>, session: Session) -> String {
         let conn_id = Ulid::new().to_string();
 
         self.0
@@ -84,40 +83,6 @@ impl<U: Clone> Connections<U> {
     /// Removees a connection from the hash map
     pub async fn remove(&self, conn_id: &str) {
         self.0.write().await.remove(conn_id);
-    }
-}
-
-/// A Session tracking details about this particular connection
-#[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
-#[serde(tag = "type")]
-pub enum Session<U> {
-    /// A session that is not associated with a User
-    #[default]
-    Anonymous,
-
-    /// A session that is associated with a User
-    User {
-        /// The User instance
-        user: U,
-    },
-}
-
-impl<U> Session<U> {
-    /// Create a new session for the given User
-    pub fn new(user: Option<U>) -> Self {
-        match user {
-            Some(user) => Self::User { user },
-            None => Self::Anonymous,
-        }
-    }
-
-    /// Get the User associated with this session, if any
-    #[allow(dead_code)]
-    pub fn get_user(&self) -> Option<&U> {
-        match self {
-            Session::Anonymous => None,
-            Session::User { user, .. } => Some(user),
-        }
     }
 }
 
@@ -137,6 +102,8 @@ impl<U: Send + Sync + Any + Default> Provider<Connections<U>> for Provide<U> {
 
 #[cfg(test)]
 pub(crate) mod test {
+    use serde::{Deserialize, Serialize};
+
     use super::*;
 
     #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq, new)]
@@ -144,10 +111,33 @@ pub(crate) mod test {
         id: String,
     }
 
+    /// A Session tracking details about this particular connection
+    #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
+    #[serde(tag = "type")]
+    enum Session {
+        /// A session that is not associated with a User
+        #[default]
+        Anonymous,
+
+        /// A session that is associated with a User
+        User(User),
+    }
+
+    impl Session {
+        /// Get the User associated with this session, if any
+        #[allow(dead_code)]
+        pub fn get_user(&self) -> Option<&User> {
+            match self {
+                Session::Anonymous => None,
+                Session::User(user) => Some(user),
+            }
+        }
+    }
+
     #[tokio::test]
     async fn test_connection_send_success() -> Result<()> {
         let (tx, mut rx) = mpsc::unbounded_channel();
-        let conn = Connection::new(tx, Session::<User>::Anonymous);
+        let conn = Connection::new(tx, Session::Anonymous);
 
         conn.send(Message::Text("Hello, World!".to_string()))?;
 
@@ -160,11 +150,8 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_connections_get_session_success() -> Result<()> {
-        let connections = Connections::<User>::default();
-
-        let expected = Session::<User>::User {
-            user: User::new(Ulid::new().to_string()),
-        };
+        let connections = Connections::<Session>::default();
+        let expected = Session::User(User::new(Ulid::new().to_string()));
 
         let conn_id = connections
             .insert(mpsc::unbounded_channel().0, expected.clone())
@@ -179,14 +166,11 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_connections_set_session_success() -> Result<()> {
-        let connections = Connections::<User>::default();
-
-        let expected = Session::<User>::User {
-            user: User::new(Ulid::new().to_string()),
-        };
+        let connections = Connections::<Session>::default();
+        let expected = Session::User(User::new(Ulid::new().to_string()));
 
         let conn_id = connections
-            .insert(mpsc::unbounded_channel().0, Session::<User>::Anonymous)
+            .insert(mpsc::unbounded_channel().0, Session::Anonymous)
             .await;
 
         connections.set_session(&conn_id, expected.clone()).await;
@@ -200,10 +184,10 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_connections_send_success() -> Result<()> {
-        let connections = Connections::<User>::default();
+        let connections = Connections::<Session>::default();
 
         let (tx, mut rx) = mpsc::unbounded_channel();
-        let conn_id = connections.insert(tx, Session::<User>::Anonymous).await;
+        let conn_id = connections.insert(tx, Session::Anonymous).await;
 
         connections
             .send(&conn_id, Message::Text("Hello, World!".to_string()))
@@ -218,14 +202,12 @@ pub(crate) mod test {
 
     #[tokio::test]
     async fn test_connections_remove_success() -> Result<()> {
-        let connections = Connections::<User>::default();
+        let connections = Connections::<Session>::default();
 
         let conn_id = connections
             .insert(
                 mpsc::unbounded_channel().0,
-                Session::<User>::User {
-                    user: User::new(Ulid::new().to_string()),
-                },
+                Session::User(User::new(Ulid::new().to_string())),
             )
             .await;
 
@@ -233,7 +215,7 @@ pub(crate) mod test {
 
         let session = connections.get_session(&conn_id).await;
 
-        assert_eq!(Session::<User>::Anonymous, session);
+        assert_eq!(Session::Anonymous, session);
 
         Ok(())
     }
@@ -241,7 +223,7 @@ pub(crate) mod test {
     #[tokio::test]
     async fn test_session_get_user_success() -> Result<()> {
         let user = User::new(Ulid::new().to_string());
-        let session = Session::<User>::User { user: user.clone() };
+        let session = Session::User(user.clone());
 
         assert_eq!(Some(&user), session.get_user());
 

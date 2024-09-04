@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- `nakago-ws` - Removed `Session` in favor of a generic type parameter for the `Connections` struct.
+
 ## [0.23.0]
 
 Major pivot! Until now, Nakago has been aimed at growing into a full-scale API server framework. However, I've realized that the core value of Nakago is the Dependency Injection system, and that it can be used in a wide variety of contexts. This release is a pivot to focus on the DI system itself, and to make it more flexible and easier to use in a variety of contexts.

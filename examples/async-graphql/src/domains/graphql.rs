@@ -28,11 +28,11 @@ pub type SchemaBuilder = async_graphql::SchemaBuilder<Query, Mutation, EmptySubs
 
 /// Loads the GraphQL schema builder dependencies
 pub async fn load(i: &Inject) -> nakago::Result<()> {
-    users::schema::load(&i).await?;
-    profiles::schema::load(&i).await?;
-    role_grants::schema::load(&i).await?;
-    shows::schema::load(&i).await?;
-    episodes::schema::load(&i).await?;
+    users::schema::load(i).await?;
+    profiles::schema::load(i).await?;
+    role_grants::schema::load(i).await?;
+    shows::schema::load(i).await?;
+    episodes::schema::load(i).await?;
 
     Ok(())
 }
@@ -67,14 +67,14 @@ pub async fn init(i: &Inject) -> nakago::Result<()> {
 
     i.inject::<SchemaBuilder>(builder).await?;
 
-    users::schema::init(&i).await?;
-    profiles::schema::init(&i).await?;
-    role_grants::schema::init(&i).await?;
-    shows::schema::init(&i).await?;
-    episodes::schema::init(&i).await?;
+    users::schema::init(i).await?;
+    profiles::schema::init(i).await?;
+    role_grants::schema::init(i).await?;
+    shows::schema::init(i).await?;
+    episodes::schema::init(i).await?;
 
     schema::Init::<Query, Mutation, EmptySubscription>::default()
-        .init(&i)
+        .init(i)
         .await?;
 
     Ok(())
