@@ -23,7 +23,6 @@ default-members = [
 ]
 
 [workspace.package]
-version = "0.24.0"
 license = "MIT"
 edition = "2021"
 authors = ["Brandon Konkle <brandon@konkle.us>"]
