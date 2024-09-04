@@ -7,7 +7,7 @@ use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
 use nakago_ws::connections::Connections;
 
-use crate::domains::users::{self, model::User};
+use crate::domains::users;
 
 use super::{
     messages::{IncomingMessage, OutgoingMessage},
@@ -22,13 +22,14 @@ pub struct Handler {
 }
 
 #[async_trait]
-impl nakago_ws::Handler<User> for Handler {
-    async fn get_session(&self, sub: Subject) -> Option<User> {
+impl nakago_ws::Handler<Session> for Handler {
+    async fn get_session(&self, sub: Subject) -> Option<Session> {
         if let Subject(Some(ref username)) = sub {
             self.users
                 .get_by_username(username, &true)
                 .await
-                .unwrap_or(None)
+                .map(|u| Session::new(u))
+                .ok()
         } else {
             None
         }
@@ -61,11 +62,11 @@ pub struct Provide {}
 
 #[Provider]
 #[async_trait]
-impl Provider<Box<dyn nakago_ws::Handler<User>>> for Provide {
+impl Provider<Box<dyn nakago_ws::Handler<Session>>> for Provide {
     async fn provide(
         self: Arc<Self>,
         i: nakago::Inject,
-    ) -> provider::Result<Arc<Box<dyn nakago_ws::Handler<User>>>> {
+    ) -> provider::Result<Arc<Box<dyn nakago_ws::Handler<Session>>>> {
         let connections = i.get::<Connections<Session>>().await?;
         let users = i.get::<Box<dyn users::Service>>().await?;
 

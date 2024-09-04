@@ -3,19 +3,19 @@ use nakago::Inject;
 use nakago_axum::{init::trace_layer, State};
 use nakago_ws::{connections, controller};
 
-use crate::{domains::users::model::User, events::handler};
+use crate::events::{handler, session::Session};
 
 use super::{events, graphql, health};
 
 /// Provide dependencies needed for the HTTP service
 pub async fn load(i: &Inject) -> nakago::Result<()> {
-    i.provide::<nakago_ws::Connections<User>>(connections::Provide::default())
+    i.provide::<nakago_ws::Connections<Session>>(connections::Provide::default())
         .await?;
 
-    i.provide::<Box<dyn nakago_ws::Handler<User>>>(handler::Provide::default())
+    i.provide::<Box<dyn nakago_ws::Handler<Session>>>(handler::Provide::default())
         .await?;
 
-    i.provide::<nakago_ws::Controller<User>>(controller::Provide::default())
+    i.provide::<nakago_ws::Controller<Session>>(controller::Provide::default())
         .await?;
 
     Ok(())

@@ -18,6 +18,14 @@ pub enum Session {
 }
 
 impl Session {
+    /// Create a new session for the given User
+    pub fn new(user: Option<User>) -> Self {
+        match user {
+            Some(user) => Self::User { user },
+            None => Self::Anonymous,
+        }
+    }
+
     /// Get the User associated with this session, if any
     #[allow(dead_code)]
     pub fn get_user(&self) -> Option<&User> {
