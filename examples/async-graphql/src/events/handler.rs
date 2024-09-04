@@ -28,7 +28,7 @@ impl nakago_ws::Handler<Session> for Handler {
             self.users
                 .get_by_username(username, &true)
                 .await
-                .map(|u| Session::new(u))
+                .map(Session::new)
                 .ok()
         } else {
             None
