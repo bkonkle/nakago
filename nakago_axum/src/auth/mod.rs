@@ -10,13 +10,13 @@ pub mod errors;
 pub mod jwks;
 
 /// JWT authentication
-pub mod subject;
+pub mod claims;
 
 /// Validation
 pub mod validator;
 
+pub use claims::Subject;
 pub use config::Config;
 pub use errors::Error;
 pub use jwks::{Jwks, JWKS};
-pub use subject::Subject;
 pub use validator::Validator;

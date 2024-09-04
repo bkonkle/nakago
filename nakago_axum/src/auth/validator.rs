@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use biscuit::{jwa::SignatureAlgorithm, jwk::JWKSet, jws::Header, ClaimsSet, Empty, JWT};
 use nakago::{provider, Inject, Provider};
 use nakago_derive::Provider;
+use serde::{Deserialize, Serialize};
 
 use super::{
     jwks::{get_secret_from_key_set, JWKS},
@@ -22,11 +23,14 @@ pub enum Validator {
 
 impl Validator {
     /// Get a validated payload from a JWT string
-    pub fn get_payload(&self, jwt: &str) -> Result<ClaimsSet<Empty>, Error> {
+    pub fn get_payload<T: Clone + Serialize + for<'de> Deserialize<'de>>(
+        &self,
+        jwt: &str,
+    ) -> Result<ClaimsSet<T>, Error> {
         match self {
             Validator::KeySet(jwks) => {
                 // First extract without verifying the header to locate the key-id (kid)
-                let token = JWT::<Empty, Empty>::new_encoded(jwt);
+                let token = JWT::<T, Empty>::new_encoded(jwt);
 
                 let header: Header<Empty> = token.unverified_header().map_err(Error::JWTToken)?;
 
@@ -53,7 +57,7 @@ impl Validator {
                 Ok(payload.clone())
             }
             Validator::Unverified => {
-                let token = JWT::<Empty, Empty>::new_encoded(jwt);
+                let token = JWT::<T, Empty>::new_encoded(jwt);
 
                 let payload = &token.unverified_payload().map_err(Error::JWTToken)?;
 

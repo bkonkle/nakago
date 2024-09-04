@@ -3,7 +3,9 @@ use axum::{
     extract::FromRequestParts,
     http::{request::Parts, HeaderValue},
 };
+use biscuit::{ClaimsSet, Empty};
 use hyper::{header::AUTHORIZATION, HeaderMap};
+use serde::{Deserialize, Serialize};
 
 use crate::State;
 
@@ -13,6 +15,48 @@ use super::{
 };
 
 const BEARER: &str = "Bearer ";
+
+/// The Token, including the JWT string and the payload with claims
+#[derive(Default, Debug, PartialEq, Eq, Clone)]
+pub struct Token<T: Default = Empty> {
+    /// The JWT string itself
+    pub jwt: Option<String>,
+
+    /// The decoded JWT claims
+    pub claims: Option<ClaimsSet<T>>,
+}
+
+/// Implement the Axum FromRequestParts trait, allowing the `Subject` to be used as an Axum
+/// extractor.
+#[async_trait]
+impl<T: Default + Clone + Serialize + for<'de> Deserialize<'de>> FromRequestParts<State>
+    for Token<T>
+{
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &State,
+    ) -> std::result::Result<Self, Self::Rejection> {
+        let validator = state
+            .get::<Validator>()
+            .await
+            .map_err(|_err| MissingValidator)?;
+
+        match jwt_from_header(&parts.headers) {
+            Ok(Some(jwt)) => {
+                let payload = validator.get_payload(jwt)?;
+
+                Ok(Token {
+                    jwt: Some(jwt.to_string()),
+                    claims: Some(payload),
+                })
+            }
+            Ok(None) => Ok(Token::<T>::default()),
+            Err(e) => Err(e),
+        }
+    }
+}
 
 /// The token's Subject claim, which corresponds with the username
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -35,7 +79,7 @@ impl FromRequestParts<State> for Subject {
 
         match jwt_from_header(&parts.headers) {
             Ok(Some(jwt)) => {
-                let payload = validator.get_payload(jwt)?;
+                let payload: ClaimsSet<Empty> = validator.get_payload(jwt)?;
                 let subject = payload.registered.subject.clone();
 
                 debug!("Successfully verified token with subject: {:?}", subject);
@@ -50,7 +94,7 @@ impl FromRequestParts<State> for Subject {
 
 /// If an authorization header is provided, make sure it's in the expected format, and
 /// return it as a String.
-pub fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>, Error> {
+fn jwt_from_header(headers: &HeaderMap<HeaderValue>) -> Result<Option<&str>, Error> {
     let header = if let Some(value) = headers.get(AUTHORIZATION) {
         value
     } else {

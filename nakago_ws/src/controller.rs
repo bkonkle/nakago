@@ -8,26 +8,32 @@ use axum::{
     },
     response::IntoResponse,
 };
+use biscuit::Empty;
 use derive_new::new;
 use futures::{SinkExt, StreamExt, TryFutureExt};
 use mockall::automock;
 use nakago::{provider, Inject, Provider, Tag};
-use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+
+use crate::auth::Token;
 
 use super::Connections;
 
 /// A Handler handles Websocket messages
 #[automock]
 #[async_trait]
-pub trait Handler<Session: Send + Sync + Any>: Send + Sync + Any {
+pub trait Handler<Session, T = Empty>: Send + Sync + Any
+where
+    Session: Send + Sync + Any,
+    T: Default + Send + Sync + Any,
+{
     /// Route the given message to the appropriate handler
     async fn route(&self, conn_id: &str, msg: Message) -> anyhow::Result<()>;
 
     /// Get the User from the Subject
-    async fn get_session(&self, sub: Subject) -> Option<Session>;
+    async fn get_session(&self, token: Token<T>) -> Option<Session>;
 }
 
 /// WebSocket Controller
@@ -41,11 +47,11 @@ impl<Session: Default + Send + Sync + Clone + Any> Controller<Session> {
     /// Handle requests for new WebSocket connections
     pub async fn upgrade(
         self: Arc<Self>,
-        sub: Subject,
+        token: Token,
         ws: WebSocketUpgrade,
     ) -> axum::response::Result<impl IntoResponse> {
         // Retrieve the request Session
-        let session = self.handler.get_session(sub).await;
+        let session = self.handler.get_session(token).await;
 
         Ok(ws.on_upgrade(|socket| async move { self.handle(socket, session).await }))
     }

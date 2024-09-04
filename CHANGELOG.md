@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `nakago-ws` - Removed `Session` in favor of a generic type parameter for the `Connections` struct.
 
+### Changed
+
+- `nakago-ws` - Handlers now accept the JWT string and the Registered Claims for use in more complex authorization scenarios.
+
 ## [0.23.0]
 
 Major pivot! Until now, Nakago has been aimed at growing into a full-scale API server framework. However, I've realized that the core value of Nakago is the Dependency Injection system, and that it can be used in a wide variety of contexts. This release is a pivot to focus on the DI system itself, and to make it more flexible and easier to use in a variety of contexts.

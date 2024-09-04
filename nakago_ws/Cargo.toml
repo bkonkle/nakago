@@ -22,6 +22,7 @@ fake = { version = "2.9", features = [
     'uuid',
 ], git = "https://github.com/cksac/fake-rs.git" }
 futures = "0.3"
+http = "1.0.0"
 hyper = "1.0"
 jsonwebtoken = "9.0"
 log = "0.4"
@@ -35,6 +36,7 @@ reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = "1.0"
+serde_urlencoded = "0.7"
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
