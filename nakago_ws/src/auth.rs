@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{any::Any, collections::HashMap};
 
 use async_trait::async_trait;
 use axum::extract::FromRequestParts;
@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 /// The JWT Token's Registered Claims
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
-pub struct Token<T: Default = Empty> {
+pub struct Token<T = Empty> {
     /// The JWT string itself
     pub jwt: Option<String>,
 
@@ -26,8 +26,9 @@ pub struct Token<T: Default = Empty> {
 
 /// Implement the Axum FromRequestParts trait, allowing `Claims` to be used as an Axum extractor.
 #[async_trait]
-impl<T: Default + Clone + Serialize + for<'de> Deserialize<'de>> FromRequestParts<State>
-    for Token<T>
+impl<T> FromRequestParts<State> for Token<T>
+where
+    T: Default + Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
 {
     type Rejection = auth::Error;
 
@@ -36,7 +37,7 @@ impl<T: Default + Clone + Serialize + for<'de> Deserialize<'de>> FromRequestPart
         state: &State,
     ) -> std::result::Result<Self, Self::Rejection> {
         let validator = state
-            .get::<Validator>()
+            .get::<Validator<T>>()
             .await
             .map_err(|_err| MissingValidator)?;
 

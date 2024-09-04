@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{any::Any, marker::PhantomData, sync::Arc};
 
 use async_trait::async_trait;
 use biscuit::{jwa::SignatureAlgorithm, jwk::JWKSet, jws::Header, ClaimsSet, Empty, JWT};
@@ -6,27 +6,21 @@ use nakago::{provider, Inject, Provider};
 use nakago_derive::Provider;
 use serde::{Deserialize, Serialize};
 
-use super::{
-    jwks::{get_secret_from_key_set, JWKS},
-    Error,
-};
+use super::{jwks::get_secret_from_key_set, Error};
 
 /// A validator for JWTs that uses a JWKS key set to validate the token
 #[derive(Clone)]
-pub enum Validator {
+pub enum Validator<T = Empty> {
     /// A validator that uses a JWKS key set to validate the token
-    KeySet(Arc<JWKSet<Empty>>),
+    KeySet(Arc<JWKSet<T>>),
 
     /// A validator that does not validate the token, used for testing
     Unverified,
 }
 
-impl Validator {
+impl<T: Clone + Serialize + for<'de> Deserialize<'de>> Validator<T> {
     /// Get a validated payload from a JWT string
-    pub fn get_payload<T: Clone + Serialize + for<'de> Deserialize<'de>>(
-        &self,
-        jwt: &str,
-    ) -> Result<ClaimsSet<T>, Error> {
+    pub fn get_payload(&self, jwt: &str) -> Result<ClaimsSet<T>, Error> {
         match self {
             Validator::KeySet(jwks) => {
                 // First extract without verifying the header to locate the key-id (kid)
@@ -69,13 +63,15 @@ impl Validator {
 
 /// Provide the State needed in order to use the `Subject` extractor in an Axum handler
 #[derive(Default)]
-pub struct Provide {}
+pub struct Provide<T> {
+    _phantom: PhantomData<T>,
+}
 
 #[Provider]
 #[async_trait]
-impl Provider<Validator> for Provide {
-    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Validator>> {
-        let jwks = i.get_tag(&JWKS).await?;
+impl<T: Send + Sync + Any> Provider<Validator<T>> for Provide<T> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Validator<T>>> {
+        let jwks = i.get::<JWKSet<T>>().await?;
 
         let validator = Validator::KeySet(jwks);
 
@@ -87,12 +83,14 @@ impl Provider<Validator> for Provide {
 ///
 /// **WARNING: This is insecure and should only be used in testing**
 #[derive(Default)]
-pub struct ProvideUnverified {}
+pub struct ProvideUnverified<T> {
+    _phantom: PhantomData<T>,
+}
 
 #[Provider]
 #[async_trait]
-impl Provider<Validator> for ProvideUnverified {
-    async fn provide(self: Arc<Self>, _i: Inject) -> provider::Result<Arc<Validator>> {
+impl<T: Send + Sync + Any> Provider<Validator<T>> for ProvideUnverified<T> {
+    async fn provide(self: Arc<Self>, _i: Inject) -> provider::Result<Arc<Validator<T>>> {
         let validator = Validator::Unverified;
 
         Ok(Arc::new(validator))

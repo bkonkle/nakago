@@ -1,29 +1,26 @@
-use std::sync::Arc;
+use std::{any::Any, marker::PhantomData, sync::Arc};
 
 use async_trait::async_trait;
 use biscuit::{
-    jwk::{AlgorithmParameters, JWKSet, JWK},
+    jwk::{AlgorithmParameters, JWK},
     jws::Secret,
 };
 use nakago::{self, provider, Inject, Provider, Tag};
 use nakago_derive::Provider;
 use nakago_figment::FromRef;
+use serde::Deserialize;
 use thiserror::Error;
+
+pub use biscuit::{jwk::JWKSet, Empty}; // Re-export types from biscuit
 
 use super::Config;
 
-/// Re-export the `JWKSet` type from biscuit, with an empty payload
-pub type Jwks = JWKSet<biscuit::Empty>;
-
-/// The default empty JWKS Tag
-pub const JWKS: Tag<Jwks> = Tag::new("auth::JWKS");
-
 /// Get the default set of JWKS keys
-pub async fn init(config: Config) -> Jwks {
+pub async fn init<T: for<'de> Deserialize<'de>>(config: Config) -> JWKSet<T> {
     let jwks_client = Client::new(config);
 
     jwks_client
-        .get_key_set()
+        .get_key_set::<T>()
         .await
         .expect("Unable to retrieve JWKS")
 }
@@ -40,16 +37,19 @@ impl Client {
     }
 
     /// Get a `JWKSet` from the configured Auth url
-    pub async fn get_key_set(&self) -> anyhow::Result<Jwks> {
+    pub async fn get_key_set<T: for<'de> Deserialize<'de>>(&self) -> anyhow::Result<JWKSet<T>> {
         let response = reqwest::get(format!("{}/.well-known/jwks.json", &self.config.url)).await?;
-        let jwks = response.json::<Jwks>().await?;
+        let jwks = response.json::<JWKSet<T>>().await?;
 
         Ok(jwks)
     }
 }
 
 /// A convenience function to get a particular key from a key set, and convert it into a secret
-pub fn get_secret_from_key_set(jwks: &Jwks, key_id: &str) -> Result<Secret, ClientError> {
+pub fn get_secret_from_key_set<T: Clone>(
+    jwks: &JWKSet<T>,
+    key_id: &str,
+) -> Result<Secret, ClientError> {
     let jwk = get_key(jwks, key_id)?;
     let secret = get_secret(jwk)?;
 
@@ -57,14 +57,14 @@ pub fn get_secret_from_key_set(jwks: &Jwks, key_id: &str) -> Result<Secret, Clie
 }
 
 /// Get a particular key from a key set by id
-pub fn get_key(jwks: &Jwks, key_id: &str) -> Result<JWK<biscuit::Empty>, ClientError> {
+pub fn get_key<T: Clone>(jwks: &JWKSet<T>, key_id: &str) -> Result<JWK<T>, ClientError> {
     let key = jwks.find(key_id).ok_or(ClientError::MissingKeyId)?.clone();
 
     Ok(key)
 }
 
 /// Convert a JWK into a Secret
-pub fn get_secret(jwk: JWK<biscuit::Empty>) -> Result<Secret, ClientError> {
+pub fn get_secret<T>(jwk: JWK<T>) -> Result<Secret, ClientError> {
     let secret = match jwk.algorithm {
         AlgorithmParameters::RSA(rsa_key) => rsa_key.jws_public_key_secret(),
         _ => return Err(ClientError::SecretKeyError),
@@ -87,31 +87,37 @@ pub enum ClientError {
 
 /// Provide the Json Web Key Set
 #[derive(Default)]
-pub struct Provide<C: nakago_figment::Config> {
+pub struct Provide<C: nakago_figment::Config, T = Empty> {
     config_tag: Option<&'static Tag<C>>,
+    _phantom: PhantomData<T>,
 }
 
-impl<C: nakago_figment::Config> Provide<C> {
+impl<C: nakago_figment::Config, T: Send + Sync + Any> Provide<C, T> {
     /// Create a new instance of Provide
     pub fn new(config_tag: Option<&'static Tag<C>>) -> Self {
-        Self { config_tag }
+        Self {
+            config_tag,
+            _phantom: PhantomData,
+        }
     }
 
     /// Set the config Tag for this instance
     pub fn with_config_tag(self, config_tag: &'static Tag<C>) -> Self {
         Self {
             config_tag: Some(config_tag),
+            ..self
         }
     }
 }
 
 #[Provider]
 #[async_trait]
-impl<C: nakago_figment::Config> Provider<Jwks> for Provide<C>
+impl<C: nakago_figment::Config, T: Send + Sync + Any + for<'de> Deserialize<'de>>
+    Provider<JWKSet<T>> for Provide<C, T>
 where
     Config: FromRef<C>,
 {
-    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Jwks>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<JWKSet<T>>> {
         let config = if let Some(tag) = self.config_tag {
             i.get_tag(tag).await?
         } else {

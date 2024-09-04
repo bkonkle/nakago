@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use async_trait::async_trait;
 use axum::{
     extract::FromRequestParts,
@@ -29,8 +31,9 @@ pub struct Token<T: Default = Empty> {
 /// Implement the Axum FromRequestParts trait, allowing the `Subject` to be used as an Axum
 /// extractor.
 #[async_trait]
-impl<T: Default + Clone + Serialize + for<'de> Deserialize<'de>> FromRequestParts<State>
-    for Token<T>
+impl<T> FromRequestParts<State> for Token<T>
+where
+    T: Default + Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
 {
     type Rejection = Error;
 
@@ -39,7 +42,7 @@ impl<T: Default + Clone + Serialize + for<'de> Deserialize<'de>> FromRequestPart
         state: &State,
     ) -> std::result::Result<Self, Self::Rejection> {
         let validator = state
-            .get::<Validator>()
+            .get::<Validator<T>>()
             .await
             .map_err(|_err| MissingValidator)?;
 

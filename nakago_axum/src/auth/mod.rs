@@ -18,5 +18,6 @@ pub mod validator;
 pub use claims::Subject;
 pub use config::Config;
 pub use errors::Error;
-pub use jwks::{Jwks, JWKS};
+pub use jwks::Empty;
+pub use jwks::JWKSet;
 pub use validator::Validator;

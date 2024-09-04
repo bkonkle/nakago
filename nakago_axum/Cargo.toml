@@ -1,6 +1,6 @@
 [package]
 name = "nakago-axum"
-version = "0.23.0"
+version = "0.24.0"
 description = "An Axum HTTP routes integration for Nakago"
 documentation = "https://docs.rs/nakago-axum/"
 license.workspace = true

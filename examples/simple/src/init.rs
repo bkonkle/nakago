@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use nakago::{Inject, Result};
 use nakago_axum::{
-    auth::{jwks, validator, Jwks, Validator},
+    auth::{jwks, validator, Empty, JWKSet, Validator},
     config,
 };
 
@@ -12,7 +12,7 @@ use crate::config::Config;
 pub async fn app(config_path: Option<PathBuf>) -> Result<Inject> {
     let i = Inject::default();
 
-    i.provide::<Jwks>(jwks::Provide::<Config>::default())
+    i.provide::<JWKSet<Empty>>(jwks::Provide::<Config>::default())
         .await?;
 
     i.provide::<Validator>(validator::Provide::default())
