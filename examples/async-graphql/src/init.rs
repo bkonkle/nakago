@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use nakago::{self, Inject};
-use nakago_axum::auth::{jwks, validator, Jwks, Validator};
+use nakago_axum::auth::{jwks, validator, Empty, JWKSet, Validator};
 use oso::Oso;
 use sea_orm::DatabaseConnection;
 
@@ -15,7 +15,7 @@ use crate::{
 pub async fn app(config_path: Option<PathBuf>) -> nakago::Result<Inject> {
     let i = Inject::default();
 
-    i.provide::<Jwks>(jwks::Provide::<Config>::default())
+    i.provide::<JWKSet<Empty>>(jwks::Provide::<Config>::default())
         .await?;
 
     i.provide::<Validator>(validator::Provide::default())

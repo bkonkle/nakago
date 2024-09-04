@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `nakago-axum` - Added a `Token<T>` extractor that uses the `T` for private claims using biscuit::ClaimsSet.
+
 ### Removed
 
 - `nakago-ws` - Removed `Session` in favor of a generic type parameter for the `Connections` struct.
+
+### Changed
+
+- `nakago-ws` - Handlers now accept a new Token type, which contains the JWT string and the Registered Claims for use in more complex authorization scenarios.
 
 ## [0.23.0]
 

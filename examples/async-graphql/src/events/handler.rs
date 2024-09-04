@@ -3,9 +3,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use axum::extract::ws::Message;
 use nakago::{provider, Provider};
-use nakago_axum::auth::Subject;
 use nakago_derive::Provider;
-use nakago_ws::connections::Connections;
+use nakago_ws::{auth::Token, connections::Connections};
 
 use crate::domains::users;
 
@@ -23,8 +22,10 @@ pub struct Handler {
 
 #[async_trait]
 impl nakago_ws::Handler<Session> for Handler {
-    async fn get_session(&self, sub: Subject) -> Option<Session> {
-        if let Subject(Some(ref username)) = sub {
+    async fn get_session(&self, token: Token) -> Option<Session> {
+        let sub = token.claims?.registered.subject;
+
+        if let Some(ref username) = sub {
             self.users
                 .get_by_username(username, &true)
                 .await
