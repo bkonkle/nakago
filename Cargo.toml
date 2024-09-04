@@ -22,6 +22,14 @@ default-members = [
     "nakago_ws",
 ]
 
+[workspace.package]
+version = "0.24.0"
+license = "MIT"
+edition = "2021"
+authors = ["Brandon Konkle <brandon@konkle.us>"]
+homepage = "https://github.com/bkonkle/nakago"
+repository = "https://github.com/bkonkle/nakago"
+
 [patch.crates-io]
 nakago = { path = "./nakago" }
 nakago-async-graphql = { path = "./nakago_async_graphql" }

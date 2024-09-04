@@ -1,13 +1,13 @@
 [package]
 name = "nakago-ws"
-version = "0.23.0"
-authors = ["Brandon Konkle <brandon@konkle.us>"]
-edition = "2021"
+version = "0.24.0"
 description = "Websocket utils for Nakago"
-documentation = "https://docs.rs/nakago/"
-homepage = "https://github.com/bkonkle/nakago"
-repository = "https://github.com/bkonkle/nakago"
-license = "MIT"
+documentation = "https://docs.rs/nakago-ws/"
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 anyhow = "1.0"

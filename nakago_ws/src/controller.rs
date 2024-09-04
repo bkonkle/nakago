@@ -17,42 +17,42 @@ use nakago_derive::Provider;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use super::{connections::Session, Connections};
+use super::Connections;
 
 /// A Handler handles Websocket messages
 #[automock]
 #[async_trait]
-pub trait Handler<U: Send + Sync + Any>: Send + Sync + Any {
+pub trait Handler<Session: Send + Sync + Any>: Send + Sync + Any {
     /// Route the given message to the appropriate handler
     async fn route(&self, conn_id: &str, msg: Message) -> anyhow::Result<()>;
 
     /// Get the User from the Subject
-    async fn get_user(&self, sub: Subject) -> Option<U>;
+    async fn get_session(&self, sub: Subject) -> Option<Session>;
 }
 
 /// WebSocket Controller
 #[derive(Clone, new)]
-pub struct Controller<U> {
-    connections: Arc<Connections<U>>,
-    handler: Arc<Box<dyn Handler<U>>>,
+pub struct Controller<Session> {
+    connections: Arc<Connections<Session>>,
+    handler: Arc<Box<dyn Handler<Session>>>,
 }
 
-impl<U: Send + Sync + Clone + Any> Controller<U> {
+impl<Session: Default + Send + Sync + Clone + Any> Controller<Session> {
     /// Handle requests for new WebSocket connections
     pub async fn upgrade(
         self: Arc<Self>,
         sub: Subject,
         ws: WebSocketUpgrade,
     ) -> axum::response::Result<impl IntoResponse> {
-        // Retrieve the request User, if username is present
-        let user = self.handler.get_user(sub).await;
+        // Retrieve the request Session
+        let session = self.handler.get_session(sub).await;
 
-        Ok(ws.on_upgrade(|socket| async move { self.handle(socket, user).await }))
+        Ok(ws.on_upgrade(|socket| async move { self.handle(socket, session).await }))
     }
 
     /// Handle `WebSocket` connections by setting up a message handler that deserializes them and
     /// determines how to handle
-    async fn handle(&self, socket: WebSocket, user: Option<U>) {
+    async fn handle(&self, socket: WebSocket, session: Option<Session>) {
         let (mut ws_write, mut ws_read) = socket.split();
 
         let (tx, rx) = mpsc::unbounded_channel();
@@ -69,7 +69,10 @@ impl<U: Send + Sync + Clone + Any> Controller<U> {
             }
         });
 
-        let conn_id = self.connections.insert(tx, Session::new(user)).await;
+        let conn_id = self
+            .connections
+            .insert(tx, session.unwrap_or_default())
+            .await;
 
         while let Some(result) = ws_read.next().await {
             let msg = match result {

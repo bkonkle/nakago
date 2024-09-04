@@ -1,11 +1,12 @@
 [package]
 name = "nakago-examples-simple"
 version = "0.23.0"
-authors = ["Brandon Konkle <brandon@konkle.us>"]
-edition = "2021"
 description = "A lightweight Rust toolkit for sharp dependency injection 😎"
-repository = "https://github.com/bkonkle/nakago"
-license = "MIT"
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 publish = false
 

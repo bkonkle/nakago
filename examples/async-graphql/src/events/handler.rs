@@ -9,18 +9,21 @@ use nakago_ws::connections::Connections;
 
 use crate::domains::users::{self, model::User};
 
-use super::messages::{IncomingMessage, OutgoingMessage};
+use super::{
+    messages::{IncomingMessage, OutgoingMessage},
+    session::Session,
+};
 
 /// Message Handler
 #[derive(Clone)]
 pub struct Handler {
-    connections: Arc<Connections<User>>,
+    connections: Arc<Connections<Session>>,
     users: Arc<Box<dyn users::Service>>,
 }
 
 #[async_trait]
 impl nakago_ws::Handler<User> for Handler {
-    async fn get_user(&self, sub: Subject) -> Option<User> {
+    async fn get_session(&self, sub: Subject) -> Option<User> {
         if let Subject(Some(ref username)) = sub {
             self.users
                 .get_by_username(username, &true)
@@ -63,7 +66,7 @@ impl Provider<Box<dyn nakago_ws::Handler<User>>> for Provide {
         self: Arc<Self>,
         i: nakago::Inject,
     ) -> provider::Result<Arc<Box<dyn nakago_ws::Handler<User>>>> {
-        let connections = i.get::<Connections<User>>().await?;
+        let connections = i.get::<Connections<Session>>().await?;
         let users = i.get::<Box<dyn users::Service>>().await?;
 
         Ok(Arc::new(Box::new(Handler { connections, users })))
