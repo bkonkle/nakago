@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `nakago-ws` - Handlers now accept a new Token type, which contains the JWT string and the Registered Claims for use in more complex authorization scenarios.
+- `nakago-async-graphql` - Update `nakago-axum`
 
 ## [0.23.0]
 

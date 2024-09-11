@@ -71,6 +71,8 @@ impl Provider<Box<dyn nakago_ws::Handler<Session>>> for Provide {
         let connections = i.get::<Connections<Session>>().await?;
         let users = i.get::<Box<dyn users::Service>>().await?;
 
-        Ok(Arc::new(Box::new(Handler { connections, users })))
+        let temp = Box::new(Handler { connections, users });
+
+        Ok(Arc::new(temp))
     }
 }
