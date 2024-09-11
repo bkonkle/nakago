@@ -103,14 +103,14 @@ impl<Session: Default + Send + Sync + Clone + Any> Controller<Session> {
 
 /// Provide a new WebSocket Event Controller
 #[derive(Default, new)]
-pub struct Provide<U: Any> {
-    connections_tag: Option<&'static Tag<Connections<U>>>,
-    handler_tag: Option<&'static Tag<Box<dyn Handler<U>>>>,
+pub struct Provide<Session: Any> {
+    connections_tag: Option<&'static Tag<Connections<Session>>>,
+    handler_tag: Option<&'static Tag<Box<dyn Handler<Session>>>>,
 }
 
-impl<U: Any> Provide<U> {
+impl<Session: Any> Provide<Session> {
     /// Set a Tag for the Connections instance this Provider requires
-    pub fn with_connections_tag(self, connections_tag: &'static Tag<Connections<U>>) -> Self {
+    pub fn with_connections_tag(self, connections_tag: &'static Tag<Connections<Session>>) -> Self {
         Self {
             connections_tag: Some(connections_tag),
             ..self
@@ -118,7 +118,7 @@ impl<U: Any> Provide<U> {
     }
 
     /// Set a Tag for the Handler instance this Provider requires
-    pub fn with_handler_tag(self, handler_tag: &'static Tag<Box<dyn Handler<U>>>) -> Self {
+    pub fn with_handler_tag(self, handler_tag: &'static Tag<Box<dyn Handler<Session>>>) -> Self {
         Self {
             handler_tag: Some(handler_tag),
             ..self
@@ -128,21 +128,21 @@ impl<U: Any> Provide<U> {
 
 #[Provider]
 #[async_trait]
-impl<U> Provider<Controller<U>> for Provide<U>
+impl<Session> Provider<Controller<Session>> for Provide<Session>
 where
-    U: Send + Sync + Any,
+    Session: Send + Sync + Any,
 {
-    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Controller<U>>> {
+    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Controller<Session>>> {
         let connections = if let Some(tag) = self.connections_tag {
             i.get_tag(tag).await?
         } else {
-            i.get::<Connections<U>>().await?
+            i.get::<Connections<Session>>().await?
         };
 
         let handler = if let Some(tag) = self.handler_tag {
             i.get_tag(tag).await?
         } else {
-            i.get::<Box<dyn Handler<U>>>().await?
+            i.get::<Box<dyn Handler<Session>>>().await?
         };
 
         Ok(Arc::new(Controller::new(connections, handler)))
