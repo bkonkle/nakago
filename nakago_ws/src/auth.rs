@@ -7,8 +7,9 @@ use http::{request::Parts, Uri};
 use nakago_axum::{
     auth::{
         self,
+        validator::Validator,
         Error::{InvalidAuthHeader, MissingValidator},
-        Validator,
+        JWKSValidator,
     },
     State,
 };
@@ -37,7 +38,7 @@ where
         state: &State,
     ) -> std::result::Result<Self, Self::Rejection> {
         let validator = state
-            .get::<Validator<T>>()
+            .get::<JWKSValidator<T>>()
             .await
             .map_err(|_err| MissingValidator)?;
 
@@ -76,7 +77,7 @@ impl FromRequestParts<State> for Subject {
         state: &State,
     ) -> std::result::Result<Self, Self::Rejection> {
         let validator = state
-            .get::<Validator>()
+            .get::<JWKSValidator>()
             .await
             .map_err(|_err| MissingValidator)?;
 

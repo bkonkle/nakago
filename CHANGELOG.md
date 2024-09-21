@@ -17,7 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `nakago-axum` - Renamed the auth `Validator` to `JWKSValidator` for clarity.
+- `nakago-axum` - Moved the Unverified Validator out to a separate struct that is only built when `cfg(test)` is enabled.
 - `nakago-ws` - Handlers now accept a new Token type, which contains the JWT string and the Registered Claims for use in more complex authorization scenarios.
+- `nakago-ws` - Changed the signature of Handlers to use Results for better error handling.
 
 ## [0.23.0]
 

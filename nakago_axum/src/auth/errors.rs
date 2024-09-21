@@ -13,19 +13,25 @@ pub enum Error {
     #[error("Invalid JWT")]
     JWTToken(biscuit::errors::Error),
 
+    /// An error occured while attempting to resolve the Validator dependency
+    #[error("Missing Validator dependency")]
+    MissingValidator,
+
     /// An error occured while attempting to identify the key id
     #[error("JWK verification failed")]
     JWKSVerification,
 
-    /// An error occured while attempting to resolve the Validator dependency
-    #[error("Missing Validator dependency")]
-    MissingValidator,
+    /// An error occured while attempting to validate the token
+    #[error("JWK validation failed")]
+    JWKSValidation,
 }
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         match self {
-            Error::JWKSVerification => (StatusCode::UNAUTHORIZED, self.to_string()).into_response(),
+            Error::JWKSVerification | Error::JWKSValidation => {
+                (StatusCode::UNAUTHORIZED, self.to_string()).into_response()
+            }
             Error::JWTToken(err) => {
                 (StatusCode::BAD_REQUEST, format!("JWTToken Error: {err}")).into_response()
             }

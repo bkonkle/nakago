@@ -15,7 +15,7 @@ pub async fn app(config_path: Option<PathBuf>) -> Result<Inject> {
     i.provide::<JWKSet<Empty>>(jwks::Provide::<Config>::default())
         .await?;
 
-    i.provide::<Validator>(validator::Provide::default())
+    i.provide::<Box<dyn Validator>>(validator::Provide::default())
         .await?;
 
     // Add config loaders before the Config is initialized

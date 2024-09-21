@@ -45,24 +45,6 @@ impl Client {
     }
 }
 
-/// A convenience function to get a particular key from a key set, and convert it into a secret
-pub fn get_secret_from_key_set<T: Clone>(
-    jwks: &JWKSet<T>,
-    key_id: &str,
-) -> Result<Secret, ClientError> {
-    let jwk = get_key(jwks, key_id)?;
-    let secret = get_secret(jwk)?;
-
-    Ok(secret)
-}
-
-/// Get a particular key from a key set by id
-pub fn get_key<T: Clone>(jwks: &JWKSet<T>, key_id: &str) -> Result<JWK<T>, ClientError> {
-    let key = jwks.find(key_id).ok_or(ClientError::MissingKeyId)?.clone();
-
-    Ok(key)
-}
-
 /// Convert a JWK into a Secret
 pub fn get_secret<T>(jwk: JWK<T>) -> Result<Secret, ClientError> {
     let secret = match jwk.algorithm {

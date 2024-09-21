@@ -20,4 +20,7 @@ pub use config::Config;
 pub use errors::Error;
 pub use jwks::Empty;
 pub use jwks::JWKSet;
-pub use validator::Validator;
+pub use validator::{JWKSValidator, Validator};
+
+#[cfg(test)]
+pub use validator::UnverifiedDecoder;

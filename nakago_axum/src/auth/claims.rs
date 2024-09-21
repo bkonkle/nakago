@@ -12,8 +12,9 @@ use serde::{Deserialize, Serialize};
 use crate::State;
 
 use super::{
+    validator::Validator,
     Error::{self, InvalidAuthHeader, MissingValidator},
-    Validator,
+    JWKSValidator,
 };
 
 const BEARER: &str = "Bearer ";
@@ -42,7 +43,7 @@ where
         state: &State,
     ) -> std::result::Result<Self, Self::Rejection> {
         let validator = state
-            .get::<Validator<T>>()
+            .get::<JWKSValidator<T>>()
             .await
             .map_err(|_err| MissingValidator)?;
 
@@ -76,7 +77,7 @@ impl FromRequestParts<State> for Subject {
         state: &State,
     ) -> std::result::Result<Self, Self::Rejection> {
         let validator = state
-            .get::<Validator>()
+            .get::<JWKSValidator>()
             .await
             .map_err(|_err| MissingValidator)?;
 
