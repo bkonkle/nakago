@@ -1,6 +1,6 @@
 [package]
 name = "nakago-async-graphql"
-version = "0.23.0"
+version = "0.24.0"
 description = "An Async-GraphQL integration for Nakago"
 documentation = "https://docs.rs/nakago-async-graphql/"
 license.workspace = true

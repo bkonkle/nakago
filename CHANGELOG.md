@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.24.0]
 
 ### Added
 
@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `nakago-axum` - Moved the Unverified Validator out to a separate struct that is only built when `cfg(test)` is enabled.
 - `nakago-ws` - Handlers now accept a new Token type, which contains the JWT string and the Registered Claims for use in more complex authorization scenarios.
 - `nakago-ws` - Changed the signature of Handlers to use Results for better error handling.
+- `nakago-async-graphql` - Updated `nakago-axum`.
 
 ## [0.23.0]
 
@@ -401,7 +402,8 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
-[unreleased]: https://github.com/bkonkle/nakago/compare/0.23.0...HEAD
+[unreleased]: https://github.com/bkonkle/nakago/compare/0.24.0...HEAD
+[0.24.0]: https://github.com/bkonkle/nakago/compare/0.22.0...0.24.0
 [0.23.0]: https://github.com/bkonkle/nakago/compare/0.22.0...0.23.0
 [0.22.0]: https://github.com/bkonkle/nakago/compare/0.21.0...0.22.0
 [0.21.0]: https://github.com/bkonkle/nakago/compare/0.20.0...0.21.0
