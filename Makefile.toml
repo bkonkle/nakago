@@ -119,19 +119,40 @@ script = '''
 [tasks.run-simple]
 env = { "RUST_LOG" = "info,sqlx::query=warn" }
 command = "cargo"
-args = ["run", "-p", "nakago-examples-simple"]
+args = [
+    "run",
+    "-p",
+    "nakago-examples-simple",
+    "--",
+    "--config",
+    "examples/simple/config.local.toml",
+]
 watch = true
 
 [tasks.run-simple-warp]
 env = { "RUST_LOG" = "info,sqlx::query=warn" }
 command = "cargo"
-args = ["run", "-p", "nakago-examples-simple-warp"]
+args = [
+    "run",
+    "-p",
+    "nakago-examples-simple-warp",
+    "--",
+    "--config",
+    "examples/simple-warp/config.local.toml",
+]
 watch = true
 
 [tasks.run-async-graphql]
 env = { "RUST_LOG" = "info,sqlx::query=warn" }
 command = "cargo"
-args = ["run", "-p", "nakago-examples-async-graphql"]
+args = [
+    "run",
+    "-p",
+    "nakago-examples-async-graphql",
+    "--",
+    "--config",
+    "examples/async-graphql/config.local.toml",
+]
 watch = true
 
 # Database tasks for example projects

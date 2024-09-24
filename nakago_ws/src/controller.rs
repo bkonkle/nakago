@@ -6,11 +6,12 @@ use axum::{
         ws::{Message, WebSocket},
         WebSocketUpgrade,
     },
-    response::IntoResponse,
+    response::{IntoResponse, Response},
 };
 use biscuit::Empty;
 use derive_new::new;
 use futures::{SinkExt, StreamExt, TryFutureExt};
+use http::StatusCode;
 use mockall::automock;
 use nakago::{provider, Inject, Provider, Tag};
 use nakago_derive::Provider;
@@ -33,7 +34,7 @@ where
     async fn route(&self, conn_id: &str, msg: Message) -> anyhow::Result<()>;
 
     /// Get the User from the Subject
-    async fn get_session(&self, token: Token<T>) -> Option<Session>;
+    async fn get_session(&self, token: Token<T>) -> anyhow::Result<Session>;
 }
 
 /// WebSocket Controller
@@ -51,14 +52,14 @@ impl<Session: Default + Send + Sync + Clone + Any> Controller<Session> {
         ws: WebSocketUpgrade,
     ) -> axum::response::Result<impl IntoResponse> {
         // Retrieve the request Session
-        let session = self.handler.get_session(token).await;
+        let session = self.handler.get_session(token).await.map_err(Error)?;
 
         Ok(ws.on_upgrade(|socket| async move { self.handle(socket, session).await }))
     }
 
     /// Handle `WebSocket` connections by setting up a message handler that deserializes them and
     /// determines how to handle
-    async fn handle(&self, socket: WebSocket, session: Option<Session>) {
+    async fn handle(&self, socket: WebSocket, session: Session) {
         let (mut ws_write, mut ws_read) = socket.split();
 
         let (tx, rx) = mpsc::unbounded_channel();
@@ -75,10 +76,7 @@ impl<Session: Default + Send + Sync + Clone + Any> Controller<Session> {
             }
         });
 
-        let conn_id = self
-            .connections
-            .insert(tx, session.unwrap_or_default())
-            .await;
+        let conn_id = self.connections.insert(tx, session).await;
 
         while let Some(result) = ws_read.next().await {
             let msg = match result {
@@ -98,6 +96,14 @@ impl<Session: Default + Send + Sync + Clone + Any> Controller<Session> {
         eprintln!("good bye user: {}", conn_id);
 
         self.connections.remove(&conn_id).await;
+    }
+}
+
+struct Error(anyhow::Error);
+
+impl IntoResponse for Error {
+    fn into_response(self) -> Response {
+        (StatusCode::INTERNAL_SERVER_ERROR, self.0.to_string()).into_response()
     }
 }
 

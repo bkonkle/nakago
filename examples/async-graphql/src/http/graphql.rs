@@ -13,7 +13,11 @@ pub async fn resolve(
     req: GraphQLRequest,
 ) -> GraphQLResponse {
     // Retrieve the request User, if username is present
-    let user = if let Subject(Some(ref username)) = sub {
+    let user = if let Subject {
+        username: Some(ref username),
+        ..
+    } = sub
+    {
         users.get_by_username(username, &true).await.unwrap_or(None)
     } else {
         None

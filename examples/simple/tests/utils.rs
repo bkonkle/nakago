@@ -22,7 +22,7 @@ impl TestUtils {
 
         let i = init::app(Some(config_path.clone().into())).await?;
 
-        i.replace_with::<Validator>(validator::ProvideUnverified::default())
+        i.replace_with::<Box<dyn Validator>>(validator::ProvideUnverified::default())
             .await?;
 
         let router = router::init(&i);

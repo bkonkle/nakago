@@ -18,7 +18,7 @@ pub async fn app(config_path: Option<PathBuf>) -> nakago::Result<Inject> {
     i.provide::<JWKSet<Empty>>(jwks::Provide::<Config>::default())
         .await?;
 
-    i.provide::<Validator>(validator::Provide::default())
+    i.provide::<Box<dyn Validator>>(validator::Provide::default())
         .await?;
 
     i.provide::<DatabaseConnection>(nakago_sea_orm::connection::Provide::<Config>::new())

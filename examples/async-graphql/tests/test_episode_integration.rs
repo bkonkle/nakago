@@ -80,13 +80,15 @@ async fn test_episode_create_simple() -> Result<()> {
         .await?;
 
     let status = resp.status();
+    if status != 200 {
+        panic!("HTTP Response was not OK: {}", resp.text().await?);
+    }
 
     let json = resp.json::<Value>().await?;
 
     let json_episode = &json["data"]["createEpisode"]["episode"];
     let json_show = &json_episode["show"];
 
-    assert_eq!(status, 200);
     assert_eq!(json_episode["title"], "Test Episode 1");
     assert_eq!(json_show["id"], show.id.clone());
 

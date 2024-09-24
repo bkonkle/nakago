@@ -1,5 +1,6 @@
 # CI testing
 
+[http]
 port = 0
 
 [database]

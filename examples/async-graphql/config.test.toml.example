@@ -1,5 +1,6 @@
 # Local testing
 
+[http]
 port = 0
 
 [auth.client]

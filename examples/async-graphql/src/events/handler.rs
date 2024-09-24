@@ -22,17 +22,16 @@ pub struct Handler {
 
 #[async_trait]
 impl nakago_ws::Handler<Session> for Handler {
-    async fn get_session(&self, token: Token) -> Option<Session> {
-        let sub = token.claims?.registered.subject;
+    async fn get_session(&self, token: Token) -> anyhow::Result<Session> {
+        let sub = token.claims.and_then(|c| c.registered.subject);
 
         if let Some(ref username) = sub {
             self.users
                 .get_by_username(username, &true)
                 .await
                 .map(Session::new)
-                .ok()
         } else {
-            None
+            Ok(Session::Anonymous)
         }
     }
 
