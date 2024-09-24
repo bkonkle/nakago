@@ -81,7 +81,7 @@ async fn test_episode_create_simple() -> Result<()> {
 
     let status = resp.status();
     if status != 200 {
-        assert!(false, "HTTP Response was not OK: {}", resp.text().await?);
+        panic!("HTTP Response was not OK: {}", resp.text().await?);
     }
 
     let json = resp.json::<Value>().await?;
