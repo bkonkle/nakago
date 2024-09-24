@@ -7,7 +7,6 @@ use axum::http::HeaderValue;
 use fake::{Fake, Faker};
 use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
 use nakago_axum::auth::{validator, Validator};
-use serde::Deserialize;
 use tokio::{net::TcpStream, time::timeout};
 use tokio_tungstenite::{
     connect_async, tungstenite,
@@ -160,22 +159,8 @@ impl Utils {
 
         if let Err(err) = result {
             let error = if let tungstenite::Error::Http(response) = &err {
-                #[derive(Deserialize, Debug)]
-                struct JsonError {
-                    code: Option<String>,
-                    error: Option<String>,
-                }
-
-                let body: Option<JsonError> = response
-                    .body()
-                    .as_ref()
-                    .and_then(|body| serde_json::from_slice(body).unwrap_or(None));
-
-                if let Some(error) = body {
-                    error.error.unwrap_or(format!("{:?}", err))
-                } else {
-                    err.to_string()
-                }
+                String::from_utf8(response.body().clone().unwrap())
+                    .unwrap_or_else(|_utf8_err| err.to_string())
             } else {
                 err.to_string()
             };

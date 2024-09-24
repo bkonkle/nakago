@@ -1,15 +1,15 @@
-use std::{any::Any, collections::HashMap};
+use std::{any::Any, collections::HashMap, marker::PhantomData};
 
 use async_trait::async_trait;
 use axum::extract::FromRequestParts;
 use biscuit::{ClaimsSet, Empty};
+use derive_new::new;
 use http::{request::Parts, Uri};
 use nakago_axum::{
     auth::{
         self,
         validator::Validator,
         Error::{InvalidAuthHeader, MissingValidator},
-        JWKSValidator,
     },
     State,
 };
@@ -17,19 +17,19 @@ use serde::{Deserialize, Serialize};
 
 /// The JWT Token's Registered Claims
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
-pub struct Token<T = Empty> {
+pub struct Token<PrivateClaims = Empty> {
     /// The JWT string itself
     pub jwt: Option<String>,
 
     /// The JWT's Registered Claims
-    pub claims: Option<ClaimsSet<T>>,
+    pub claims: Option<ClaimsSet<PrivateClaims>>,
 }
 
 /// Implement the Axum FromRequestParts trait, allowing `Claims` to be used as an Axum extractor.
 #[async_trait]
-impl<T> FromRequestParts<State> for Token<T>
+impl<PrivateClaims> FromRequestParts<State> for Token<PrivateClaims>
 where
-    T: Default + Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
+    PrivateClaims: Default + Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
 {
     type Rejection = auth::Error;
 
@@ -38,7 +38,7 @@ where
         state: &State,
     ) -> std::result::Result<Self, Self::Rejection> {
         let validator = state
-            .get::<JWKSValidator<T>>()
+            .get::<Box<dyn Validator<PrivateClaims>>>()
             .await
             .map_err(|_err| MissingValidator)?;
 
@@ -63,13 +63,17 @@ where
 }
 
 /// The token's Subject claim, which corresponds with the username
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Subject(pub Option<String>);
+#[derive(Debug, PartialEq, Eq, Clone, new)]
+pub struct Subject<PrivateClaims> {
+    /// The token subject claim
+    pub username: Option<String>,
+    _phantom: PhantomData<PrivateClaims>,
+}
 
 /// Implement the Axum FromRequestParts trait, allowing the `Subject` to be used as an Axum
 /// extractor.
 #[async_trait]
-impl FromRequestParts<State> for Subject {
+impl<PrivateClaims: Any> FromRequestParts<State> for Subject<PrivateClaims> {
     type Rejection = auth::Error;
 
     async fn from_request_parts(
@@ -77,20 +81,20 @@ impl FromRequestParts<State> for Subject {
         state: &State,
     ) -> std::result::Result<Self, Self::Rejection> {
         let validator = state
-            .get::<JWKSValidator>()
+            .get::<Box<dyn Validator<PrivateClaims>>>()
             .await
             .map_err(|_err| MissingValidator)?;
 
         match jwt_from_params(&parts.uri) {
             Ok(Some(jwt)) => {
-                let payload: ClaimsSet<Empty> = validator.get_payload(&jwt)?;
+                let payload: ClaimsSet<PrivateClaims> = validator.get_payload(&jwt)?;
                 let subject = payload.registered.subject.clone();
 
                 debug!("Successfully verified token with subject: {:?}", subject);
 
-                Ok(Subject(subject))
+                Ok(Subject::new(subject))
             }
-            Ok(None) => Ok(Subject(None)),
+            Ok(None) => Ok(Subject::new(None)),
             Err(e) => Err(e),
         }
     }

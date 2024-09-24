@@ -20,17 +20,17 @@ pub trait Validator<T = Empty>: Send + Sync + Any {
 
 /// A validator for JWTs that uses a JWKS key set to validate the token
 #[derive(Clone)]
-pub struct JWKSValidator<T = Empty> {
-    key_set: Arc<JWKSet<T>>,
+pub struct JWKSValidator<PrivateClaims = Empty> {
+    key_set: Arc<JWKSet<PrivateClaims>>,
 }
 
-impl<T> Validator<T> for JWKSValidator<T>
+impl<PrivateClaims> Validator<PrivateClaims> for JWKSValidator<PrivateClaims>
 where
-    T: Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
+    PrivateClaims: Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
 {
     /// Get a validated payload from a JWT string
-    fn get_payload(&self, jwt: &str) -> Result<ClaimsSet<T>, Error> {
-        let token = JWT::<T, Empty>::new_encoded(jwt)
+    fn get_payload(&self, jwt: &str) -> Result<ClaimsSet<PrivateClaims>, Error> {
+        let token = JWT::<PrivateClaims, Empty>::new_encoded(jwt)
             .decode_with_jwks(&self.key_set, Some(SignatureAlgorithm::RS256))
             .map_err(|_err| Error::JWKSVerification)?;
 
