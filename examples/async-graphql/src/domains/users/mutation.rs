@@ -84,7 +84,10 @@ impl UsersMutation {
 
         // Otherwise, check for a username so that it can be created
         let username = match subject {
-            Subject(Some(username)) => Ok(username),
+            Subject {
+                username: Some(username),
+                ..
+            } => Ok(username),
             _ => Err(graphql_error("Unauthorized", StatusCode::UNAUTHORIZED)),
         }?;
 

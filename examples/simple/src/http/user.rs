@@ -14,7 +14,11 @@ pub struct UsernameResponse {
 
 /// Handle Get Username requests
 pub async fn get_username(sub: Subject) -> Json<UsernameResponse> {
-    let username = if let Subject(Some(username)) = sub {
+    let username = if let Subject {
+        username: Some(username),
+        ..
+    } = sub
+    {
         username.clone()
     } else {
         "(anonymous)".to_string()

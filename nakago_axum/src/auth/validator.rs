@@ -58,18 +58,21 @@ where
 
 /// Provide the State needed in order to use the `Subject` extractor in an Axum handler
 #[derive(Default)]
-pub struct Provide<T = Empty> {
-    _phantom: PhantomData<T>,
+pub struct Provide<PrivateClaims = Empty> {
+    _phantom: PhantomData<PrivateClaims>,
 }
 
 #[Provider]
 #[async_trait]
-impl<T> Provider<Box<dyn Validator<T>>> for Provide<T>
+impl<PrivateClaims> Provider<Box<dyn Validator<PrivateClaims>>> for Provide<PrivateClaims>
 where
-    T: Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
+    PrivateClaims: Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
 {
-    async fn provide(self: Arc<Self>, i: Inject) -> provider::Result<Arc<Box<dyn Validator<T>>>> {
-        let jwks = i.get::<JWKSet<T>>().await?;
+    async fn provide(
+        self: Arc<Self>,
+        i: Inject,
+    ) -> provider::Result<Arc<Box<dyn Validator<PrivateClaims>>>> {
+        let jwks = i.get::<JWKSet<PrivateClaims>>().await?;
 
         let validator = Box::new(JWKSValidator { key_set: jwks });
 
@@ -101,17 +104,20 @@ where
 /// Provide the test ***unverified*** Validator, which trusts any token given to it
 /// WARNING: Not intended for production use, but exported here for integration tests
 #[derive(Default)]
-pub struct ProvideUnverified<T = Empty> {
-    _phantom: PhantomData<T>,
+pub struct ProvideUnverified<PrivateClaims = Empty> {
+    _phantom: PhantomData<PrivateClaims>,
 }
 
 #[Provider]
 #[async_trait]
-impl<T> Provider<Box<dyn Validator<T>>> for ProvideUnverified<T>
+impl<PrivateClaims> Provider<Box<dyn Validator<PrivateClaims>>> for ProvideUnverified<PrivateClaims>
 where
-    T: Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
+    PrivateClaims: Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
 {
-    async fn provide(self: Arc<Self>, _i: Inject) -> provider::Result<Arc<Box<dyn Validator<T>>>> {
+    async fn provide(
+        self: Arc<Self>,
+        _i: Inject,
+    ) -> provider::Result<Arc<Box<dyn Validator<PrivateClaims>>>> {
         let validator = Box::new(UnverifiedDecoder::new());
 
         Ok(Arc::new(validator))
