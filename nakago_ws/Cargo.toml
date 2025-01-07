@@ -1,6 +1,6 @@
 [package]
 name = "nakago-ws"
-version = "0.24.0"
+version = "0.24.1"
 description = "Websocket utils for Nakago"
 documentation = "https://docs.rs/nakago-ws/"
 license.workspace = true
@@ -15,12 +15,7 @@ async-trait = "0.1"
 axum = { version = "0.7", features = ["ws", "macros"] }
 biscuit = "0.7.0"
 derive-new = "0.7"
-fake = { version = "2.9", features = [
-    'derive',
-    'chrono',
-    'http',
-    'uuid',
-], git = "https://github.com/cksac/fake-rs.git" }
+fake = { version = "2.9", features = ['derive', 'chrono', 'http', 'uuid'] }
 futures = "0.3"
 http = "1.0.0"
 hyper = "1.0"

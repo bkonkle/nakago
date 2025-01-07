@@ -1,6 +1,6 @@
 [package]
 name = "nakago-examples-async-graphql"
-version = "0.24.0"
+version = "0.24.1"
 description = "A lightweight Rust toolkit for sharp dependency injection 😎"
 license.workspace = true
 edition.workspace = true
@@ -24,12 +24,7 @@ async-trait = "0.1"
 axum = { version = "0.7", features = ["ws", "macros"] }
 chrono = { version = "0.4.19", features = ["serde"] }
 derive-new = "0.7"
-fake = { version = "2.9", features = [
-    'derive',
-    'chrono',
-    'http',
-    'uuid',
-], git = "https://github.com/cksac/fake-rs.git" }
+fake = { version = "2.9", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
 hyper = "1.0"
