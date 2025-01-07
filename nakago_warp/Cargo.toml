@@ -15,12 +15,7 @@ async-trait = "0.1"
 biscuit = "0.7.0"
 bytes = "1"
 derive-new = "0.7"
-fake = { version = "2.9", features = [
-    'derive',
-    'chrono',
-    'http',
-    'uuid',
-], git = "https://github.com/cksac/fake-rs.git" }
+fake = { version = "2.9", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env"] }
 futures-util = { version = "0.3", default-features = false, features = [
     "sink",

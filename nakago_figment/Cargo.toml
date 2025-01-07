@@ -1,6 +1,6 @@
 [package]
 name = "nakago-figment"
-version = "0.23.0"
+version = "0.24.1"
 description = "Figment config loading utils for Nakago"
 documentation = "https://docs.rs/nakago-figment/"
 license.workspace = true
@@ -12,12 +12,7 @@ homepage.workspace = true
 [dependencies]
 anyhow = "1.0"
 derive-new = "0.7"
-fake = { version = "2.9", features = [
-    'derive',
-    'chrono',
-    'http',
-    'uuid',
-], git = "https://github.com/cksac/fake-rs.git" }
+fake = { version = "2.9", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 log = "0.4"
 nakago = "0.23"

@@ -1,4 +1,4 @@
-use std::{io, net::SocketAddr, panic::PanicInfo, sync::Arc};
+use std::{io, net::SocketAddr, panic::PanicHookInfo, sync::Arc};
 
 use axum::{serve::Serve, Router};
 use backtrace::Backtrace;
@@ -84,7 +84,7 @@ pub fn trace_layer() -> TraceLayer<SharedClassifier<ServerErrorsAsFailures>> {
 // --------------
 
 /// A generic function to log stacktraces on panic
-pub fn handle_panic(info: &PanicInfo<'_>) {
+pub fn handle_panic(info: &PanicHookInfo<'_>) {
     if cfg!(debug_assertions) {
         let location = info.location().unwrap();
 

@@ -1,6 +1,6 @@
 [package]
 name = "nakago"
-version = "0.23.0"
+version = "0.24.1"
 description = "A lightweight Rust toolkit for sharp dependency injection 😎"
 documentation = "https://docs.rs/nakago/"
 license.workspace = true
@@ -30,12 +30,7 @@ tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
 criterion = "0.5"
-fake = { version = "2.9", features = [
-    'derive',
-    'chrono',
-    'http',
-    'uuid',
-], git = "https://github.com/cksac/fake-rs.git" }
+fake = { version = "2.9", features = ['derive', 'chrono', 'http', 'uuid'] }
 mockall = "0.13"
 pretty_assertions = "1.2"
 googletest = "0.12"

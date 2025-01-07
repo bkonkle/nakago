@@ -1,6 +1,6 @@
 [package]
 name = "nakago-sea-orm"
-version = "0.23.0"
+version = "0.24.1"
 description = "A SeaORM integration for Nakago"
 documentation = "https://docs.rs/nakago-sea-orm/"
 license.workspace = true

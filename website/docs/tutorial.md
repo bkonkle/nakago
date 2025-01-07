@@ -113,24 +113,62 @@ nakago_figment::Init::<Config>::default()
     .await?;
 ```
 
-First, add the default JWKS Validator from `nakago_axum`'s `auth` module using the `provide_type` method, which uses the type as the key for the Inject container:
+First, add the default JWKS Validator from `nakago_axum`'s `auth` module using the `provide` method, which uses the type as the key for the Inject container. Add this to your `init.rs` file, within the `app()` function:
 
 ```rust
 use nakago_axum::auth::{validator, Validator};
 
 // ...
 
-i.provide::<Validator>(validator::Provide::default()).await?;
+i.provide::<Box<dyn Validator>>(validator::Provide::default())
+        .await?;
 ```
 
-This will be overridden in your tests to use the unverified variant, but we'll get to that later. Next you should use `jwks::Provide` to inject the JWKS config:
+This will be overridden in your tests to use the unverified variant, but we'll get to that later. Next you should use `jwks::Provide` to inject the JWKS config. Add thios to your `init.rs` file as well:
 
 ```rust
-use nakago_axum::auth::{jwks, Jwks};
+use nakago_axum::auth::{jwks, JWKSet, Empty};
 
 // ...
 
-i.provide::<Jwks>(jwks::Provide::<Config>::default()).await?;
+i.provide::<JWKSet<Empty>>(jwks::Provide::<Config>::default())
+        .await?;
+```
+
+Your `init.rs` should now look like this:
+
+```rust
+use std::path::PathBuf;
+
+use nakago::{Inject, Result};
+use nakago_axum::{
+    auth::{jwks, validator, Empty, JWKSet, Validator},
+    config,
+};
+
+use crate::config::Config;
+
+/// Create a dependency injection container for the top-level application
+pub async fn app(config_path: Option<PathBuf>) -> Result<Inject> {
+    let i = Inject::default();
+
+    i.provide::<Box<dyn Validator>>(validator::Provide::default())
+        .await?;
+
+    i.provide::<JWKSet<Empty>>(jwks::Provide::<Config>::default())
+        .await?;
+
+    // Add config loaders before the Config is initialized
+    config::add_default_loaders(&i).await?;
+
+    // Initialize the Config
+    nakago_figment::Init::<Config>::default()
+        .maybe_with_path(config_path)
+        .init(&i)
+        .await?;
+
+    Ok(i)
+}
 ```
 
 ### Axum Route
@@ -167,9 +205,28 @@ pub async fn get_username(sub: Subject) -> Json<UsernameResponse> {
 }
 ```
 
+Make sure to add the `user.rs` file to your `http/mod.rs` file:
+
+```rust
+/// User handlers
+pub mod user;
+```
+
 The `Subject` extension uses Nakago Axum's State proivider to find the Inject container, which it then uses to grab the JWT config and the Validator instance. It decodes the JWT and returns the `sub` claim from the payload. If the user is not logged in, the `Subject` will contain a `None`.
 
 Now add a route that uses the handler to the Init hook at `http/router.rs`:
+
+```rust
+use super::{health, user};
+
+// ...
+
+Router::new()
+    // ...
+    .route("/username", get(user::get_username))
+```
+
+Your `http/router.rs` file should now look like this:
 
 ```rust
 /// This method should already exist in your `http/router.rs` file
