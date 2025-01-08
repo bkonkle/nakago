@@ -18,7 +18,6 @@ pub struct Loader {
     locations: Arc<Box<dyn Service>>,
 }
 
-#[async_trait]
 impl dataloader::Loader<String> for Loader {
     type Value = User;
     type Error = FieldError;
