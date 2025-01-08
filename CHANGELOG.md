@@ -419,8 +419,8 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
-[unreleased]: https://github.com/bkonkle/nakago/compare/0.24.2...HEAD
-[0.24.2]: https://github.com/bkonkle/nakago/compare/0.24.1...0.24.2
+[unreleased]: https://github.com/bkonkle/nakago/compare/0.25.0...HEAD
+[0.25.0]: https://github.com/bkonkle/nakago/compare/0.24.1...0.25.0
 [0.24.1]: https://github.com/bkonkle/nakago/compare/0.24.0...0.24.1
 [0.24.0]: https://github.com/bkonkle/nakago/compare/0.22.0...0.24.0
 [0.23.0]: https://github.com/bkonkle/nakago/compare/0.22.0...0.23.0
