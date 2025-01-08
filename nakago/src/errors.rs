@@ -36,7 +36,7 @@ pub enum Error {
     Provider(#[from] Box<provider::Error>),
 
     /// An error thrown when an Any type cannot be downcast to the given concrete type
-    #[error("{0} was not able to be downcast to {}", .0.type_name)]
+    #[error("{} was not able to be downcast to {}", .0, .0.type_name)]
     TypeMismatch(
         /// The Key of the entity that was not found
         Key,

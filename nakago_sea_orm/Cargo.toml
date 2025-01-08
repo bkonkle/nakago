@@ -1,6 +1,6 @@
 [package]
 name = "nakago-sea-orm"
-version = "0.24.1"
+version = "0.25.0"
 description = "A SeaORM integration for Nakago"
 documentation = "https://docs.rs/nakago-sea-orm/"
 license.workspace = true
@@ -12,13 +12,13 @@ homepage.workspace = true
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
-axum = { version = "0.7", features = ["macros"] }
+axum = { version = "0.8", features = ["macros"] }
 derive-new = "0.7"
 figment = { version = "0.10", features = ["env"] }
 log = "0.4"
-nakago = "0.23"
-nakago-derive = "0.23"
-nakago-figment = "0.23"
+nakago = "0.25"
+nakago-derive = "0.25"
+nakago-figment = "0.25"
 pretty_env_logger = "0.5"
 rand = "0.8"
 sea-orm = { version = "1.0", features = [
@@ -32,7 +32,7 @@ sea-orm = { version = "1.0", features = [
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 

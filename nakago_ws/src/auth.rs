@@ -1,6 +1,5 @@
 use std::{any::Any, collections::HashMap, marker::PhantomData};
 
-use async_trait::async_trait;
 use axum::extract::FromRequestParts;
 use biscuit::{ClaimsSet, Empty};
 use derive_new::new;
@@ -26,7 +25,6 @@ pub struct Token<PrivateClaims = Empty> {
 }
 
 /// Implement the Axum FromRequestParts trait, allowing `Claims` to be used as an Axum extractor.
-#[async_trait]
 impl<PrivateClaims> FromRequestParts<State> for Token<PrivateClaims>
 where
     PrivateClaims: Default + Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
@@ -72,7 +70,6 @@ pub struct Subject<PrivateClaims> {
 
 /// Implement the Axum FromRequestParts trait, allowing the `Subject` to be used as an Axum
 /// extractor.
-#[async_trait]
 impl<PrivateClaims: Any> FromRequestParts<State> for Subject<PrivateClaims> {
     type Rejection = auth::Error;
 

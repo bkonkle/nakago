@@ -5,7 +5,6 @@ use std::{
     sync::Arc,
 };
 
-use async_trait::async_trait;
 use axum::{extract::FromRequestParts, http::request::Parts};
 use derive_new::new;
 
@@ -41,7 +40,6 @@ impl<T> Deref for Inject<T> {
     }
 }
 
-#[async_trait]
 impl<T: Send + Sync + Any> FromRequestParts<State> for Inject<T> {
     type Rejection = Infallible;
 

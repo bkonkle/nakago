@@ -139,11 +139,11 @@ pub(crate) mod test {
         let (tx, mut rx) = mpsc::unbounded_channel();
         let conn = Connection::new(tx, Session::Anonymous);
 
-        conn.send(Message::Text("Hello, World!".to_string()))?;
+        conn.send(Message::Text("Hello, World!".into()))?;
 
         let message = rx.recv().await.ok_or(anyhow!("No message received"))?;
 
-        assert_eq!(message, Message::Text("Hello, World!".to_string()));
+        assert_eq!(message, Message::Text("Hello, World!".into()));
 
         Ok(())
     }
@@ -190,12 +190,12 @@ pub(crate) mod test {
         let conn_id = connections.insert(tx, Session::Anonymous).await;
 
         connections
-            .send(&conn_id, Message::Text("Hello, World!".to_string()))
+            .send(&conn_id, Message::Text("Hello, World!".into()))
             .await?;
 
         let message = rx.recv().await.ok_or(anyhow!("No message received"))?;
 
-        assert_eq!(message, Message::Text("Hello, World!".to_string()));
+        assert_eq!(message, Message::Text("Hello, World!".into()));
 
         Ok(())
     }

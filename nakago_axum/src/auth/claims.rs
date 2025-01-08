@@ -1,6 +1,5 @@
 use std::{any::Any, marker::PhantomData};
 
-use async_trait::async_trait;
 use axum::{
     extract::FromRequestParts,
     http::{request::Parts, HeaderValue},
@@ -31,7 +30,6 @@ pub struct Token<PrivateClaims: Default = Empty> {
 
 /// Implement the Axum FromRequestParts trait, allowing the `Subject` to be used as an Axum
 /// extractor.
-#[async_trait]
 impl<PrivateClaims> FromRequestParts<State> for Token<PrivateClaims>
 where
     PrivateClaims: Default + Clone + Serialize + for<'de> Deserialize<'de> + Send + Sync + Any,
@@ -73,7 +71,6 @@ pub struct Subject<PrivateClaims = Empty> {
 
 /// Implement the Axum FromRequestParts trait, allowing the `Subject` to be used as an Axum
 /// extractor.
-#[async_trait]
 impl<PrivateClaims: Any> FromRequestParts<State> for Subject<PrivateClaims> {
     type Rejection = Error;
 

@@ -20,7 +20,7 @@ async fn test_ping() -> Result<()> {
     let message = serde_json::to_string(&IncomingMessage::Ping)?;
 
     utils
-        .send_message(Message::Text(message), Some(&token), |read| {
+        .send_message(Message::Text(message.into()), Some(&token), |read| {
             read.take(1).for_each(|message| async {
                 let data = message.unwrap().into_data();
                 let result = std::str::from_utf8(&data).unwrap();

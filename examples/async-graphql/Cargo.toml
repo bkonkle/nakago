@@ -1,6 +1,6 @@
 [package]
 name = "nakago-examples-async-graphql"
-version = "0.24.1"
+version = "0.25.0"
 description = "A lightweight Rust toolkit for sharp dependency injection 😎"
 license.workspace = true
 edition.workspace = true
@@ -15,27 +15,27 @@ integration = []
 
 [dependencies]
 anyhow = "1.0"
-async-graphql = { git = "https://github.com/bkonkle/async-graphql.git", branch = "update-http-axum", features = [
+async-graphql = { git = "https://github.com/aumetra/async-graphql", branch = "axum-0.8", features = [
     "chrono",
     "dataloader",
 ] }
-async-graphql-axum = { git = "https://github.com/bkonkle/async-graphql.git", branch = "update-http-axum" }
+async-graphql-axum = { git = "https://github.com/aumetra/async-graphql", branch = "axum-0.8" }
 async-trait = "0.1"
-axum = { version = "0.7", features = ["ws", "macros"] }
+axum = { version = "0.8", features = ["ws", "macros"] }
 chrono = { version = "0.4.19", features = ["serde"] }
 derive-new = "0.7"
-fake = { version = "2.9", features = ['derive', 'chrono', 'http', 'uuid'] }
+fake = { version = "3.1", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
 hyper = "1.0"
 log = "0.4"
-nakago-async-graphql = "0.24"
-nakago-axum = "0.24"
-nakago-derive = "0.23"
-nakago-figment = "0.23"
-nakago-sea-orm = "0.23"
-nakago-ws = "0.24"
-nakago = "0.23"
+nakago-async-graphql = "0.25"
+nakago-axum = "0.25"
+nakago-derive = "0.25"
+nakago-figment = "0.25"
+nakago-sea-orm = "0.25"
+nakago-ws = "0.25"
+nakago = "0.25"
 oso = "0.27"
 pico-args = "0.5.0"
 pretty_env_logger = "0.5"
@@ -66,5 +66,5 @@ hyper-tls = "0.6"
 maplit = { version = "1" }
 mockall = "0.13"
 pretty_assertions = "1.2"
-tokio-tungstenite = { version = "0.24", features = ["url"] }
+tokio-tungstenite = { version = "0.26", features = ["url"] }
 url = "2.0.0"
