@@ -42,6 +42,10 @@ pub enum OutgoingMessage {
 
 impl From<OutgoingMessage> for Message {
     fn from(msg: OutgoingMessage) -> Message {
-        Message::Text(serde_json::to_string(&msg).expect("Unable to serialize OutgoingMessage"))
+        Message::Text(
+            serde_json::to_string(&msg)
+                .expect("Unable to serialize OutgoingMessage")
+                .into(),
+        )
     }
 }

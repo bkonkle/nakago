@@ -30,7 +30,7 @@ impl<C: nakago_figment::Config> Listener<C> {
         &self,
         i: &Inject,
         router: Router,
-    ) -> nakago::Result<(Serve<Router, Router>, SocketAddr)>
+    ) -> nakago::Result<(Serve<TcpListener, Router, Router>, SocketAddr)>
     where
         Config: FromRef<C>,
     {
