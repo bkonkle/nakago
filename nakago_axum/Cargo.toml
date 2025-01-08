@@ -1,6 +1,6 @@
 [package]
 name = "nakago-axum"
-version = "0.24.1"
+version = "0.25.0"
 description = "An Axum HTTP routes integration for Nakago"
 documentation = "https://docs.rs/nakago-axum/"
 license.workspace = true
@@ -27,9 +27,9 @@ futures-util = { version = "0.3", default-features = false, features = [
 hyper = "1.0"
 jsonwebtoken = "9.0"
 log = "0.4"
-nakago = "0.24"
-nakago-derive = "0.23"
-nakago-figment = "0.24"
+nakago = "0.25"
+nakago-derive = "0.25"
+nakago-figment = "0.25"
 pretty_env_logger = "0.5"
 rand = "0.8"
 reqwest = { version = "0.12", features = ["json"] }

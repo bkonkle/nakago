@@ -1,6 +1,6 @@
 [package]
 name = "nakago"
-version = "0.24.1"
+version = "0.25.0"
 description = "A lightweight Rust toolkit for sharp dependency injection 😎"
 documentation = "https://docs.rs/nakago/"
 license.workspace = true
@@ -17,7 +17,7 @@ derive-new = "0.7"
 fnv = "1.0.7"
 futures = "0.3.28"
 log = "0.4"
-nakago-derive = "0.23"
+nakago-derive = "0.25"
 pretty_env_logger = "0.5"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }

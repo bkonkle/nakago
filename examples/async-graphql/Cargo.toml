@@ -1,6 +1,6 @@
 [package]
 name = "nakago-examples-async-graphql"
-version = "0.24.1"
+version = "0.25.0"
 description = "A lightweight Rust toolkit for sharp dependency injection 😎"
 license.workspace = true
 edition.workspace = true
@@ -29,13 +29,13 @@ figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
 hyper = "1.0"
 log = "0.4"
-nakago-async-graphql = "0.24"
-nakago-axum = "0.24"
-nakago-derive = "0.23"
-nakago-figment = "0.24"
-nakago-sea-orm = "0.24"
-nakago-ws = "0.24"
-nakago = "0.24"
+nakago-async-graphql = "0.25"
+nakago-axum = "0.25"
+nakago-derive = "0.25"
+nakago-figment = "0.25"
+nakago-sea-orm = "0.25"
+nakago-ws = "0.25"
+nakago = "0.25"
 oso = "0.27"
 pico-args = "0.5.0"
 pretty_env_logger = "0.5"

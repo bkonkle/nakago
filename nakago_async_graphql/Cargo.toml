@@ -1,6 +1,6 @@
 [package]
 name = "nakago-async-graphql"
-version = "0.24.1"
+version = "0.25.0"
 description = "An Async-GraphQL integration for Nakago"
 documentation = "https://docs.rs/nakago-async-graphql/"
 license.workspace = true
@@ -23,10 +23,10 @@ fake = { version = "3.1", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env"] }
 hyper = "1.0"
 log = "0.4"
-nakago = "0.24"
-nakago-axum = "0.24"
-nakago-derive = "0.23"
-nakago-figment = "0.24"
+nakago = "0.25"
+nakago-axum = "0.25"
+nakago-derive = "0.25"
+nakago-figment = "0.25"
 pretty_env_logger = "0.5"
 rand = "0.8"
 reqwest = { version = "0.12", features = ["json"] }
