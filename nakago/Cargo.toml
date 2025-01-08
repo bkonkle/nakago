@@ -25,12 +25,12 @@ serde_derive = "1.0"
 serde_json = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
-thiserror = "1.0"
+thiserror = "2.0"
 tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
 criterion = "0.5"
-fake = { version = "2.9", features = ['derive', 'chrono', 'http', 'uuid'] }
+fake = { version = "3.1", features = ['derive', 'chrono', 'http', 'uuid'] }
 mockall = "0.13"
 pretty_assertions = "1.2"
-googletest = "0.12"
+googletest = "0.13"

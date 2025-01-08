@@ -17,14 +17,14 @@ integration = []
 anyhow = "1.0"
 async-trait = "0.1"
 chrono = { version = "0.4.19", features = ["serde"] }
-fake = { version = "2.9", features = ['derive', 'chrono', 'http', 'uuid'] }
+fake = { version = "3.1", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env", "toml", "yaml", "json"] }
 futures = "0.3"
 hyper = "1.0"
 log = "0.4"
-nakago = "0.23"
-nakago-figment = "0.23"
-nakago-warp = "0.23"
+nakago = "0.24"
+nakago-figment = "0.24"
+nakago-warp = "0.24"
 nakago-derive = "0.23"
 pico-args = "0.5.0"
 pretty_env_logger = "0.5"

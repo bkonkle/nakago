@@ -12,16 +12,16 @@ homepage.workspace = true
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
-axum = { version = "0.7", features = ["ws", "macros"] }
+axum = { version = "0.8", features = ["ws", "macros"] }
 biscuit = "0.7.0"
 derive-new = "0.7"
-fake = { version = "2.9", features = ['derive', 'chrono', 'http', 'uuid'] }
+fake = { version = "3.1", features = ['derive', 'chrono', 'http', 'uuid'] }
 futures = "0.3"
 http = "1.0.0"
 hyper = "1.0"
 jsonwebtoken = "9.0"
 log = "0.4"
-nakago = "0.23"
+nakago = "0.24"
 nakago-axum = "0.24"
 nakago-derive = "0.23"
 mockall = "0.13"
@@ -32,7 +32,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = "1.0"
 serde_urlencoded = "0.7"
-thiserror = "1.0"
+thiserror = "2.0"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 tracing = "0.1"

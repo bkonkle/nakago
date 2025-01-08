@@ -5,11 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.2]
+
+- _(all packages)_ - Dependency updates.
+
 ## [0.24.1]
 
 ### Changed
 
-- (all packages) - Remove the `git = "<https://github.com/cksac/fake-rs.git>"` parameter from the `fake` dependency, as it is no longer needed.
+- _(all packages)_ - Remove the `git = "<https://github.com/cksac/fake-rs.git>"` parameter from the `fake` dependency, as it is no longer needed.
 - `nakago-axum` - Change `std::panic::PanicInfo` to `std::panic::PanicHookInfo`
 
 ## [0.24.0]
@@ -409,7 +413,8 @@ Expect major changes to the Application and Lifecycle systems going forward, bui
 - Injection Providers
 - Documentation
 
-[unreleased]: https://github.com/bkonkle/nakago/compare/0.24.1...HEAD
+[unreleased]: https://github.com/bkonkle/nakago/compare/0.24.2...HEAD
+[0.24.2]: https://github.com/bkonkle/nakago/compare/0.24.1...0.24.2
 [0.24.1]: https://github.com/bkonkle/nakago/compare/0.24.0...0.24.1
 [0.24.0]: https://github.com/bkonkle/nakago/compare/0.22.0...0.24.0
 [0.23.0]: https://github.com/bkonkle/nakago/compare/0.22.0...0.23.0

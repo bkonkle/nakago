@@ -15,7 +15,7 @@ async-trait = "0.1"
 biscuit = "0.7.0"
 bytes = "1"
 derive-new = "0.7"
-fake = { version = "2.9", features = ['derive', 'chrono', 'http', 'uuid'] }
+fake = { version = "3.1", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env"] }
 futures-util = { version = "0.3", default-features = false, features = [
     "sink",
@@ -24,17 +24,17 @@ futures-util = { version = "0.3", default-features = false, features = [
 hyper = "1.0"
 jsonwebtoken = "9.0"
 log = "0.4"
-nakago = "0.23"
+nakago = "0.24"
 nakago-derive = "0.23"
-nakago-figment = "0.23"
+nakago-figment = "0.24"
 pretty_env_logger = "0.5"
 rand = "0.8"
 reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = "1.0"
-thiserror = "1.0"
-tower-http = { version = "0.5", features = ["trace"] }
+thiserror = "2.0"
+tower-http = { version = "0.6", features = ["trace"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 warp = "0.3"
