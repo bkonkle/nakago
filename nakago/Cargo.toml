@@ -33,4 +33,4 @@ criterion = "0.5"
 fake = { version = "3.1", features = ['derive', 'chrono', 'http', 'uuid'] }
 mockall = "0.13"
 pretty_assertions = "1.2"
-googletest = "0.13"
+googletest = "0.14"
