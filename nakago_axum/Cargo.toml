@@ -16,7 +16,7 @@ axum = { version = "0.8", features = ["ws", "macros"] }
 backtrace = "0.3"
 biscuit = "0.7.0"
 bytes = "1"
-crossterm = "0.28"
+crossterm = "0.29"
 derive-new = "0.7"
 fake = { version = "3.1", features = ['derive', 'chrono', 'http', 'uuid'] }
 figment = { version = "0.10", features = ["env"] }
