@@ -21,9 +21,13 @@
 
 Nakago is a toolkit for building Rust applications with a modular structure, taking advantage of dependency injection to bring organization and testability to Rust projects large and small.
 
-## ⚠️ Alpha Disclaimer
+## Archived
 
-NOTE: This library is in early development, and the API may shift rapidly as it evolves. Be advised that this is not yet recommended for Production use.
+I'm not working on Nakago anymore, so I've archived the repo.
+
+I built Nakago to bring dependency injection to Rust apps — a typed container you register providers in, so tests and different environments can swap pieces out without a lot of rewiring. When I picked it back up recently for a new service, I tried the same setup both ways: once with Nakago, and once in plain Rust with a small composition trait per backend, an enum that picks one at startup, and a struct of trait objects for the services. I think the plain Rust version won pretty clearly. It came out a little shorter, a missing dependency became a compile error instead of a runtime one, and it didn't pull in twenty-odd extra crates. The pieces I most wanted to swap were generic over traits that can't be boxed anyway, so a container couldn't hide them.
+
+So for the apps I'm building now, plain Rust composition does the job, and I'd rather not keep a framework around that I'm not using. The code and the crates on crates.io stay up for reference, but they won't get updates, and `main` no longer builds — one of its git dependencies is gone. If you're using Nakago, I'd move the wiring into plain structs and traits. It's less code than it sounds like. Thanks to everyone who tried it out.
 
 ## Features
 
